@@ -1,0 +1,27 @@
+{
+  "name": "carshes",
+  "version": "1.0.0",
+  "description": "Web service which allows manipulating car sharing service data",
+  "license": "ISC",
+  "author": "",
+  "type": "commonjs",
+  "main": "src/app.js",
+  "scripts": {
+    "start": "node src/app.js",
+    "dev": "node --watch src/app.js",
+    "compose-up": "docker compose up -d",
+    "seed:cars": "docker compose exec app npm run seed:cars:inner"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.5",
+    "eslint": "^9.39.5",
+    "globals": "^17.11.0",
+    "prettier": "^3.9.6"
+  },
+  "dependencies": {
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "mongoose": "^9.9.3",
+    "swagger-ui-express": "^5.0.1"
+  }
+}
