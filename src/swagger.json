@@ -1,0 +1,1300 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Carshes API",
+    "version": "1.0.0",
+    "description": "API documentation for the Carshes car-sharing service"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3000/api/v1",
+      "description": "Local Development Server"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Cars",
+      "description": "Car fleet management endpoints"
+    },
+    {
+      "name": "Drivers",
+      "description": "Driver management endpoints"
+    },
+    {
+      "name": "Bookings",
+      "description": "Booking management endpoints"
+    }
+  ],
+  "paths": {
+    "/cars": {
+      "get": {
+        "summary": "Get all cars",
+        "description": "Returns a list of all cars in the system.",
+        "tags": [
+          "Cars"
+        ],
+        "responses": {
+          "200": {
+            "description": "Successfully retrieved cars",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Successfully retrieved all cars"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/CarWithProductionInfo"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Add a new car",
+        "description": "Adds a new car to the car-sharing park. Can optionally create a new ProductionInfo record if an object is provided instead of an ID.",
+        "tags": [
+          "Cars"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "productionInfo": {
+                    "oneOf": [
+                      {
+                        "$ref": "#/components/schemas/ProductionInfoInput"
+                      },
+                      {
+                        "type": "string",
+                        "description": "Existing ProductionInfo ObjectId"
+                      }
+                    ],
+                    "description": "Either an existing ProductionInfo ID or an object to create a new one"
+                  },
+                  "vin": {
+                    "type": "string",
+                    "example": "12345678901234567",
+                    "minLength": 17,
+                    "maxLength": 17
+                  },
+                  "registrationNumber": {
+                    "type": "string",
+                    "example": "1234 AB-7"
+                  },
+                  "fuelLevel": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 100,
+                    "example": 100
+                  },
+                  "mileage": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "example": 50000
+                  },
+                  "location": {
+                    "$ref": "#/components/schemas/GeoPoint"
+                  }
+                },
+                "required": [
+                  "productionInfo",
+                  "vin",
+                  "registrationNumber",
+                  "location"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Car successfully added",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuccessResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input data (validation error or duplicate field)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/cars/in-use/low-fuel": {
+      "get": {
+        "summary": "Get cars in use with low fuel",
+        "description": "Returns a list of cars that are currently in use and have a fuel level less than 25%. Results include populated production info.",
+        "tags": [
+          "Cars"
+        ],
+        "responses": {
+          "200": {
+            "description": "Successfully retrieved cars",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Successfully retrieved cars in use with low fuel"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/CarWithProductionInfo"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/cars/reserved": {
+      "get": {
+        "summary": "Get reserved cars by card authorization status",
+        "description": "Returns a list of reserved cars filtered by whether the driver's credit/debit card is authorized. Includes driver details and car location.",
+        "tags": [
+          "Cars"
+        ],
+        "parameters": [
+          {
+            "name": "authorized",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false
+            },
+            "description": "Filter by card authorization status (true = authorized, false = unauthorized)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successfully retrieved cars",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Successfully retrieved reserved cars with unauthorized cards"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/ReservedCarUnauthorized"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/cars/service-old-or-high-mileage": {
+      "put": {
+        "summary": "Send old or high mileage cars to service",
+        "description": "Updates any car produced before 2017 or with mileage > 100,000 km by setting its status to 'in_service'.",
+        "tags": [
+          "Cars"
+        ],
+        "responses": {
+          "200": {
+            "description": "Successfully updated cars",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Successfully updated cars to in_service"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/UpdateResult"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/cars/relocate-frequently-booked": {
+      "put": {
+        "summary": "Relocate frequently booked cars",
+        "description": "Updates any car booked more than 2 times (and not currently 'in_use' or 'reserved') by setting its location to a central point in Minsk (27.5443, 53.8883).",
+        "tags": [
+          "Cars"
+        ],
+        "responses": {
+          "200": {
+            "description": "Successfully updated locations",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Successfully updated location for frequently booked cars"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/UpdateResult"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/cars/{vin}": {
+      "get": {
+        "summary": "Get a car by VIN",
+        "description": "Returns a single car matching the provided VIN.",
+        "tags": [
+          "Cars"
+        ],
+        "parameters": [
+          {
+            "name": "vin",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 17,
+              "maxLength": 17
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successfully retrieved car",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Successfully retrieved car by VIN"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/CarWithProductionInfo"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Car not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete a car by VIN",
+        "description": "Removes a car from the car-sharing park by its VIN.",
+        "tags": [
+          "Cars"
+        ],
+        "parameters": [
+          {
+            "name": "vin",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 17,
+              "maxLength": 17
+            },
+            "description": "The 17-character Vehicle Identification Number"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Car successfully deleted"
+          },
+          "404": {
+            "description": "Car not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "Update a car by VIN",
+        "description": "Updates an existing car matching the provided VIN.",
+        "tags": [
+          "Cars"
+        ],
+        "parameters": [
+          {
+            "name": "vin",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 17,
+              "maxLength": 17
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "free",
+                      "reserved",
+                      "in_use",
+                      "unavailable",
+                      "in_service"
+                    ]
+                  },
+                  "fuelLevel": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 100
+                  },
+                  "mileage": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "location": {
+                    "$ref": "#/components/schemas/GeoPoint"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Car successfully updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuccessResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Car not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/drivers": {
+      "get": {
+        "summary": "Get all drivers",
+        "description": "Returns a list of all drivers in the system.",
+        "tags": [
+          "Drivers"
+        ],
+        "responses": {
+          "200": {
+            "description": "Successfully retrieved drivers",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Successfully retrieved all drivers"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Driver"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Add a new driver",
+        "description": "Adds a new driver.",
+        "tags": [
+          "Drivers"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "licenseNumber": {
+                    "type": "string"
+                  },
+                  "firstName": {
+                    "type": "string"
+                  },
+                  "lastName": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "licenseNumber",
+                  "firstName",
+                  "lastName"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Driver successfully created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuccessResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/drivers/{id}": {
+      "get": {
+        "summary": "Get a driver by ID",
+        "description": "Returns a single driver matching the provided ID.",
+        "tags": [
+          "Drivers"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successfully retrieved driver",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Successfully retrieved driver"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Driver"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Driver not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "Update a driver",
+        "description": "Updates an existing driver.",
+        "tags": [
+          "Drivers"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "licenseNumber": {
+                    "type": "string"
+                  },
+                  "firstName": {
+                    "type": "string"
+                  },
+                  "lastName": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Driver successfully updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuccessResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete a driver by ID (Soft delete)",
+        "description": "Soft deletes a driver and their associated credit cards.",
+        "tags": [
+          "Drivers"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Driver successfully deleted"
+          },
+          "404": {
+            "description": "Driver not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/bookings": {
+      "get": {
+        "summary": "Get all bookings",
+        "description": "Returns a list of all bookings in the system.",
+        "tags": [
+          "Bookings"
+        ],
+        "responses": {
+          "200": {
+            "description": "Successfully retrieved bookings",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Successfully retrieved all bookings"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Booking"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Add a new booking",
+        "description": "Adds a new booking.",
+        "tags": [
+          "Bookings"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "driverId": {
+                    "type": "string"
+                  },
+                  "carId": {
+                    "type": "string"
+                  },
+                  "startDate": {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  "startFuelLevel": {
+                    "type": "number"
+                  },
+                  "startMileage": {
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "driverId",
+                  "carId",
+                  "startDate",
+                  "startFuelLevel",
+                  "startMileage"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Booking successfully created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuccessResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/bookings/{id}": {
+      "get": {
+        "summary": "Get a booking by ID",
+        "description": "Returns a single booking matching the provided ID.",
+        "tags": [
+          "Bookings"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successfully retrieved booking",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Successfully retrieved booking"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Booking"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Booking not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "Update a booking",
+        "description": "Updates an existing booking.",
+        "tags": [
+          "Bookings"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "endDate": {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  "finishFuelLevel": {
+                    "type": "number"
+                  },
+                  "finishMileage": {
+                    "type": "number"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Booking successfully updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuccessResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete a booking by ID",
+        "description": "Deletes a booking.",
+        "tags": [
+          "Bookings"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Booking successfully deleted"
+          },
+          "404": {
+            "description": "Booking not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "GeoPoint": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "Point"
+            ],
+            "example": "Point"
+          },
+          "coordinates": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "minItems": 2,
+            "maxItems": 2,
+            "description": "[longitude, latitude]",
+            "example": [
+              27.5615,
+              53.9022
+            ]
+          }
+        },
+        "required": [
+          "type",
+          "coordinates"
+        ]
+      },
+      "ProductionInfoInput": {
+        "type": "object",
+        "properties": {
+          "brand": {
+            "type": "string",
+            "example": "Toyota"
+          },
+          "model": {
+            "type": "string",
+            "example": "Corolla"
+          },
+          "year": {
+            "type": "integer",
+            "minimum": 1886,
+            "example": 2021
+          }
+        },
+        "required": [
+          "brand",
+          "model",
+          "year"
+        ]
+      },
+      "ProductionInfo": {
+        "type": "object",
+        "properties": {
+          "_id": {
+            "type": "string",
+            "example": "64a1b2c3d4e5f6a7b8c9d0e1"
+          },
+          "brand": {
+            "type": "string",
+            "example": "Toyota"
+          },
+          "model": {
+            "type": "string",
+            "example": "Corolla"
+          },
+          "year": {
+            "type": "integer",
+            "example": 2021
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "Car": {
+        "type": "object",
+        "properties": {
+          "_id": {
+            "type": "string",
+            "example": "64a1b2c3d4e5f6a7b8c9d0e2"
+          },
+          "productionInfo": {
+            "type": "string",
+            "description": "ProductionInfo ObjectId",
+            "example": "64a1b2c3d4e5f6a7b8c9d0e1"
+          },
+          "vin": {
+            "type": "string",
+            "example": "12345678901234567"
+          },
+          "registrationNumber": {
+            "type": "string",
+            "example": "1234 AB-7"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "free",
+              "reserved",
+              "in_use",
+              "unavailable",
+              "in_service"
+            ],
+            "example": "free"
+          },
+          "fuelLevel": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100,
+            "example": 85
+          },
+          "mileage": {
+            "type": "number",
+            "minimum": 0,
+            "example": 50000
+          },
+          "location": {
+            "$ref": "#/components/schemas/GeoPoint"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "isDeleted": {
+            "type": "boolean",
+            "example": false
+          },
+          "deletedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          }
+        }
+      },
+      "CarWithProductionInfo": {
+        "type": "object",
+        "description": "Car with populated productionInfo object",
+        "properties": {
+          "_id": {
+            "type": "string",
+            "example": "64a1b2c3d4e5f6a7b8c9d0e2"
+          },
+          "productionInfo": {
+            "$ref": "#/components/schemas/ProductionInfo"
+          },
+          "vin": {
+            "type": "string",
+            "example": "12345678901234567"
+          },
+          "registrationNumber": {
+            "type": "string",
+            "example": "1234 AB-7"
+          },
+          "status": {
+            "type": "string",
+            "example": "in_use"
+          },
+          "fuelLevel": {
+            "type": "number",
+            "example": 18
+          },
+          "mileage": {
+            "type": "number",
+            "example": 50000
+          },
+          "location": {
+            "$ref": "#/components/schemas/GeoPoint"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "isDeleted": {
+            "type": "boolean",
+            "example": false
+          },
+          "deletedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          }
+        }
+      },
+      "ReservedCarUnauthorized": {
+        "type": "object",
+        "description": "Projected fields for reserved cars with unauthorized credit cards",
+        "properties": {
+          "vin": {
+            "type": "string",
+            "example": "12345678901234567"
+          },
+          "location": {
+            "$ref": "#/components/schemas/GeoPoint"
+          },
+          "driverFirstName": {
+            "type": "string",
+            "example": "Aliaksandr"
+          },
+          "driverLastName": {
+            "type": "string",
+            "example": "Kazlou"
+          },
+          "driverLicenseNumber": {
+            "type": "string",
+            "example": "123456AB"
+          }
+        }
+      },
+      "UpdateResult": {
+        "type": "object",
+        "description": "MongoDB updateMany result",
+        "properties": {
+          "acknowledged": {
+            "type": "boolean",
+            "example": true
+          },
+          "modifiedCount": {
+            "type": "integer",
+            "example": 3
+          },
+          "matchedCount": {
+            "type": "integer",
+            "example": 5
+          }
+        }
+      },
+      "SuccessResponse": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "example": "Operation successful"
+          },
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "example": "error"
+          },
+          "statusCode": {
+            "type": "integer",
+            "example": 400
+          },
+          "message": {
+            "type": "string",
+            "example": "Invalid input data. VIN is required"
+          }
+        }
+      },
+      "Driver": {
+        "type": "object",
+        "properties": {
+          "_id": {
+            "type": "string",
+            "example": "64a1b2c3d4e5f6a7b8c9d0e1"
+          },
+          "licenseNumber": {
+            "type": "string",
+            "example": "123456AB"
+          },
+          "firstName": {
+            "type": "string",
+            "example": "Aliaksandr"
+          },
+          "lastName": {
+            "type": "string",
+            "example": "Kazlou"
+          },
+          "isDeleted": {
+            "type": "boolean",
+            "example": false
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "deletedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          }
+        }
+      },
+      "Booking": {
+        "type": "object",
+        "properties": {
+          "_id": {
+            "type": "string",
+            "example": "64a1b2c3d4e5f6a7b8c9d0e1"
+          },
+          "driverId": {
+            "type": "string",
+            "example": "64a1b2c3d4e5f6a7b8c9d0e2"
+          },
+          "carId": {
+            "type": "string",
+            "example": "64a1b2c3d4e5f6a7b8c9d0e3"
+          },
+          "startDate": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "endDate": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "startFuelLevel": {
+            "type": "number",
+            "example": 100
+          },
+          "startMileage": {
+            "type": "number",
+            "example": 50000
+          },
+          "finishFuelLevel": {
+            "type": "number",
+            "example": 80,
+            "nullable": true
+          },
+          "finishMileage": {
+            "type": "number",
+            "example": 50100,
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      }
+    }
+  }
+}
