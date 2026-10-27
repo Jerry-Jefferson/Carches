@@ -9,11 +9,10 @@ const getAll = catchAsync(async (req, res) => {
   });
 });
 
-const getByVin = catchAsync(async (req, res) => {
-  const { vin } = req.params;
-  const car = await carService.getByVin(vin);
+const getById = catchAsync(async (req, res) => {
+  const car = await carService.getById(req.params.id);
   res.status(200).json({
-    message: "Successfully retrieved car by VIN",
+    message: "Successfully retrieved car",
     data: car,
   });
 });
@@ -77,7 +76,7 @@ const relocateFrequentlyBooked = catchAsync(async (req, res) => {
 
 module.exports = {
   getAll,
-  getByVin,
+  getById,
   create,
   update,
   deleteByVin,

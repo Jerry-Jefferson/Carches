@@ -1,6 +1,6 @@
 # Carshes
 
-REST API for a car sharing service, built with Node.js, Express and MongoDB (Mongoose). It manages cars, drivers and bookings.
+REST API for a car sharing service, built with Node.js, Express and MongoDB (Mongoose). It manages cars, users and bookings.
 
 ## Getting started
 
@@ -31,6 +31,6 @@ REST API for a car sharing service, built with Node.js, Express and MongoDB (Mon
 
 ## Authentication
 
-Register via `POST /api/v1/auth/signup` or sign in via `POST /api/v1/auth/signin` with `{ "email", "password" }` to get a JWT. All `/cars`, `/drivers` and `/bookings` routes require the header `Authorization: Bearer <token>`. Set `JWT_SECRET` (32+ characters) in `.env`.
+Register via `POST /api/v1/auth/signup` or sign in via `POST /api/v1/auth/signin` with `{ "email", "password" }` (sign up also needs `licenseNumber`, `firstName`, `lastName`) to get a JWT. All `/cars`, `/users` and `/bookings` routes require the header `Authorization: Bearer <token>`. Set `JWT_SECRET` (32+ characters) in `.env`.
 
-The API is available at `http://localhost:3000/api/v1` (`/cars`, `/drivers`, `/bookings`), and the Swagger docs at `http://localhost:3000/api-docs`.
+The API is available at `http://localhost:3000/api/v1` (`/cars`, `/users`, `/bookings`), and the Swagger docs at `http://localhost:3000/api-docs`.

@@ -10,7 +10,8 @@
     "start": "node src/app.js",
     "dev": "node --watch src/app.js",
     "compose-up": "docker compose up -d",
-    "seed:cars": "docker compose exec app npm run seed:cars:inner"
+    "seed:cars": "docker compose exec app npm run seed:cars:inner",
+    "migrate:admin": "node src/migrations/001-create-default-admin.js"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.5",

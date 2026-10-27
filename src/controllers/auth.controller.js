@@ -17,7 +17,13 @@ const signIn = catchAsync(async (req, res) => {
   });
 });
 
+const logout = catchAsync(async (req, res) => {
+  await authService.logout({ userId: req.user._id, jti: req.auth.jti, exp: req.auth.exp });
+  res.sendStatus(204);
+});
+
 module.exports = {
   signUp,
   signIn,
+  logout,
 };

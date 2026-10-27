@@ -3,9 +3,10 @@ const { EMAIL_REGEX } = require("../models/user.model");
 
 const PASSWORD_MIN_LENGTH = 8;
 const PASSWORD_MAX_BYTES = 72;
+const PROFILE_FIELDS = ["licenseNumber", "firstName", "lastName"];
 
 const validateAuthBody =
-  ({ enforcePasswordPolicy }) =>
+  ({ enforcePasswordPolicy, requireProfile = false }) =>
   (req, _res, next) => {
     const { email, password } = req.body ?? {};
 
@@ -34,8 +35,21 @@ const validateAuthBody =
       return next(new AppError(`Password cannot exceed ${PASSWORD_MAX_BYTES} bytes`, 400));
     }
 
-    req.body = { email: normalizedEmail, password };
-    next();
+    if (!requireProfile) {
+      req.body = { email: normalizedEmail, password };
+      return next();
+    }
+
+    const missing = PROFILE_FIELDS.filter(
+      (field) => typeof req.body[field] !== "string" || !req.body[field].trim()
+    );
+    if (missing.length) {
+      return next(new AppError(`${missing.join(", ")} must be provided as non-empty strings`, 400));
+    }
+
+    const { licenseNumber, firstName, lastName } = req.body;
+    req.body = { email: normalizedEmail, password, licenseNumber, firstName, lastName };
+    return next();
   };
 
 module.exports = validateAuthBody;

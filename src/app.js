@@ -13,7 +13,7 @@ const setupGracefulShutdown = require("./utils/gracefulShutdown");
 const app = express();
 app.use(express.json());
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
-app.use("/api/v1", apiRouter);
+app.use("/api/v2", apiRouter);
 app.use(errorHandler);
 
 const PORT = process.env.PORT || 3000;

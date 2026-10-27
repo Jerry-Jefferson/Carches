@@ -14,11 +14,15 @@ const getStatusFromBooking = (booking) => {
 };
 
 const getAll = async () => {
-  return await Booking.find().populate("driverId carId");
+  return await Booking.find().populate("userId carId");
+};
+
+const getByUserId = async (userId) => {
+  return await Booking.find({ userId }).sort({ startDate: -1 }).populate("carId");
 };
 
 const getById = async (id) => {
-  const booking = await Booking.findById(id).populate("driverId carId");
+  const booking = await Booking.findById(id).populate("userId carId");
   if (!booking) {
     const error = new Error("Booking not found");
     error.statusCode = 404;
@@ -40,7 +44,7 @@ const update = async (id, updateData) => {
   const booking = await Booking.findByIdAndUpdate(id, updateData, {
     new: true,
     runValidators: true,
-  }).populate("driverId carId");
+  }).populate("userId carId");
 
   if (!booking) {
     const error = new Error("Booking not found");
@@ -66,6 +70,7 @@ const deleteById = async (id) => {
 
 module.exports = {
   getAll,
+  getByUserId,
   getById,
   create,
   update,

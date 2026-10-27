@@ -3,7 +3,7 @@
   "info": {
     "title": "Carshes API",
     "version": "1.0.0",
-    "description": "API documentation for the Carshes car-sharing service"
+    "description": "API documentation for the Carshes car-sharing service. Roles: `user` can access their own data, browse cars and create bookings; `admin` can access every endpoint."
   },
   "servers": [
     {
@@ -21,8 +21,8 @@
       "description": "Car fleet management endpoints"
     },
     {
-      "name": "Drivers",
-      "description": "Driver management endpoints"
+      "name": "Users",
+      "description": "User management endpoints"
     },
     {
       "name": "Bookings",
@@ -33,7 +33,7 @@
     "/auth/signup": {
       "post": {
         "summary": "Sign up",
-        "description": "Registers a new user. The password is hashed with bcrypt before being stored. Returns the created user and a JWT.",
+        "description": "Registers a new user (the only way to create users). The password is hashed with bcrypt before being stored. Returns the created user and a JWT.",
         "tags": ["Auth"],
         "security": [],
         "requestBody": {
@@ -61,7 +61,11 @@
                       "_id": "66c5b2f4e1a2b3c4d5e6f7a8",
                       "email": "jane.doe@example.com",
                       "createdAt": "2026-10-26T10:00:00.000Z",
-                      "updatedAt": "2026-10-26T10:00:00.000Z"
+                      "updatedAt": "2026-10-26T10:00:00.000Z",
+                      "role": "user",
+                      "licenseNumber": "123456AB",
+                      "firstName": "Jane",
+                      "lastName": "Doe"
                     },
                     "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
                   }
@@ -97,22 +101,40 @@
                       "statusCode": 400,
                       "message": "Password must be at least 8 characters long"
                     }
+                  },
+                  "missingProfile": {
+                    "value": {
+                      "status": "error",
+                      "statusCode": 400,
+                      "message": "licenseNumber, firstName, lastName must be provided as non-empty strings"
+                    }
                   }
                 }
               }
             }
           },
           "409": {
-            "description": "Email already registered",
+            "description": "Email or license number already registered",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponse"
                 },
-                "example": {
-                  "status": "error",
-                  "statusCode": 409,
-                  "message": "A user with this email already exists"
+                "examples": {
+                  "email": {
+                    "value": {
+                      "status": "error",
+                      "statusCode": 409,
+                      "message": "A user with this email already exists"
+                    }
+                  },
+                  "license": {
+                    "value": {
+                      "status": "error",
+                      "statusCode": 409,
+                      "message": "A user with this license number already exists"
+                    }
+                  }
                 }
               }
             }
@@ -166,7 +188,11 @@
                       "_id": "66c5b2f4e1a2b3c4d5e6f7a8",
                       "email": "jane.doe@example.com",
                       "createdAt": "2026-10-26T10:00:00.000Z",
-                      "updatedAt": "2026-10-26T10:00:00.000Z"
+                      "updatedAt": "2026-10-26T10:00:00.000Z",
+                      "role": "user",
+                      "licenseNumber": "123456AB",
+                      "firstName": "Jane",
+                      "lastName": "Doe"
                     },
                     "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
                   }
@@ -222,10 +248,35 @@
         }
       }
     },
+    "/auth/logout": {
+      "post": {
+        "summary": "Log out",
+        "description": "Revokes the bearer token used for this request. Any further request with the same token returns 401 \"Token has been revoked\". Other sessions of the same user are not affected.\n\n**Required role:** `user` (admins also allowed).",
+        "tags": ["Auth"],
+        "responses": {
+          "204": {
+            "description": "Token revoked"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/cars": {
       "get": {
         "summary": "Get all cars",
-        "description": "Returns a list of all cars in the system.",
+        "description": "Returns a list of all cars in the system.\n\n**Required role:** `user` (admins also allowed).",
         "tags": ["Cars"],
         "responses": {
           "200": {
@@ -257,7 +308,7 @@
       },
       "post": {
         "summary": "Add a new car",
-        "description": "Adds a new car to the car-sharing park. Can optionally create a new ProductionInfo record if an object is provided instead of an ID.",
+        "description": "Adds a new car to the car-sharing park. Can optionally create a new ProductionInfo record if an object is provided instead of an ID.\n\n**Required role:** `admin`.",
         "tags": ["Cars"],
         "requestBody": {
           "required": true,
@@ -332,6 +383,9 @@
           "401": {
             "$ref": "#/components/responses/Unauthorized"
           },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
           "500": {
             "description": "Internal server error",
             "content": {
@@ -348,7 +402,7 @@
     "/cars/in-use/low-fuel": {
       "get": {
         "summary": "Get cars in use with low fuel",
-        "description": "Returns a list of cars that are currently in use and have a fuel level less than 25%. Results include populated production info.",
+        "description": "Returns a list of cars that are currently in use and have a fuel level less than 25%. Results include populated production info.\n\n**Required role:** `admin`.",
         "tags": ["Cars"],
         "responses": {
           "200": {
@@ -376,6 +430,9 @@
           "401": {
             "$ref": "#/components/responses/Unauthorized"
           },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
           "500": {
             "description": "Internal server error",
             "content": {
@@ -392,7 +449,7 @@
     "/cars/reserved": {
       "get": {
         "summary": "Get reserved cars by card authorization status",
-        "description": "Returns a list of reserved cars filtered by whether the driver's credit/debit card is authorized. Includes driver details and car location.",
+        "description": "Returns a list of reserved cars filtered by whether the user's credit/debit card is authorized. Includes user details and car location.\n\n**Required role:** `admin`.",
         "tags": ["Cars"],
         "parameters": [
           {
@@ -432,6 +489,9 @@
           "401": {
             "$ref": "#/components/responses/Unauthorized"
           },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
           "500": {
             "description": "Internal server error",
             "content": {
@@ -448,7 +508,7 @@
     "/cars/service-old-or-high-mileage": {
       "put": {
         "summary": "Send old or high mileage cars to service",
-        "description": "Updates any car produced before 2017 or with mileage > 100,000 km by setting its status to 'in_service'.",
+        "description": "Updates any car produced before 2017 or with mileage > 100,000 km by setting its status to 'in_service'.\n\n**Required role:** `admin`.",
         "tags": ["Cars"],
         "responses": {
           "200": {
@@ -473,6 +533,9 @@
           "401": {
             "$ref": "#/components/responses/Unauthorized"
           },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
           "500": {
             "description": "Internal server error",
             "content": {
@@ -489,7 +552,7 @@
     "/cars/relocate-frequently-booked": {
       "put": {
         "summary": "Relocate frequently booked cars",
-        "description": "Updates any car booked more than 2 times (and not currently 'in_use' or 'reserved') by setting its location to a central point in Minsk (27.5443, 53.8883).",
+        "description": "Updates any car booked more than 2 times (and not currently 'in_use' or 'reserved') by setting its location to a central point in Minsk (27.5443, 53.8883).\n\n**Required role:** `admin`.",
         "tags": ["Cars"],
         "responses": {
           "200": {
@@ -514,6 +577,93 @@
           "401": {
             "$ref": "#/components/responses/Unauthorized"
           },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/cars/{id}": {
+      "get": {
+        "summary": "Get a car by ID",
+        "description": "Returns a single car (with production info) by its database ID. Soft-deleted cars are treated as not found.\n\n**Required role:** `user` (admins also allowed).",
+        "tags": ["Cars"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Car ID (24-character hex MongoDB ObjectId)",
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-fA-F0-9]{24}$",
+              "example": "64a1b2c3d4e5f6a7b8c9d0e1"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successfully retrieved car",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Successfully retrieved car"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/CarWithProductionInfo"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid car ID format",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "status": "error",
+                  "statusCode": 400,
+                  "message": "Invalid car ID format"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "description": "Car not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "status": "error",
+                  "statusCode": 404,
+                  "message": "Car not found"
+                }
+              }
+            }
+          },
           "500": {
             "description": "Internal server error",
             "content": {
@@ -528,60 +678,9 @@
       }
     },
     "/cars/{vin}": {
-      "get": {
-        "summary": "Get a car by VIN",
-        "description": "Returns a single car matching the provided VIN.",
-        "tags": ["Cars"],
-        "parameters": [
-          {
-            "name": "vin",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "minLength": 17,
-              "maxLength": 17
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successfully retrieved car",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "message": {
-                      "type": "string",
-                      "example": "Successfully retrieved car by VIN"
-                    },
-                    "data": {
-                      "$ref": "#/components/schemas/CarWithProductionInfo"
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "401": {
-            "$ref": "#/components/responses/Unauthorized"
-          },
-          "404": {
-            "description": "Car not found",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      },
       "delete": {
         "summary": "Delete a car by VIN",
-        "description": "Removes a car from the car-sharing park by its VIN.",
+        "description": "Removes a car from the car-sharing park by its VIN.\n\n**Required role:** `admin`.",
         "tags": ["Cars"],
         "parameters": [
           {
@@ -602,6 +701,9 @@
           },
           "401": {
             "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
           },
           "404": {
             "description": "Car not found",
@@ -627,7 +729,7 @@
       },
       "put": {
         "summary": "Update a car by VIN",
-        "description": "Updates an existing car matching the provided VIN.",
+        "description": "Updates an existing car matching the provided VIN.\n\n**Required role:** `admin`.",
         "tags": ["Cars"],
         "parameters": [
           {
@@ -683,6 +785,9 @@
           "401": {
             "$ref": "#/components/responses/Unauthorized"
           },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
           "404": {
             "description": "Car not found",
             "content": {
@@ -696,14 +801,14 @@
         }
       }
     },
-    "/drivers": {
+    "/users/me": {
       "get": {
-        "summary": "Get all drivers",
-        "description": "Returns a list of all drivers in the system.",
-        "tags": ["Drivers"],
+        "summary": "Get my profile",
+        "description": "Returns the profile of the authenticated user. The user is resolved from the bearer token only; no user ID is accepted.\n\n**Required role:** `user` (admins also allowed).",
+        "tags": ["Users"],
         "responses": {
           "200": {
-            "description": "Successfully retrieved drivers",
+            "description": "Successfully retrieved profile",
             "content": {
               "application/json": {
                 "schema": {
@@ -711,12 +816,53 @@
                   "properties": {
                     "message": {
                       "type": "string",
-                      "example": "Successfully retrieved all drivers"
+                      "example": "Successfully retrieved profile"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/User"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/users": {
+      "get": {
+        "summary": "Get all users",
+        "description": "Returns a list of all users in the system.\n\n**Required role:** `admin`.",
+        "tags": ["Users"],
+        "responses": {
+          "200": {
+            "description": "Successfully retrieved users",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Successfully retrieved all users"
                     },
                     "data": {
                       "type": "array",
                       "items": {
-                        "$ref": "#/components/schemas/Driver"
+                        "$ref": "#/components/schemas/User"
                       }
                     }
                   }
@@ -726,57 +872,18 @@
           },
           "401": {
             "$ref": "#/components/responses/Unauthorized"
-          }
-        }
-      },
-      "post": {
-        "summary": "Add a new driver",
-        "description": "Adds a new driver.",
-        "tags": ["Drivers"],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "licenseNumber": {
-                    "type": "string"
-                  },
-                  "firstName": {
-                    "type": "string"
-                  },
-                  "lastName": {
-                    "type": "string"
-                  }
-                },
-                "required": ["licenseNumber", "firstName", "lastName"]
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Driver successfully created",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/SuccessResponse"
-                }
-              }
-            }
           },
-          "401": {
-            "$ref": "#/components/responses/Unauthorized"
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
           }
         }
       }
     },
-    "/drivers/{id}": {
+    "/users/{id}": {
       "get": {
-        "summary": "Get a driver by ID",
-        "description": "Returns a single driver matching the provided ID.",
-        "tags": ["Drivers"],
+        "summary": "Get a user by ID",
+        "description": "Returns a single user matching the provided ID.\n\n**Required role:** `admin`.",
+        "tags": ["Users"],
         "parameters": [
           {
             "name": "id",
@@ -789,7 +896,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Successfully retrieved driver",
+            "description": "Successfully retrieved user",
             "content": {
               "application/json": {
                 "schema": {
@@ -797,10 +904,10 @@
                   "properties": {
                     "message": {
                       "type": "string",
-                      "example": "Successfully retrieved driver"
+                      "example": "Successfully retrieved user"
                     },
                     "data": {
-                      "$ref": "#/components/schemas/Driver"
+                      "$ref": "#/components/schemas/User"
                     }
                   }
                 }
@@ -810,8 +917,11 @@
           "401": {
             "$ref": "#/components/responses/Unauthorized"
           },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
           "404": {
-            "description": "Driver not found",
+            "description": "User not found",
             "content": {
               "application/json": {
                 "schema": {
@@ -823,9 +933,9 @@
         }
       },
       "put": {
-        "summary": "Update a driver",
-        "description": "Updates an existing driver.",
-        "tags": ["Drivers"],
+        "summary": "Update a user",
+        "description": "Updates an existing user. `password` and `role` cannot be changed through this endpoint and are ignored.\n\n**Required role:** `admin`.",
+        "tags": ["Users"],
         "parameters": [
           {
             "name": "id",
@@ -843,14 +953,24 @@
               "schema": {
                 "type": "object",
                 "properties": {
+                  "email": {
+                    "type": "string",
+                    "format": "email"
+                  },
                   "licenseNumber": {
-                    "type": "string"
+                    "type": "string",
+                    "minLength": 6,
+                    "maxLength": 20
                   },
                   "firstName": {
-                    "type": "string"
+                    "type": "string",
+                    "minLength": 2,
+                    "maxLength": 50
                   },
                   "lastName": {
-                    "type": "string"
+                    "type": "string",
+                    "minLength": 2,
+                    "maxLength": 50
                   }
                 }
               }
@@ -859,7 +979,7 @@
         },
         "responses": {
           "200": {
-            "description": "Driver successfully updated",
+            "description": "User successfully updated",
             "content": {
               "application/json": {
                 "schema": {
@@ -870,13 +990,16 @@
           },
           "401": {
             "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
           }
         }
       },
       "delete": {
-        "summary": "Delete a driver by ID (Soft delete)",
-        "description": "Soft deletes a driver and their associated credit cards.",
-        "tags": ["Drivers"],
+        "summary": "Delete a user by ID (Soft delete)",
+        "description": "Soft deletes a user and their associated credit cards.\n\n**Required role:** `admin`.",
+        "tags": ["Users"],
         "parameters": [
           {
             "name": "id",
@@ -889,13 +1012,60 @@
         ],
         "responses": {
           "204": {
-            "description": "Driver successfully deleted"
+            "description": "User successfully deleted"
           },
           "401": {
             "$ref": "#/components/responses/Unauthorized"
           },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
           "404": {
-            "description": "Driver not found",
+            "description": "User not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/bookings/my": {
+      "get": {
+        "summary": "Get my bookings",
+        "description": "Returns all bookings of the authenticated user, newest first, with car details populated. Filtered strictly by the user ID from the bearer token.\n\n**Required role:** `user` (admins also allowed).",
+        "tags": ["Bookings"],
+        "responses": {
+          "200": {
+            "description": "Successfully retrieved bookings",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Successfully retrieved your bookings"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/BookingWithCar"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "500": {
+            "description": "Internal server error",
             "content": {
               "application/json": {
                 "schema": {
@@ -910,7 +1080,7 @@
     "/bookings": {
       "get": {
         "summary": "Get all bookings",
-        "description": "Returns a list of all bookings in the system.",
+        "description": "Returns a list of all bookings in the system.\n\n**Required role:** `admin`.",
         "tags": ["Bookings"],
         "responses": {
           "200": {
@@ -937,12 +1107,15 @@
           },
           "401": {
             "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
           }
         }
       },
       "post": {
         "summary": "Add a new booking",
-        "description": "Adds a new booking.",
+        "description": "Adds a new booking.\n\n**Required role:** `user` (admins also allowed).",
         "tags": ["Bookings"],
         "requestBody": {
           "required": true,
@@ -951,8 +1124,9 @@
               "schema": {
                 "type": "object",
                 "properties": {
-                  "driverId": {
-                    "type": "string"
+                  "userId": {
+                    "type": "string",
+                    "description": "Only used when the caller is an admin. For regular users it is ignored and the booking is always created for the authenticated user."
                   },
                   "carId": {
                     "type": "string"
@@ -968,7 +1142,7 @@
                     "type": "number"
                   }
                 },
-                "required": ["driverId", "carId", "startDate", "startFuelLevel", "startMileage"]
+                "required": ["carId", "startDate", "startFuelLevel", "startMileage"]
               }
             }
           }
@@ -993,7 +1167,7 @@
     "/bookings/{id}": {
       "get": {
         "summary": "Get a booking by ID",
-        "description": "Returns a single booking matching the provided ID.",
+        "description": "Returns a single booking matching the provided ID.\n\n**Required role:** `admin`.",
         "tags": ["Bookings"],
         "parameters": [
           {
@@ -1028,6 +1202,9 @@
           "401": {
             "$ref": "#/components/responses/Unauthorized"
           },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
           "404": {
             "description": "Booking not found",
             "content": {
@@ -1042,7 +1219,7 @@
       },
       "put": {
         "summary": "Update a booking",
-        "description": "Updates an existing booking.",
+        "description": "Updates an existing booking.\n\n**Required role:** `admin`.",
         "tags": ["Bookings"],
         "parameters": [
           {
@@ -1089,12 +1266,15 @@
           },
           "401": {
             "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
           }
         }
       },
       "delete": {
         "summary": "Delete a booking by ID",
-        "description": "Deletes a booking.",
+        "description": "Deletes a booking.\n\n**Required role:** `admin`.",
         "tags": ["Bookings"],
         "parameters": [
           {
@@ -1112,6 +1292,9 @@
           },
           "401": {
             "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
           },
           "404": {
             "description": "Booking not found",
@@ -1320,15 +1503,15 @@
           "location": {
             "$ref": "#/components/schemas/GeoPoint"
           },
-          "driverFirstName": {
+          "userFirstName": {
             "type": "string",
             "example": "Aliaksandr"
           },
-          "driverLastName": {
+          "userLastName": {
             "type": "string",
             "example": "Kazlou"
           },
-          "driverLicenseNumber": {
+          "userLicenseNumber": {
             "type": "string",
             "example": "123456AB"
           }
@@ -1381,44 +1564,6 @@
           }
         }
       },
-      "Driver": {
-        "type": "object",
-        "properties": {
-          "_id": {
-            "type": "string",
-            "example": "64a1b2c3d4e5f6a7b8c9d0e1"
-          },
-          "licenseNumber": {
-            "type": "string",
-            "example": "123456AB"
-          },
-          "firstName": {
-            "type": "string",
-            "example": "Aliaksandr"
-          },
-          "lastName": {
-            "type": "string",
-            "example": "Kazlou"
-          },
-          "isDeleted": {
-            "type": "boolean",
-            "example": false
-          },
-          "createdAt": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "updatedAt": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "deletedAt": {
-            "type": "string",
-            "format": "date-time",
-            "nullable": true
-          }
-        }
-      },
       "Booking": {
         "type": "object",
         "properties": {
@@ -1426,9 +1571,10 @@
             "type": "string",
             "example": "64a1b2c3d4e5f6a7b8c9d0e1"
           },
-          "driverId": {
+          "userId": {
             "type": "string",
-            "example": "64a1b2c3d4e5f6a7b8c9d0e2"
+            "example": "64a1b2c3d4e5f6a7b8c9d0e2",
+            "description": "ID of the User who made the booking"
           },
           "carId": {
             "type": "string",
@@ -1473,7 +1619,7 @@
       },
       "SignUpRequest": {
         "type": "object",
-        "required": ["email", "password"],
+        "required": ["email", "password", "licenseNumber", "firstName", "lastName"],
         "properties": {
           "email": {
             "type": "string",
@@ -1489,6 +1635,25 @@
             "maxLength": 72,
             "example": "S3cureP@ssw0rd",
             "description": "8 characters minimum, 72 bytes maximum"
+          },
+          "licenseNumber": {
+            "type": "string",
+            "minLength": 6,
+            "maxLength": 20,
+            "example": "123456AB",
+            "description": "Must be unique; stored uppercased"
+          },
+          "firstName": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 50,
+            "example": "Jane"
+          },
+          "lastName": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 50,
+            "example": "Doe"
           }
         }
       },
@@ -1510,15 +1675,42 @@
       },
       "User": {
         "type": "object",
+        "description": "User entity",
         "properties": {
           "_id": {
             "type": "string",
-            "example": "66c5b2f4e1a2b3c4d5e6f7a8"
+            "example": "64a1b2c3d4e5f6a7b8c9d0e1"
           },
           "email": {
             "type": "string",
             "format": "email",
             "example": "jane.doe@example.com"
+          },
+          "role": {
+            "type": "string",
+            "enum": ["user", "admin"],
+            "example": "user"
+          },
+          "licenseNumber": {
+            "type": "string",
+            "example": "123456AB"
+          },
+          "firstName": {
+            "type": "string",
+            "example": "Aliaksandr"
+          },
+          "lastName": {
+            "type": "string",
+            "example": "Kazlou"
+          },
+          "isDeleted": {
+            "type": "boolean",
+            "example": false
+          },
+          "deletedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
           },
           "createdAt": {
             "type": "string",
@@ -1528,7 +1720,8 @@
             "type": "string",
             "format": "date-time"
           }
-        }
+        },
+        "required": ["email", "role", "licenseNumber", "firstName", "lastName"]
       },
       "AuthResponse": {
         "type": "object",
@@ -1550,6 +1743,21 @@
             }
           }
         }
+      },
+      "BookingWithCar": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Booking"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "carId": {
+                "$ref": "#/components/schemas/Car"
+              }
+            }
+          }
+        ]
       }
     },
     "securitySchemes": {
@@ -1600,7 +1808,30 @@
                   "statusCode": 401,
                   "message": "Token has expired"
                 }
+              },
+              "revoked": {
+                "summary": "Revoked token (after logout)",
+                "value": {
+                  "status": "error",
+                  "statusCode": 401,
+                  "message": "Token has been revoked"
+                }
               }
+            }
+          }
+        }
+      },
+      "Forbidden": {
+        "description": "Authenticated, but the user's role is not allowed to access this endpoint",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            },
+            "example": {
+              "status": "error",
+              "statusCode": 403,
+              "message": "You do not have permission to perform this action"
             }
           }
         }
