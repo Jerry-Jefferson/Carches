@@ -1,13 +1,17 @@
 const express = require("express");
-const carRoutes = require("./car.routes");
+const authenticate = require("../middleware/authenticate");
 
+const authRoutes = require("./auth.routes");
+const carRoutes = require("./car.routes");
 const driverRoutes = require("./driver.routes");
 const bookingRoutes = require("./booking.routes");
 
 const router = express.Router();
 
-router.use("/cars", carRoutes);
-router.use("/drivers", driverRoutes);
-router.use("/bookings", bookingRoutes);
+router.use("/auth", authRoutes);
+
+router.use("/cars", authenticate, carRoutes);
+router.use("/drivers", authenticate, driverRoutes);
+router.use("/bookings", authenticate, bookingRoutes);
 
 module.exports = router;

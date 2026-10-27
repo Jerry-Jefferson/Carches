@@ -29,4 +29,8 @@ REST API for a car sharing service, built with Node.js, Express and MongoDB (Mon
    node src/seed/cars.js
    ```
 
+## Authentication
+
+Register via `POST /api/v1/auth/signup` or sign in via `POST /api/v1/auth/signin` with `{ "email", "password" }` to get a JWT. All `/cars`, `/drivers` and `/bookings` routes require the header `Authorization: Bearer <token>`. Set `JWT_SECRET` (32+ characters) in `.env`.
+
 The API is available at `http://localhost:3000/api/v1` (`/cars`, `/drivers`, `/bookings`), and the Swagger docs at `http://localhost:3000/api-docs`.

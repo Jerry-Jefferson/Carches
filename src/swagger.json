@@ -13,6 +13,10 @@
   ],
   "tags": [
     {
+      "name": "Auth",
+      "description": "User registration and authentication"
+    },
+    {
       "name": "Cars",
       "description": "Car fleet management endpoints"
     },
@@ -26,13 +30,203 @@
     }
   ],
   "paths": {
+    "/auth/signup": {
+      "post": {
+        "summary": "Sign up",
+        "description": "Registers a new user. The password is hashed with bcrypt before being stored. Returns the created user and a JWT.",
+        "tags": ["Auth"],
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SignUpRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "User registered",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthResponse"
+                },
+                "example": {
+                  "message": "User successfully registered",
+                  "data": {
+                    "user": {
+                      "_id": "66c5b2f4e1a2b3c4d5e6f7a8",
+                      "email": "jane.doe@example.com",
+                      "createdAt": "2026-10-26T10:00:00.000Z",
+                      "updatedAt": "2026-10-26T10:00:00.000Z"
+                    },
+                    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request body (missing fields, invalid email, password too short/long, malformed JSON)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "examples": {
+                  "missing": {
+                    "value": {
+                      "status": "error",
+                      "statusCode": 400,
+                      "message": "Email and password are required and must be strings"
+                    }
+                  },
+                  "invalidEmail": {
+                    "value": {
+                      "status": "error",
+                      "statusCode": 400,
+                      "message": "Email is invalid"
+                    }
+                  },
+                  "shortPassword": {
+                    "value": {
+                      "status": "error",
+                      "statusCode": 400,
+                      "message": "Password must be at least 8 characters long"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Email already registered",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "status": "error",
+                  "statusCode": 409,
+                  "message": "A user with this email already exists"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "status": "error",
+                  "statusCode": 500,
+                  "message": "Internal Server Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/signin": {
+      "post": {
+        "summary": "Sign in",
+        "description": "Authenticates a user by email and password and returns a JWT to use in the `Authorization: Bearer <token>` header for protected routes.",
+        "tags": ["Auth"],
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SignInRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Signed in",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthResponse"
+                },
+                "example": {
+                  "message": "Successfully signed in",
+                  "data": {
+                    "user": {
+                      "_id": "66c5b2f4e1a2b3c4d5e6f7a8",
+                      "email": "jane.doe@example.com",
+                      "createdAt": "2026-10-26T10:00:00.000Z",
+                      "updatedAt": "2026-10-26T10:00:00.000Z"
+                    },
+                    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Missing or malformed email/password",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "status": "error",
+                  "statusCode": 400,
+                  "message": "Email and password are required and must be strings"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "status": "error",
+                  "statusCode": 401,
+                  "message": "Invalid email or password"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "status": "error",
+                  "statusCode": 500,
+                  "message": "Internal Server Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/cars": {
       "get": {
         "summary": "Get all cars",
         "description": "Returns a list of all cars in the system.",
-        "tags": [
-          "Cars"
-        ],
+        "tags": ["Cars"],
         "responses": {
           "200": {
             "description": "Successfully retrieved cars",
@@ -55,15 +249,16 @@
                 }
               }
             }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
           }
         }
       },
       "post": {
         "summary": "Add a new car",
         "description": "Adds a new car to the car-sharing park. Can optionally create a new ProductionInfo record if an object is provided instead of an ID.",
-        "tags": [
-          "Cars"
-        ],
+        "tags": ["Cars"],
         "requestBody": {
           "required": true,
           "content": {
@@ -108,12 +303,7 @@
                     "$ref": "#/components/schemas/GeoPoint"
                   }
                 },
-                "required": [
-                  "productionInfo",
-                  "vin",
-                  "registrationNumber",
-                  "location"
-                ]
+                "required": ["productionInfo", "vin", "registrationNumber", "location"]
               }
             }
           }
@@ -139,6 +329,9 @@
               }
             }
           },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
           "500": {
             "description": "Internal server error",
             "content": {
@@ -156,9 +349,7 @@
       "get": {
         "summary": "Get cars in use with low fuel",
         "description": "Returns a list of cars that are currently in use and have a fuel level less than 25%. Results include populated production info.",
-        "tags": [
-          "Cars"
-        ],
+        "tags": ["Cars"],
         "responses": {
           "200": {
             "description": "Successfully retrieved cars",
@@ -182,6 +373,9 @@
               }
             }
           },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
           "500": {
             "description": "Internal server error",
             "content": {
@@ -199,9 +393,7 @@
       "get": {
         "summary": "Get reserved cars by card authorization status",
         "description": "Returns a list of reserved cars filtered by whether the driver's credit/debit card is authorized. Includes driver details and car location.",
-        "tags": [
-          "Cars"
-        ],
+        "tags": ["Cars"],
         "parameters": [
           {
             "name": "authorized",
@@ -237,6 +429,9 @@
               }
             }
           },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
           "500": {
             "description": "Internal server error",
             "content": {
@@ -254,9 +449,7 @@
       "put": {
         "summary": "Send old or high mileage cars to service",
         "description": "Updates any car produced before 2017 or with mileage > 100,000 km by setting its status to 'in_service'.",
-        "tags": [
-          "Cars"
-        ],
+        "tags": ["Cars"],
         "responses": {
           "200": {
             "description": "Successfully updated cars",
@@ -277,6 +470,9 @@
               }
             }
           },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
           "500": {
             "description": "Internal server error",
             "content": {
@@ -294,9 +490,7 @@
       "put": {
         "summary": "Relocate frequently booked cars",
         "description": "Updates any car booked more than 2 times (and not currently 'in_use' or 'reserved') by setting its location to a central point in Minsk (27.5443, 53.8883).",
-        "tags": [
-          "Cars"
-        ],
+        "tags": ["Cars"],
         "responses": {
           "200": {
             "description": "Successfully updated locations",
@@ -317,6 +511,9 @@
               }
             }
           },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
           "500": {
             "description": "Internal server error",
             "content": {
@@ -334,9 +531,7 @@
       "get": {
         "summary": "Get a car by VIN",
         "description": "Returns a single car matching the provided VIN.",
-        "tags": [
-          "Cars"
-        ],
+        "tags": ["Cars"],
         "parameters": [
           {
             "name": "vin",
@@ -369,6 +564,9 @@
               }
             }
           },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
           "404": {
             "description": "Car not found",
             "content": {
@@ -384,9 +582,7 @@
       "delete": {
         "summary": "Delete a car by VIN",
         "description": "Removes a car from the car-sharing park by its VIN.",
-        "tags": [
-          "Cars"
-        ],
+        "tags": ["Cars"],
         "parameters": [
           {
             "name": "vin",
@@ -403,6 +599,9 @@
         "responses": {
           "204": {
             "description": "Car successfully deleted"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
           },
           "404": {
             "description": "Car not found",
@@ -429,9 +628,7 @@
       "put": {
         "summary": "Update a car by VIN",
         "description": "Updates an existing car matching the provided VIN.",
-        "tags": [
-          "Cars"
-        ],
+        "tags": ["Cars"],
         "parameters": [
           {
             "name": "vin",
@@ -453,13 +650,7 @@
                 "properties": {
                   "status": {
                     "type": "string",
-                    "enum": [
-                      "free",
-                      "reserved",
-                      "in_use",
-                      "unavailable",
-                      "in_service"
-                    ]
+                    "enum": ["free", "reserved", "in_use", "unavailable", "in_service"]
                   },
                   "fuelLevel": {
                     "type": "integer",
@@ -489,6 +680,9 @@
               }
             }
           },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
           "404": {
             "description": "Car not found",
             "content": {
@@ -506,9 +700,7 @@
       "get": {
         "summary": "Get all drivers",
         "description": "Returns a list of all drivers in the system.",
-        "tags": [
-          "Drivers"
-        ],
+        "tags": ["Drivers"],
         "responses": {
           "200": {
             "description": "Successfully retrieved drivers",
@@ -531,15 +723,16 @@
                 }
               }
             }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
           }
         }
       },
       "post": {
         "summary": "Add a new driver",
         "description": "Adds a new driver.",
-        "tags": [
-          "Drivers"
-        ],
+        "tags": ["Drivers"],
         "requestBody": {
           "required": true,
           "content": {
@@ -557,11 +750,7 @@
                     "type": "string"
                   }
                 },
-                "required": [
-                  "licenseNumber",
-                  "firstName",
-                  "lastName"
-                ]
+                "required": ["licenseNumber", "firstName", "lastName"]
               }
             }
           }
@@ -576,6 +765,9 @@
                 }
               }
             }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
           }
         }
       }
@@ -584,9 +776,7 @@
       "get": {
         "summary": "Get a driver by ID",
         "description": "Returns a single driver matching the provided ID.",
-        "tags": [
-          "Drivers"
-        ],
+        "tags": ["Drivers"],
         "parameters": [
           {
             "name": "id",
@@ -617,6 +807,9 @@
               }
             }
           },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
           "404": {
             "description": "Driver not found",
             "content": {
@@ -632,9 +825,7 @@
       "put": {
         "summary": "Update a driver",
         "description": "Updates an existing driver.",
-        "tags": [
-          "Drivers"
-        ],
+        "tags": ["Drivers"],
         "parameters": [
           {
             "name": "id",
@@ -676,15 +867,16 @@
                 }
               }
             }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
           }
         }
       },
       "delete": {
         "summary": "Delete a driver by ID (Soft delete)",
         "description": "Soft deletes a driver and their associated credit cards.",
-        "tags": [
-          "Drivers"
-        ],
+        "tags": ["Drivers"],
         "parameters": [
           {
             "name": "id",
@@ -698,6 +890,9 @@
         "responses": {
           "204": {
             "description": "Driver successfully deleted"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
           },
           "404": {
             "description": "Driver not found",
@@ -716,9 +911,7 @@
       "get": {
         "summary": "Get all bookings",
         "description": "Returns a list of all bookings in the system.",
-        "tags": [
-          "Bookings"
-        ],
+        "tags": ["Bookings"],
         "responses": {
           "200": {
             "description": "Successfully retrieved bookings",
@@ -741,15 +934,16 @@
                 }
               }
             }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
           }
         }
       },
       "post": {
         "summary": "Add a new booking",
         "description": "Adds a new booking.",
-        "tags": [
-          "Bookings"
-        ],
+        "tags": ["Bookings"],
         "requestBody": {
           "required": true,
           "content": {
@@ -774,13 +968,7 @@
                     "type": "number"
                   }
                 },
-                "required": [
-                  "driverId",
-                  "carId",
-                  "startDate",
-                  "startFuelLevel",
-                  "startMileage"
-                ]
+                "required": ["driverId", "carId", "startDate", "startFuelLevel", "startMileage"]
               }
             }
           }
@@ -795,6 +983,9 @@
                 }
               }
             }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
           }
         }
       }
@@ -803,9 +994,7 @@
       "get": {
         "summary": "Get a booking by ID",
         "description": "Returns a single booking matching the provided ID.",
-        "tags": [
-          "Bookings"
-        ],
+        "tags": ["Bookings"],
         "parameters": [
           {
             "name": "id",
@@ -836,6 +1025,9 @@
               }
             }
           },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
           "404": {
             "description": "Booking not found",
             "content": {
@@ -851,9 +1043,7 @@
       "put": {
         "summary": "Update a booking",
         "description": "Updates an existing booking.",
-        "tags": [
-          "Bookings"
-        ],
+        "tags": ["Bookings"],
         "parameters": [
           {
             "name": "id",
@@ -896,15 +1086,16 @@
                 }
               }
             }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
           }
         }
       },
       "delete": {
         "summary": "Delete a booking by ID",
         "description": "Deletes a booking.",
-        "tags": [
-          "Bookings"
-        ],
+        "tags": ["Bookings"],
         "parameters": [
           {
             "name": "id",
@@ -918,6 +1109,9 @@
         "responses": {
           "204": {
             "description": "Booking successfully deleted"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
           },
           "404": {
             "description": "Booking not found",
@@ -940,9 +1134,7 @@
         "properties": {
           "type": {
             "type": "string",
-            "enum": [
-              "Point"
-            ],
+            "enum": ["Point"],
             "example": "Point"
           },
           "coordinates": {
@@ -953,16 +1145,10 @@
             "minItems": 2,
             "maxItems": 2,
             "description": "[longitude, latitude]",
-            "example": [
-              27.5615,
-              53.9022
-            ]
+            "example": [27.5615, 53.9022]
           }
         },
-        "required": [
-          "type",
-          "coordinates"
-        ]
+        "required": ["type", "coordinates"]
       },
       "ProductionInfoInput": {
         "type": "object",
@@ -981,11 +1167,7 @@
             "example": 2021
           }
         },
-        "required": [
-          "brand",
-          "model",
-          "year"
-        ]
+        "required": ["brand", "model", "year"]
       },
       "ProductionInfo": {
         "type": "object",
@@ -1038,13 +1220,7 @@
           },
           "status": {
             "type": "string",
-            "enum": [
-              "free",
-              "reserved",
-              "in_use",
-              "unavailable",
-              "in_service"
-            ],
+            "enum": ["free", "reserved", "in_use", "unavailable", "in_service"],
             "example": "free"
           },
           "fuelLevel": {
@@ -1294,7 +1470,146 @@
             "format": "date-time"
           }
         }
+      },
+      "SignUpRequest": {
+        "type": "object",
+        "required": ["email", "password"],
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "maxLength": 254,
+            "example": "jane.doe@example.com",
+            "description": "Case-insensitive; stored lowercased and trimmed"
+          },
+          "password": {
+            "type": "string",
+            "format": "password",
+            "minLength": 8,
+            "maxLength": 72,
+            "example": "S3cureP@ssw0rd",
+            "description": "8 characters minimum, 72 bytes maximum"
+          }
+        }
+      },
+      "SignInRequest": {
+        "type": "object",
+        "required": ["email", "password"],
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "example": "jane.doe@example.com"
+          },
+          "password": {
+            "type": "string",
+            "format": "password",
+            "example": "S3cureP@ssw0rd"
+          }
+        }
+      },
+      "User": {
+        "type": "object",
+        "properties": {
+          "_id": {
+            "type": "string",
+            "example": "66c5b2f4e1a2b3c4d5e6f7a8"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "example": "jane.doe@example.com"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "AuthResponse": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "user": {
+                "$ref": "#/components/schemas/User"
+              },
+              "token": {
+                "type": "string",
+                "description": "JWT access token",
+                "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+              }
+            }
+          }
+        }
+      }
+    },
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "JWT returned by /auth/signup or /auth/signin. Send as `Authorization: Bearer <token>`."
+      }
+    },
+    "responses": {
+      "Unauthorized": {
+        "description": "Missing, malformed, invalid or expired token",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            },
+            "examples": {
+              "missingHeader": {
+                "summary": "No Authorization header",
+                "value": {
+                  "status": "error",
+                  "statusCode": 401,
+                  "message": "Authorization header is missing"
+                }
+              },
+              "badFormat": {
+                "summary": "Wrong header format",
+                "value": {
+                  "status": "error",
+                  "statusCode": 401,
+                  "message": "Authorization header must be in the format: Bearer <token>"
+                }
+              },
+              "invalid": {
+                "summary": "Invalid token",
+                "value": {
+                  "status": "error",
+                  "statusCode": 401,
+                  "message": "Invalid token"
+                }
+              },
+              "expired": {
+                "summary": "Expired token",
+                "value": {
+                  "status": "error",
+                  "statusCode": 401,
+                  "message": "Token has expired"
+                }
+              }
+            }
+          }
+        }
       }
     }
-  }
+  },
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ]
 }
