@@ -1,3 +1,4 @@
+const mongoose = require("mongoose");
 const Car = require("../models/car.model");
 const ProductionInfo = require("../models/productionInfo.model");
 const Booking = require("../models/booking.model");
@@ -7,8 +8,14 @@ const getAll = async () => {
   return await Car.find({ isDeleted: false }).populate("productionInfo");
 };
 
-const getByVin = async (vin) => {
-  const car = await Car.findOne({ vin: vin.toUpperCase(), isDeleted: false }).populate("productionInfo");
+const getById = async (id) => {
+  if (!mongoose.isObjectIdOrHexString(id)) {
+    const error = new Error("Invalid car ID format");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const car = await Car.findOne({ _id: id, isDeleted: false }).populate("productionInfo");
   if (!car) {
     const error = new Error("Car not found");
     error.statusCode = 404;
@@ -102,8 +109,8 @@ const getReservedByCardAuth = async (authorized) => {
     {
       $lookup: {
         from: "creditcards",
-        localField: "booking.driverId",
-        foreignField: "driverId",
+        localField: "booking.userId",
+        foreignField: "userId",
         as: "creditCard",
       },
     },
@@ -111,21 +118,21 @@ const getReservedByCardAuth = async (authorized) => {
     { $match: { "creditCard.isAuthorized": authorized } },
     {
       $lookup: {
-        from: "drivers",
-        localField: "booking.driverId",
+        from: "users",
+        localField: "booking.userId",
         foreignField: "_id",
-        as: "driver",
+        as: "user",
       },
     },
-    { $unwind: "$driver" },
+    { $unwind: "$user" },
     {
       $project: {
         _id: 0,
         vin: 1,
         location: 1,
-        driverFirstName: "$driver.firstName",
-        driverLastName: "$driver.lastName",
-        driverLicenseNumber: "$driver.licenseNumber",
+        userFirstName: "$user.firstName",
+        userLastName: "$user.lastName",
+        userLicenseNumber: "$user.licenseNumber",
       },
     },
   ]);
@@ -177,7 +184,7 @@ const relocateFrequentlyBooked = async () => {
 
 module.exports = {
   getAll,
-  getByVin,
+  getById,
   create,
   update,
   deleteByVin,

@@ -15,7 +15,10 @@ const authenticate = catchAsync(async (req, _res, next) => {
     throw new AppError("Authorization header must be in the format: Bearer <token>", 401);
   }
 
-  req.user = await authService.verifyToken(token);
+  const { user, payload } = await authService.verifyToken(token);
+
+  req.user = user;
+  req.auth = { jti: payload.jti, exp: payload.exp };
   next();
 });
 

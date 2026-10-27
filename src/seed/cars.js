@@ -2,7 +2,8 @@ const mongoose = require("mongoose");
 const connectDB = require("../db/connection");
 const Car = require("../models/car.model");
 const ProductionInfo = require("../models/productionInfo.model");
-const Driver = require("../models/driver.model");
+const bcrypt = require("bcryptjs");
+const User = require("../models/user.model");
 const CreditCard = require("../models/creditCard.model");
 const Booking = require("../models/booking.model");
 const { VEHICLE_STATUS_LIST } = require("../constants/vehicle");
@@ -64,7 +65,7 @@ const generatePastDate = () => {
 };
 
 const CARS_TO_SEED = 5;
-const DRIVERS_TO_SEED = 5;
+const USERS_TO_SEED = 5;
 const BOOKINGS_TO_SEED = 5;
 
 const seed = async () => {
@@ -72,16 +73,20 @@ const seed = async () => {
 
   await Booking.deleteMany({});
   await CreditCard.deleteMany({});
-  await Driver.deleteMany({});
+  await User.deleteMany({});
   await Car.deleteMany({});
   await ProductionInfo.deleteMany({});
 
   console.log("Cleared all collections.");
 
-  const usedLicenses = new Set();
-  const drivers = [];
+  // All seeded users share one password, taken from SEED_USER_PASSWORD or a default
+  const seedPassword = process.env.SEED_USER_PASSWORD || "Password123!";
+  const seedPasswordHash = await bcrypt.hash(seedPassword, 12);
 
-  for (let i = 0; i < DRIVERS_TO_SEED; i++) {
+  const usedLicenses = new Set();
+  const users = [];
+
+  for (let i = 0; i < USERS_TO_SEED; i++) {
     let licenseNumber;
     do {
       licenseNumber = generateLicenseNumber();
@@ -90,20 +95,22 @@ const seed = async () => {
 
     const { firstName, lastName } = randomElement(FULL_NAMES);
 
-    drivers.push({
+    users.push({
+      email: `${firstName}.${lastName}.${i + 1}@carshes.test`.toLowerCase(),
+      password: seedPasswordHash,
       licenseNumber,
       firstName,
       lastName,
     });
   }
 
-  const insertedDrivers = await Driver.insertMany(drivers);
-  console.log(`Seeded ${insertedDrivers.length} drivers.`);
+  const insertedUsers = await User.insertMany(users);
+  console.log(`Seeded ${insertedUsers.length} users (password: ${seedPassword}).`);
 
-  const creditCards = insertedDrivers.map((driver) => ({
-    driverId: driver._id,
+  const creditCards = insertedUsers.map((user) => ({
+    userId: user._id,
     number: generateCardNumber(),
-    owner: `${driver.firstName} ${driver.lastName}`.toUpperCase(),
+    owner: `${user.firstName} ${user.lastName}`.toUpperCase(),
     validThrough: generateFutureDate(),
     isAuthorized: Math.random() > 0.5,
   }));
@@ -152,7 +159,7 @@ const seed = async () => {
   const bookings = [];
 
   for (let i = 0; i < BOOKINGS_TO_SEED; i++) {
-    const driver = randomElement(insertedDrivers);
+    const user = randomElement(insertedUsers);
     const car = randomElement(insertedCars);
 
     const startFuelLevel = randomInt(20, 100);
@@ -160,7 +167,7 @@ const seed = async () => {
     const hasFinished = Math.random() > 0.4;
 
     bookings.push({
-      driverId: driver._id,
+      userId: user._id,
       carId: car._id,
       startDate: generatePastDate(),
       startFuelLevel,
