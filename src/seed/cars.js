@@ -10,10 +10,6 @@ const { BRANDS_AND_MODELS, FULL_NAMES, LOCATION_BOUNDS } = require("../constants
 
 require("dotenv").config();
 
-// ---------------------------------------------------------------------------
-// Random-value helpers
-// ---------------------------------------------------------------------------
-
 const randomInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
 
 const randomFloat = (min, max, decimals = 6) =>
@@ -67,17 +63,9 @@ const generatePastDate = () => {
   return new Date(now.getTime() - daysAgo * 24 * 60 * 60 * 1000);
 };
 
-// ---------------------------------------------------------------------------
-// Seed counts
-// ---------------------------------------------------------------------------
-
 const CARS_TO_SEED = 5;
 const DRIVERS_TO_SEED = 5;
 const BOOKINGS_TO_SEED = 5;
-
-// ---------------------------------------------------------------------------
-// Seed logic
-// ---------------------------------------------------------------------------
 
 const seed = async () => {
   await connectDB();
@@ -90,7 +78,6 @@ const seed = async () => {
 
   console.log("Cleared all collections.");
 
-  // --- Drivers ---
   const usedLicenses = new Set();
   const drivers = [];
 
@@ -113,7 +100,6 @@ const seed = async () => {
   const insertedDrivers = await Driver.insertMany(drivers);
   console.log(`Seeded ${insertedDrivers.length} drivers.`);
 
-  // --- Credit cards (one per driver) ---
   const creditCards = insertedDrivers.map((driver) => ({
     driverId: driver._id,
     number: generateCardNumber(),
@@ -125,7 +111,6 @@ const seed = async () => {
   const insertedCards = await CreditCard.insertMany(creditCards);
   console.log(`Seeded ${insertedCards.length} credit cards.`);
 
-  // --- Cars ---
   const usedVins = new Set();
   const usedRegNumbers = new Set();
   const cars = [];
@@ -164,7 +149,6 @@ const seed = async () => {
   const insertedCars = await Car.insertMany(cars);
   console.log(`Seeded ${insertedCars.length} cars.`);
 
-  // --- Bookings ---
   const bookings = [];
 
   for (let i = 0; i < BOOKINGS_TO_SEED; i++) {
