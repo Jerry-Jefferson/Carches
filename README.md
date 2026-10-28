@@ -100,6 +100,22 @@ Other scripts:
 | `npm run format`     | Format code with Prettier       |
 | `npm run format:check` | Check formatting without changing files |
 
+## Claude Code: MongoDB MCP
+
+`.mcp.json` registers a read-only [MongoDB MCP server](https://github.com/mongodb-js/mongodb-mcp-server) so Claude Code can query the local database. Before starting Claude Code, set the connection string (MongoDB must be running):
+
+```powershell
+# PowerShell
+$env:MDB_MCP_CONNECTION_STRING = "mongodb://<user>:<password>@localhost:27018/carshes?authSource=admin"
+```
+
+```bash
+# bash / zsh
+export MDB_MCP_CONNECTION_STRING="mongodb://<user>:<password>@localhost:27018/carshes?authSource=admin"
+```
+
+Use the `MONGO_INITDB_ROOT_USERNAME` / `MONGO_INITDB_ROOT_PASSWORD` values from `backend/.env`. On macOS or Linux, change `"command": "cmd"` in `.mcp.json` to `"npx"` and drop the `"/c"` argument.
+
 ## Project structure
 
 ```
