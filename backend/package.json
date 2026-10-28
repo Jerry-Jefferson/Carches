@@ -11,6 +11,7 @@
     "dev": "node --watch src/app.js",
     "compose-up": "docker compose up -d",
     "seed:cars": "docker compose exec app npm run seed:cars:inner",
+    "seed:cars:inner": "node src/seed/cars.js",
     "migrate:admin": "node src/migrations/001-create-default-admin.js"
   },
   "devDependencies": {

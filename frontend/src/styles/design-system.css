@@ -1,0 +1,70 @@
+/*
+ * Carshes design system tokens.
+ * Values are HSL channels ("H S% L%") so they can be used as hsl(var(--token))
+ * or with an alpha channel: hsl(var(--token) / 0.5).
+ * Exposed to Tailwind in main.css and to Ant Design Vue in src/theme/antd.js.
+ */
+@layer base {
+  :root {
+    /* Background and base surface */
+    --background: 48 60% 98%; /* Very light warm background */
+    --foreground: 353 14% 42%; /* #795C5F - main text color for contrast */
+
+    /* Surfaces (cards, popovers) */
+    --card: 48 76% 92%; /* #F2E29F - light cream surface */
+    --card-foreground: 353 14% 42%; /* #795C5F */
+    --popover: 48 76% 95%;
+    --popover-foreground: 353 14% 42%;
+
+    /* Primary brand */
+    --primary: 45 93% 74%; /* #FADF7F - base primary color */
+    --primary-hover: 43 59% 64%; /* #D9B26F - hover state */
+    --primary-foreground: 353 14% 25%; /* Darkened #795C5F for readable text on primary */
+
+    /* Secondary */
+    --secondary: 47 29% 50%; /* #A69658 */
+    --secondary-hover: 47 29% 42%;
+    --secondary-foreground: 48 60% 98%;
+
+    /* Muted */
+    --muted: 48 50% 88%;
+    --muted-foreground: 47 20% 40%;
+
+    /* Accent / highlighted states */
+    --accent: 43 59% 64%; /* #D9B26F */
+    --accent-foreground: 353 14% 25%;
+
+    /* Borders, inputs, focus rings */
+    --border: 47 29% 65%; /* Based on #A69658 with lower saturation */
+    --input: 47 29% 75%;
+    --ring: 45 93% 74%; /* #FADF7F */
+  }
+
+  .dark {
+    /* Dark theme based on the same palette */
+    --background: 353 14% 12%;
+    --foreground: 48 76% 92%; /* #F2E29F */
+
+    --card: 353 14% 18%; /* Dark variant of #795C5F */
+    --card-foreground: 48 76% 92%;
+    --popover: 353 14% 16%;
+    --popover-foreground: 48 76% 92%;
+
+    --primary: 45 93% 74%; /* #FADF7F */
+    --primary-hover: 48 76% 85%;
+    --primary-foreground: 353 14% 15%;
+
+    --secondary: 47 29% 50%; /* #A69658 */
+    --secondary-foreground: 48 60% 98%;
+
+    --muted: 353 10% 25%;
+    --muted-foreground: 48 30% 75%;
+
+    --accent: 43 59% 64%; /* #D9B26F */
+    --accent-foreground: 353 14% 15%;
+
+    --border: 353 10% 30%;
+    --input: 353 10% 30%;
+    --ring: 45 93% 74%;
+  }
+}
