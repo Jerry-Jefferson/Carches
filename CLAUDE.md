@@ -55,6 +55,8 @@ There is **no monorepo tooling** — each folder has its own `package.json`, `no
 ```
 Carshes/
 ├── CLAUDE.md                          ← this file
+├── .mcp.json                          ← MongoDB MCP server (read-only)
+├── .claude/skills/                    ← project skills (see §11)
 ├── README.md
 ├── .gitignore
 │
@@ -139,6 +141,8 @@ Carshes/
         │   └── design-system.css      ← design tokens (HSL channels) for light and `.dark` themes
         ├── theme/
         │   └── antd.js                ← builds the Ant Design theme from the CSS design tokens
+        ├── test/
+        │   └── setup.js               ← Vitest setup: matchMedia / ResizeObserver polyfills for Ant Design
         └── __tests__/
             └── App.spec.js
 ```
@@ -361,3 +365,27 @@ export default {
 10. **Ant Design dark mode shifts primary**: Ant Design's dark algorithm slightly darkens `colorPrimary`, so primary buttons are a bit darker than `#FADF7F` in dark mode.
 11. **Windows host**: the project lives on Windows (`D:\Carshes`). `node_modules` must be installed on the machine that runs the code — never copy `node_modules` from Linux (platform-specific binaries for Vite/Rolldown, Tailwind and Lightning CSS).
 12. **Seeding wipes data**: `seed:cars` deletes all bookings, credit cards, cars, production info and non-admin users before inserting samples. Admin users are kept. Seeded users share the password from `SEED_USER_PASSWORD` (default `Password123!`).
+
+---
+
+## 11. Skills & MCP
+
+### Project skills (`.claude/skills/`)
+
+| Skill | Use it when |
+|-------|-------------|
+| `vue-component` | creating or rewriting any `.vue` file — Options API skeleton, design tokens, Ant Design, VeeValidate form pattern, test file |
+| `vuex-module` | adding frontend state or API calls — namespaced module, actions via `@/api/http`, map helpers, tests |
+| `docker-workflow` | starting, rebuilding or inspecting containers; running migrations and seeds |
+| `swagger-update` | any backend route, request body or response change |
+
+The patterns in `vue-component` and `vuex-module` were checked with real tests; keep them in sync if the conventions change.
+
+### MongoDB MCP (`.mcp.json`)
+
+- Server: official `mongodb-mcp-server` (v3), started with `--readOnly` — query, aggregate, count, schema, indexes, stats. No insert/update/delete tools are exposed. Telemetry is disabled.
+- Connection string comes from the `MDB_MCP_CONNECTION_STRING` environment variable (never commit credentials). From the host the database is on port `27018`:
+  `mongodb://<MONGO_INITDB_ROOT_USERNAME>:<MONGO_INITDB_ROOT_PASSWORD>@localhost:27018/carshes?authSource=admin`
+- The command uses `cmd /c npx …` because the project runs on native Windows. On macOS/Linux/WSL change it to `"command": "npx"` with the same args minus `"/c"`.
+- To allow writes temporarily, remove `--readOnly` locally — don't commit that.
+- Use it to inspect data (e.g. check soft-deleted users, revoked tokens, seeded cars) instead of writing ad-hoc scripts; make data changes through the API, migrations or the seeder.
