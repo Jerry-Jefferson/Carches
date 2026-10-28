@@ -7,6 +7,7 @@ const User = require("../models/user.model");
 const CreditCard = require("../models/creditCard.model");
 const Booking = require("../models/booking.model");
 const { VEHICLE_STATUS_LIST } = require("../constants/vehicle");
+const { USER_ROLES } = require("../constants/user");
 const { BRANDS_AND_MODELS, FULL_NAMES, LOCATION_BOUNDS } = require("../constants/seed");
 
 require("dotenv").config();
@@ -73,11 +74,11 @@ const seed = async () => {
 
   await Booking.deleteMany({});
   await CreditCard.deleteMany({});
-  await User.deleteMany({});
+  await User.deleteMany({ role: { $ne: USER_ROLES.ADMIN } });
   await Car.deleteMany({});
   await ProductionInfo.deleteMany({});
 
-  console.log("Cleared all collections.");
+  console.log("Cleared all collections (admin users kept).");
 
   // All seeded users share one password, taken from SEED_USER_PASSWORD or a default
   const seedPassword = process.env.SEED_USER_PASSWORD || "Password123!";

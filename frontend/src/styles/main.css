@@ -1,0 +1,58 @@
+/*
+ * Layer order (lowest to highest priority):
+ *   theme      - Tailwind theme variables
+ *   antd-reset - Ant Design base reset (replaces Tailwind Preflight)
+ *   base       - design system tokens and global element styles
+ *   components - shared component classes
+ *   utilities  - Tailwind utilities, marked `important` because Ant Design injects
+ *                unlayered CSS-in-JS styles at runtime that would otherwise win
+ */
+@layer theme, antd-reset, base, components, utilities;
+@import 'tailwindcss/theme.css' layer(theme);
+@import 'ant-design-vue/dist/reset.css' layer(antd-reset);
+@import './design-system.css';
+@import 'tailwindcss/utilities.css' layer(utilities) important;
+
+/* `dark:` utilities follow the `.dark` class used by the design system */
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme inline {
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+  --color-popover: hsl(var(--popover));
+  --color-popover-foreground: hsl(var(--popover-foreground));
+
+  --color-primary: hsl(var(--primary));
+  --color-primary-hover: hsl(var(--primary-hover));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+
+  --color-secondary: hsl(var(--secondary));
+  --color-secondary-hover: hsl(var(--secondary-hover));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
+
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
+}
+
+@layer base {
+  html,
+  body {
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+  }
+
+  ::selection {
+    background-color: hsl(var(--primary));
+    color: hsl(var(--primary-foreground));
+  }
+}
