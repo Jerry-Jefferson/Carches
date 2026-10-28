@@ -38,6 +38,27 @@
     --border: 47 29% 65%; /* Based on #A69658 with lower saturation */
     --input: 47 29% 75%;
     --ring: 45 93% 74%; /* #FADF7F */
+
+    /* Input and table surfaces */
+    --surface: 0 0% 100%;
+    --surface-foreground: 353 14% 42%;
+
+    /*
+     * Feedback and status colors. Each passes WCAG AA (4.5:1) as text on
+     * background, card and popover, and with its foreground on top of it
+     * (checked in src/styles/__tests__/contrast.spec.js).
+     */
+    --destructive: 0 62% 42%;
+    --destructive-foreground: 48 60% 98%;
+    --success: 145 55% 26%;
+    --success-foreground: 48 60% 98%;
+    --warning: 30 85% 30%;
+    --warning-foreground: 48 60% 98%;
+    --info: 205 70% 32%;
+    --info-foreground: 48 60% 98%;
+
+    /* Base color of soft elevation shadows */
+    --shadow: 353 14% 25%;
   }
 
   .dark {
@@ -66,5 +87,19 @@
     --border: 353 10% 30%;
     --input: 353 10% 30%;
     --ring: 45 93% 74%;
+
+    --surface: 353 14% 14%;
+    --surface-foreground: 48 76% 92%;
+
+    --destructive: 0 75% 70%;
+    --destructive-foreground: 353 14% 12%;
+    --success: 140 45% 60%;
+    --success-foreground: 353 14% 12%;
+    --warning: 38 90% 62%;
+    --warning-foreground: 353 14% 12%;
+    --info: 205 75% 70%;
+    --info-foreground: 353 14% 12%;
+
+    --shadow: 0 0% 0%;
   }
 }

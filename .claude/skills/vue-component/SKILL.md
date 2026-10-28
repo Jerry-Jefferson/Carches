@@ -68,7 +68,8 @@ Rules:
 
 ## 3. Styling with the design system
 
-- Colors **only** from tokens: `bg-background`, `text-foreground`, `bg-card`, `text-card-foreground`, `bg-popover`, `bg-primary`, `hover:bg-primary-hover`, `text-primary-foreground`, `bg-secondary`, `hover:bg-secondary-hover`, `text-secondary-foreground`, `bg-muted`, `text-muted-foreground`, `bg-accent`, `text-accent-foreground`, `border-border`, `border-input`, `ring-ring`.
+- Colors **only** from tokens: `bg-background`, `text-foreground`, `bg-card`, `text-card-foreground`, `bg-popover`, `bg-primary`, `hover:bg-primary-hover`, `text-primary-foreground`, `bg-secondary`, `hover:bg-secondary-hover`, `text-secondary-foreground`, `bg-muted`, `text-muted-foreground`, `bg-accent`, `text-accent-foreground`, `bg-surface`, `border-border`, `border-input`, `ring-ring`; status colours `destructive`, `success`, `warning`, `info` (+ `-foreground`, soft backgrounds via `bg-success/15`). Status labels/tones come from `@/utils/derive` (`carStatusMeta`, `bookingStatusMeta`, `fuelTone`); display values from `@/utils/format`.
+- Typography and shape from the theme: `text-headline-sm`, `text-body-md`, `text-label-sm uppercase`, …; `rounded-control` / `rounded-card` / `rounded-dialog`; `shadow-card` / `shadow-popover`.
 - Never `text-gray-500`, `bg-blue-600`, hex or `rgb()` values. Opacity works: `bg-primary/50`.
 - Dark mode: tokens switch automatically with `.dark` on `<html>`; use `dark:` only for layout differences, not colors.
 - Tailwind for layout/spacing (`flex`, `gap-4`, `p-6`, `grid`), Ant Design for controls.

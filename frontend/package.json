@@ -16,6 +16,7 @@
   },
   "dependencies": {
     "@ant-design/icons-vue": "^7.0.1",
+    "@fontsource/plus-jakarta-sans": "^5.3.0",
     "@vee-validate/zod": "^4.15.1",
     "ant-design-vue": "^4.2.6",
     "axios": "^1.21.0",
