@@ -1,9 +1,17 @@
+<script>
+export default {
+  name: 'NotFoundView',
+}
+</script>
+
 <template>
-  <a-result status="404" title="404" sub-title="Sorry, the page you visited does not exist.">
+  <a-result
+    status="404"
+    title="Page not found"
+    sub-title="The page you are looking for does not exist."
+  >
     <template #extra>
-      <router-link to="/">
-        <a-button type="primary">Back home</a-button>
-      </router-link>
+      <a-button type="primary" @click="$router.push({ name: 'fleet' })">Back to fleet</a-button>
     </template>
   </a-result>
 </template>
