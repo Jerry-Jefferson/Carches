@@ -124,30 +124,43 @@ Carshes/
     ├── .prettierrc.json / .prettierignore
     ├── public/                        ← static assets
     └── src/
-        ├── main.js                    ← creates Vue app, installs router + store
-        ├── App.vue                    ← root component
+        ├── main.js                    ← installs the session interceptors, creates Vue app with router + store
+        ├── App.vue                    ← root: Ant Design theme + layout picked by route.meta.layout
         ├── api/
-        │   └── http.js                ← axios instance (baseURL from VITE_API_URL, defaults to /api/v2)
+        │   ├── http.js                ← axios instance, unwrap(), error normalisation, installInterceptors()
+        │   ├── session.js             ← installSession(): Bearer token + 401 → clear session, /auth?redirect=
+        │   ├── auth.js                ← E1–E3: signUp, signIn, logout
+        │   ├── users.js               ← E4–E8: getMe, list, getById, update, remove
+        │   ├── cars.js                ← E9–E17 (update/remove by VIN)
+        │   └── bookings.js            ← E18–E23
         ├── router/
-        │   └── index.js               ← routes: / (HomeView), catch-all (NotFoundView)
+        │   ├── index.js               ← route table (meta: layout, guestOnly, roles, title) + guards
+        │   └── guards.js              ← createAuthGuard, safeRedirect, setDocumentTitle
         ├── store/
-        │   └── index.js               ← Vuex store (empty modules, strict in dev)
-        ├── views/
-        │   ├── HomeView.vue
-        │   └── NotFoundView.vue
-        ├── components/                ← reusable components (empty, kept by .gitkeep)
+        │   ├── index.js               ← Vuex store (strict in dev)
+        │   └── modules/auth.js        ← session: signIn/signUp/logout/bootstrap, isAuthenticated/isAdmin
+        ├── layouts/                   ← AuthLayout, AppLayout (header + footer), AdminLayout (sidebar + top bar)
+        ├── views/                     ← Auth, Fleet, CarDetails, MyTrips, MyProfile, Admin (placeholders until their phase), NotFound
+        ├── components/
+        │   ├── brand/BrandWordmark.vue
+        │   ├── common/                ← StatusTag, EnergyBar, PillGroup, InfoCallout, EmptyState, ErrorState,
+        │   │                            CarPlaceholder, InitialsAvatar, MapView (Leaflet, lazy-loaded)
+        │   └── layout/                ← AppHeader, MainNav, HeaderSearch, UserMenu, AppFooter
         ├── styles/
         │   ├── main.css               ← CSS entry: layer order, Tailwind, antd reset, token → Tailwind color mapping
         │   └── design-system.css      ← design tokens (HSL channels) for light and `.dark` themes
         ├── theme/
-        │   └── antd.js                ← builds the Ant Design theme from the CSS design tokens
+        │   ├── antd.js                ← builds the Ant Design theme from the CSS design tokens
+        │   └── tones.js               ← tone → class names (soft / solid / text) for status colours
         ├── config/
         │   └── site.js                ← brand name, tagline, city, support contacts, footer links
         ├── utils/
         │   ├── format.js              ← display formatters (ru-BY numbers, BYN, English dates in Europe/Minsk, km, %, coords, names)
         │   ├── derive.js              ← booking status, trip metrics, car/booking status meta (label, tone, icon), fuel tone
         │   ├── geo.js                 ← GeoJSON [lng, lat] ↔ { lat, lng }, Haversine, walking time, Minsk centre, map links
-        │   └── csv.js                 ← CSV export (BOM, escaping, formula-injection guard) + download helper
+        │   ├── csv.js                 ← CSV export (BOM, escaping, formula-injection guard) + download helper
+        │   ├── notify.js              ← toasts / notifications (success, warning, error, apiError, notice)
+        │   └── tokenStorage.js        ← JWT in localStorage ("Remember me") or sessionStorage
         ├── test/
         │   └── setup.js               ← Vitest setup: matchMedia / ResizeObserver polyfills for Ant Design
         └── __tests__/
@@ -182,14 +195,21 @@ Request → Express router (/api/v2)
 ### Frontend
 
 ```
-main.js → createApp(App)
-        → use(router)   — Vue Router (history mode)
+main.js → installSession(http, { store, router, notify })
+        → createApp(App)
+        → use(router)   — Vue Router (history mode) + auth guard
         → use(store)    — Vuex
         → mount('#app')
+
+Component → Vuex action → src/api/<resource>.js → api/http.js (token, error normalisation) → /api/v2
 ```
 
-- **Routing**: lazy-loaded views, catch-all 404.
-- **API calls**: go through the shared `axios` instance in `api/http.js`; the Vite dev server proxies `/api` requests to the backend (`VITE_BACKEND_URL`).
+- **Routing**: lazy-loaded views, catch-all 404. `meta.layout` (`auth` | `app` default | `admin`) picks the layout in `App.vue`, which renders nothing until the first navigation resolves.
+- **Access** (`router/guards.js`): every navigation awaits `auth/bootstrap` (restores a stored token once via `GET /users/me`). Guests may open only `/auth` — everything else, including unknown URLs, redirects to `/auth?redirect=<path>`. Signed-in users are sent from `/auth` to `/fleet`. `meta.roles: ['admin']` sends others to `/fleet` with a warning. Use `safeRedirect()` before following `?redirect=`.
+- **Session**: the token is in the `auth` store and in `tokenStorage` (localStorage with "Remember me", else sessionStorage). Any 401 except from sign in / sign up clears the session, toasts "Your session has expired…" and goes to `/auth?redirect=…`. Pass `{ skipAuthRedirect: true }` as axios config for calls that handle 401 themselves (bootstrap, logout).
+- **API calls**: components never call HTTP. Vuex actions call the thin modules in `src/api/` (`import * as carsApi from '@/api/cars'`), which use the shared instance and return the unwrapped `data`. The Vite dev server proxies `/api` requests to the backend (`VITE_BACKEND_URL`).
+- **Errors**: the interceptor sets `error.statusCode` and `error.message` (the backend message, or "Network error. Check your connection."); `error.response` stays available. Use `getErrorMessage(err)` from `@/api/http`.
+- **Loading / error conventions**: store modules keep `isLoading` (lists), `isSubmitting` (mutations) and `error` (message string); actions store the message and re-throw. Failed page loads render `ErrorState` with a retry; empty lists render `EmptyState`; mutations report through `notify.success` / `notify.apiError` from `@/utils/notify` (never Ant Design's `message` directly); form errors show inline.
 - **Component auto-import**: Ant Design Vue components are auto-resolved by `unplugin-vue-components` — no manual imports needed.
 - **Theming**: one source of truth — CSS variables in `styles/design-system.css`. Tailwind reads them through `@theme inline` in `main.css`; Ant Design reads them at runtime through `buildAntdTheme()` in `theme/antd.js`. `App.vue` keeps the result in `data()` and rebuilds it from a `MutationObserver` when the `.dark` class on `<html>` changes.
 
@@ -330,7 +350,8 @@ export default {
 - **Vuex**: access through `mapState`, `mapGetters`, `mapActions`, `mapMutations` in `computed` / `methods`; use namespaced modules in `src/store/modules/`.
 - **Router**: use `this.$router` / `this.$route`.
 - **Forms**: use VeeValidate's `<Form>` / `<Field>` / `<ErrorMessage>` components with `:validation-schema="toTypedSchema(zodSchema)"` (`toTypedSchema` from `@vee-validate/zod`) — not `useForm` / `useField`.
-- **HTTP**: import the shared instance from `@/api/http.js`; do not create new axios instances or hardcode `/api/v2` URLs.
+- **HTTP**: add endpoint functions to `src/api/<resource>.js` (they use the shared instance from `@/api/http.js`) and call them from Vuex actions; do not create new axios instances, pass auth headers by hand or hardcode `/api/v2` URLs.
+- **Maps**: use `components/common/MapView.vue` (markers `{ id, lat, lng, tone, label }`, `popup` scoped slot, `pickable` → `pick`); it lazy-loads Leaflet. Don't import `leaflet` elsewhere.
 
 ### 8.3 Styling
 
@@ -372,8 +393,8 @@ export default {
 2. **JWT_SECRET validation**: The app will crash on startup if `JWT_SECRET` is missing or < 32 characters. Same for `BCRYPT_SALT_ROUNDS` outside 10–15 range.
 3. **No shared dependencies**: Do not try to hoist deps or use workspace-level `package.json`. Each part is fully standalone.
 4. **Swagger is static**: `swagger.json` is hand-maintained. It is not auto-generated from code — keep it in sync when changing routes.
-5. **No components yet**: `src/components/` only holds a `.gitkeep`; remove it once the first component is added.
-6. **Vuex store is empty**: The store has no modules yet — ready to be populated as features are built.
+5. **Static toasts and the theme**: Ant Design's `message` / `notification` render outside `<a-config-provider>`; `App.vue` passes the theme to them with `ConfigProvider.config({ theme })`. Go through `@/utils/notify`.
+6. **Nested interactive elements**: don't wrap `<a-button>` in `<router-link>` (a button inside a link). Use `<a-button @click="$router.push(…)">` or a styled `<router-link>`.
 7. **Dev server proxy**: In development, the Vite dev server proxies `/api` to the backend. This means API calls just use relative paths (`/api/v2/...`) — no CORS setup needed in dev.
 8. **Zod must stay on v3**: VeeValidate 4 does not validate Zod 4 schemas (invalid values pass). Keep `zod@^3` with `@vee-validate/zod`.
 9. **Tokens need a `jti`**: every JWT carries a unique ID used for logout/revocation; tokens without one are rejected.
@@ -393,7 +414,7 @@ export default {
 | Skill | Use it when |
 |-------|-------------|
 | `vue-component` | creating or rewriting any `.vue` file — Options API skeleton, design tokens, Ant Design, VeeValidate form pattern, test file |
-| `vuex-module` | adding frontend state or API calls — namespaced module, actions via `@/api/http`, map helpers, tests |
+| `vuex-module` | adding frontend state or API calls — namespaced module, actions via `src/api/*` modules, map helpers, tests |
 | `docker-workflow` | starting, rebuilding or inspecting containers; running migrations and seeds |
 | `swagger-update` | any backend route, request body or response change |
 

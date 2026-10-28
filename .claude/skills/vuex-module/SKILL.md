@@ -1,6 +1,6 @@
 ---
 name: vuex-module
-description: How to scaffold a new namespaced Vuex 4 module in the Carshes frontend with actions that call the shared axios instance (@/api/http.js), register it in the store, use it from Options API components via mapState/mapGetters/mapActions, and test it. Use when adding app state or API calls to the frontend.
+description: How to scaffold a new namespaced Vuex 4 module in the Carshes frontend with actions that call the endpoint modules in src/api/ (which use the shared axios instance @/api/http.js), register it in the store, use it from Options API components via mapState/mapGetters/mapActions, and test it. Use when adding app state or API calls to the frontend.
 ---
 
 # Adding a Vuex 4 module (Carshes frontend)
@@ -9,10 +9,20 @@ Work inside `frontend/`. One module per backend resource or feature: `cars`, `bo
 
 ## 1. Create the module
 
+Endpoint functions live in `src/api/<resource>.js` (`auth`, `users`, `cars`, `bookings` already exist — add to them before creating a new file). They call the shared instance and return the unwrapped `data`:
+
+```js
+// src/api/cars.js
+import http, { unwrap } from './http'
+
+export const list = () => http.get('/cars').then(unwrap)
+```
+
 `src/store/modules/<name>.js` — namespaced, `state` as a function, mutations in `UPPER_SNAKE_CASE`, API calls only in actions:
 
 ```js
-import http from '@/api/http'
+import * as carsApi from '@/api/cars'
+import { getErrorMessage } from '@/api/http'
 
 export default {
   namespaced: true,
@@ -40,10 +50,9 @@ export default {
       commit('SET_LOADING', true)
       commit('SET_ERROR', null)
       try {
-        const { data } = await http.get('/cars')
-        commit('SET_ITEMS', data.data)
+        commit('SET_ITEMS', await carsApi.list())
       } catch (err) {
-        commit('SET_ERROR', err.response?.data?.message ?? err.message)
+        commit('SET_ERROR', getErrorMessage(err))
         throw err
       } finally {
         commit('SET_LOADING', false)
@@ -54,12 +63,13 @@ export default {
 ```
 
 Rules:
-- **Always `import http from '@/api/http'`** — never `axios` directly, never a hardcoded `/api/v2` (the base URL comes from `VITE_API_URL`). Paths are relative to it: `'/cars'`, `'/bookings/my'`, `'/users/me'`.
-- Backend responses are `{ message, data }` → use `data.data`. Errors are `{ status, statusCode, message }` → `err.response?.data?.message`.
+- **Actions call `src/api/*` functions**, never `axios` or `http` directly, never a hardcoded `/api/v2` (the base URL comes from `VITE_API_URL`). API paths are relative to it: `'/cars'`, `'/bookings/my'`, `'/users/me'`.
+- API functions return the `data` of the `{ message, data }` envelope (`unwrap`). The interceptor in `http.js` puts the backend message on `err.message` and the status on `err.statusCode` → store `getErrorMessage(err)`.
 - Re-throw after storing the error so the calling component can react (show a message, stay on the form).
 - The store is **strict in dev**: state may only change inside mutations. Never mutate objects you got from state (copy them first) and never assign state in actions.
 - Never send a user ID for "my" data — `/users/me` and `/bookings/my` take it from the token. For `POST /bookings`, the backend overrides `userId` for non-admins.
-- Authentication: `http.js` does **not** attach a token yet. When the first protected call is added, put an `Authorization: Bearer <token>` request interceptor in `src/api/http.js` (reading the token from the store/auth module) rather than passing headers in each action.
+- Authentication is automatic: `installSession` (`src/api/session.js`, called in `main.js`) sends the `auth` store token as `Authorization: Bearer …` and handles 401s globally. Never pass auth headers in actions. Pass `{ skipAuthRedirect: true }` as axios config only for calls that handle a 401 themselves.
+- Keep `isLoading` for list loads and `isSubmitting` for create/update/delete; components show `ErrorState` / `notify.apiError` (see CLAUDE.md §4 Frontend).
 
 ## 2. Register it
 
@@ -67,11 +77,13 @@ Rules:
 
 ```js
 import { createStore } from 'vuex'
+import auth from './modules/auth'
 import cars from './modules/cars'
 
 export default createStore({
   strict: import.meta.env.DEV,
   modules: {
+    auth,
     cars,
   },
 })
@@ -118,40 +130,43 @@ export default {
 
 ## 4. Test it
 
-`src/store/modules/__tests__/<name>.spec.js` — mock the HTTP instance, use a real store:
+`src/store/modules/__tests__/<name>.spec.js` — mock the API module, use a real store (`auth.spec.js` is a full example):
 
 ```js
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { createStore } from 'vuex'
-import http from '@/api/http'
+import * as carsApi from '@/api/cars'
 import cars from '../cars'
 
-vi.mock('@/api/http', () => ({ default: { get: vi.fn(), post: vi.fn() } }))
+vi.mock('@/api/cars', () => ({ list: vi.fn() }))
 
 const makeStore = () => createStore({ strict: true, modules: { cars } })
 
 describe('cars module', () => {
   beforeEach(() => {
-    vi.mocked(http.get).mockReset()
+    vi.mocked(carsApi.list).mockReset()
   })
 
   it('fetchCars stores items', async () => {
-    vi.mocked(http.get).mockResolvedValue({
-      data: { data: [{ vin: 'A', status: 'free' }, { vin: 'B', status: 'in_use' }] },
-    })
+    vi.mocked(carsApi.list).mockResolvedValue([
+      { vin: 'A', status: 'free' },
+      { vin: 'B', status: 'in_use' },
+    ])
     const store = makeStore()
     await store.dispatch('cars/fetchCars')
 
-    expect(http.get).toHaveBeenCalledWith('/cars')
+    expect(carsApi.list).toHaveBeenCalled()
     expect(store.state.cars.items).toHaveLength(2)
     expect(store.getters['cars/freeCars']).toHaveLength(1)
   })
 
   it('fetchCars stores the API error message', async () => {
-    const apiError = Object.assign(new Error('Request failed with status code 401'), {
+    // Shaped like an error after the http.js interceptor: message = backend message
+    const apiError = Object.assign(new Error('Authorization header is missing'), {
+      statusCode: 401,
       response: { data: { message: 'Authorization header is missing' } },
     })
-    vi.mocked(http.get).mockRejectedValue(apiError)
+    vi.mocked(carsApi.list).mockRejectedValue(apiError)
     const store = makeStore()
 
     await expect(store.dispatch('cars/fetchCars')).rejects.toBe(apiError)
@@ -161,7 +176,7 @@ describe('cars module', () => {
 })
 ```
 
-- `beforeEach` must use braces. `beforeEach(() => vi.mocked(http.get).mockReset())` returns the mock, Vitest treats it as a teardown function and calls `http.get` again after the test — with a rejecting mock that fails the test with the API error.
+- `beforeEach` must use braces. `beforeEach(() => vi.mocked(carsApi.list).mockReset())` returns the mock, Vitest treats it as a teardown function and calls the mock again after the test — with a rejecting mock that fails the test with the API error.
 - Use `strict: true` in tests so illegal state mutations are caught.
 - Mock errors as real `Error` objects with a `response` property, like axios produces.
 

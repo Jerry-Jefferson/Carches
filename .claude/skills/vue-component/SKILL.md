@@ -17,7 +17,6 @@ Work inside `frontend/`. Read `CLAUDE.md` §8.2–8.3 if anything below is uncle
 - PascalCase, **multi-word** names (`vue/multi-word-component-names` is an error).
 - A new view also needs a lazy route in `src/router/index.js`:
   `{ path: '/cars', name: 'cars', component: () => import('@/views/CarListView.vue') }` — add it **before** the catch-all `/:pathMatch(.*)*`.
-- Delete `src/components/.gitkeep` once the first component lands there.
 
 ## 2. Options API skeleton
 
@@ -191,7 +190,7 @@ describe('LoginForm', () => {
 Testing notes:
 - No need to install Ant Design in tests: Vitest uses `vite.config.js`, so `<a-*>` components and icons are auto-imported there too.
 - VeeValidate validates asynchronously — use `vi.waitFor(...)`, not a single `flushPromises()`.
-- Components using the store or router: pass `createStore({ modules: { … } })` / a `createRouter({ history: createMemoryHistory(), routes })` in `global.plugins`, and mock `@/api/http` with `vi.mock`.
+- Components using the store or router: pass `createStore({ modules: { … } })` / a `createRouter({ history: createMemoryHistory(), routes })` in `global.plugins`, and mock the API modules the store calls (`vi.mock('@/api/auth', …)`) — see `components/layout/__tests__/layout.spec.js`.
 - `beforeEach` / `afterEach` callbacks must not **return** a function (`() => mock.mockReset()` returns the mock, and Vitest runs it as teardown). Use braces.
 
 ## 7. Finish
