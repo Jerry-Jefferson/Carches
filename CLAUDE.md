@@ -141,10 +141,17 @@ Carshes/
         │   └── design-system.css      ← design tokens (HSL channels) for light and `.dark` themes
         ├── theme/
         │   └── antd.js                ← builds the Ant Design theme from the CSS design tokens
+        ├── config/
+        │   └── site.js                ← brand name, tagline, city, support contacts, footer links
+        ├── utils/
+        │   ├── format.js              ← display formatters (ru-BY numbers, BYN, English dates in Europe/Minsk, km, %, coords, names)
+        │   ├── derive.js              ← booking status, trip metrics, car/booking status meta (label, tone, icon), fuel tone
+        │   ├── geo.js                 ← GeoJSON [lng, lat] ↔ { lat, lng }, Haversine, walking time, Minsk centre, map links
+        │   └── csv.js                 ← CSV export (BOM, escaping, formula-injection guard) + download helper
         ├── test/
         │   └── setup.js               ← Vitest setup: matchMedia / ResizeObserver polyfills for Ant Design
         └── __tests__/
-            └── App.spec.js
+            └── App.spec.js            ← further tests sit next to their code in `__tests__/` folders
 ```
 
 ---
@@ -327,8 +334,16 @@ export default {
 
 ### 8.3 Styling
 
-- **Colors come from the design system** (`styles/design-system.css`). Use the token classes — `bg-background`, `text-foreground`, `bg-card`, `bg-primary`, `hover:bg-primary-hover`, `text-primary-foreground`, `bg-secondary`, `bg-muted`, `text-muted-foreground`, `bg-accent`, `border-border`, `border-input`, `ring-ring` — **not** Tailwind palette colors (`text-gray-500`, `bg-blue-600`) or hex values.
-- To add a token: define it in both `:root` and `.dark` in `design-system.css`, map it in `@theme inline` in `main.css`, and, if Ant Design should use it, add it to `TOKEN_MAP` in `theme/antd.js`.
+- **Colors come from the design system** (`styles/design-system.css`). Use the token classes — `bg-background`, `text-foreground`, `bg-card`, `bg-primary`, `hover:bg-primary-hover`, `text-primary-foreground`, `bg-secondary`, `bg-muted`, `text-muted-foreground`, `bg-accent`, `bg-surface`, `border-border`, `border-input`, `ring-ring` — **not** Tailwind palette colors (`text-gray-500`, `bg-blue-600`) or hex values.
+- **Feedback / status tokens**: `destructive`, `success`, `warning`, `info`, each with a `-foreground` (e.g. `text-destructive`, `bg-success text-success-foreground`). For soft backgrounds use opacity (`bg-success/15 text-success`) — there are no "-soft" tokens. Ant Design reads them as `colorError`, `colorSuccess`, `colorWarning`, `colorInfo`.
+- **`surface`** (white in light mode) is the Ant Design container background (`colorBgContainer`) — inputs, tables, selects. Cards keep the cream `card` color via `bg-card`.
+- **Status → tone mapping** lives in `utils/derive.js` (`CAR_STATUS_META`, `BOOKING_STATUS_META`, `fuelTone`); `tone` is a token name. Cars: `free` Available → `success`, `reserved` Reserved → `warning`, `in_use` In trip → `info`, `unavailable` Unavailable → `muted`, `in_service` In service → `destructive`. Bookings: Active → `info`, Upcoming → `warning`, Completed → `success`. Fuel: < 25 % `destructive`, < 40 % `warning`, else `success`. Always show status as text **and** colour.
+- To add a token: define it in both `:root` and `.dark` in `design-system.css`, map it in `@theme inline` in `main.css`, and, if Ant Design should use it, add it to `TOKEN_MAP` in `theme/antd.js`. Text-like tokens must pass WCAG AA — add them to `STATUS_TOKENS` in `styles/__tests__/contrast.spec.js`.
+- **Font**: Plus Jakarta Sans 400–700, self-hosted via `@fontsource/plus-jakarta-sans` (imported in `main.js`), exposed as `--font-sans` (`font-sans`); Ant Design's `fontFamily` is read from the same variable.
+- **Type scale** (`main.css` `@theme`): `text-display`, `text-headline-lg|md|sm`, `text-body-lg|md|sm`, `text-label-lg|md|sm` — each sets size, line height and weight. `text-label-sm` is meant to be combined with `uppercase`.
+- **Radius roles**: `rounded-control` (8 px — inputs, buttons; Ant Design `borderRadius`), `rounded-card` (12 px; `borderRadiusLG`), `rounded-dialog` (16 px — auth card, modals), `rounded-full` for pills.
+- **Elevation**: `shadow-card`, `shadow-popover` — warm shadows built from the `--shadow` token (black in dark mode).
+- **Motion**: `animate-status-pulse` (status dot), `ease-soft` for hover lifts / zooms. A global `prefers-reduced-motion` rule in `main.css` disables animations and transitions — don't override it.
 - Token values are HSL channels without `hsl()` (e.g. `45 93% 74%`); use `hsl(var(--primary))` or `hsl(var(--primary) / 0.5)` in raw CSS.
 - **Dark mode** is the `.dark` class on `<html>`; `dark:` utilities follow it (not the OS setting).
 - Tailwind **Preflight is disabled** (Ant Design's reset is used instead) and **utilities are `!important`** so they beat Ant Design's runtime CSS-in-JS. Do not re-enable Preflight or remove `important`.
@@ -365,6 +380,9 @@ export default {
 10. **Ant Design dark mode shifts primary**: Ant Design's dark algorithm slightly darkens `colorPrimary`, so primary buttons are a bit darker than `#FADF7F` in dark mode.
 11. **Windows host**: the project lives on Windows (`D:\Carshes`). `node_modules` must be installed on the machine that runs the code — never copy `node_modules` from Linux (platform-specific binaries for Vite/Rolldown, Tailwind and Lightning CSS).
 12. **Seeding wipes data**: `seed:cars` deletes all bookings, credit cards, cars, production info and non-admin users before inserting samples. Admin users are kept. Seeded users share the password from `SEED_USER_PASSWORD` (default `Password123!`).
+13. **Coordinates are `[lng, lat]`**: the backend stores GeoJSON points. Convert with `toLatLng` / `toGeoJsonPoint` from `utils/geo.js` — never index `coordinates` by hand.
+14. **Dates show Minsk time**: `utils/format.js` formats in `Europe/Minsk` regardless of the browser timezone; use its helpers instead of `toLocaleString()`.
+15. **Vitest stubs CSS**: `css: false` turns `.css?raw` imports into empty strings — tests that need a stylesheet read it with `node:fs` (see `styles/__tests__/contrast.spec.js`).
 
 ---
 

@@ -35,22 +35,36 @@ const TOKEN_MAP = {
   colorTextSecondary: 'muted-foreground',
   colorTextDescription: 'muted-foreground',
   colorBgLayout: 'background',
-  colorBgContainer: 'card',
+  colorBgContainer: 'surface',
   colorBgElevated: 'popover',
   colorFillSecondary: 'muted',
   colorBorder: 'input',
   colorBorderSecondary: 'border',
+  colorError: 'destructive',
+  colorSuccess: 'success',
+  colorWarning: 'warning',
+  colorInfo: 'info',
+}
+
+// Matches the radius roles in main.css (rounded-control, rounded-card)
+const STATIC_TOKENS = {
+  borderRadius: 8,
+  borderRadiusLG: 12,
 }
 
 export const buildAntdTheme = (root = document.documentElement) => {
   const styles = getComputedStyle(root)
   const isDark = root.classList.contains('dark')
 
-  const token = Object.fromEntries(
+  const colors = Object.fromEntries(
     Object.entries(TOKEN_MAP)
       .map(([antdToken, cssVar]) => [antdToken, readToken(styles, cssVar)])
       .filter(([, value]) => value),
   )
+  // Font stack from Tailwind's --font-sans, so Ant Design and Tailwind text match
+  const fontFamily = styles.getPropertyValue('--font-sans').trim()
+
+  const token = { ...STATIC_TOKENS, ...colors, ...(fontFamily && { fontFamily }) }
 
   return {
     algorithm: isDark ? antdTheme.darkAlgorithm : antdTheme.defaultAlgorithm,
