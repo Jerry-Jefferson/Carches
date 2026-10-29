@@ -37,6 +37,20 @@ export default {
     completed: byStatus(BOOKING_STATUS.COMPLETED),
     // An active or upcoming booking blocks new bookings (Q2)
     openBooking: (state, getters) => getters.activeTrips[0] ?? getters.upcoming[0] ?? null,
+    // Bookings joined with the fleet list: E18 populates `carId` without brand and model
+    // (Q5). `car` is null when the car has left the fleet; `plate` comes from either source.
+    trips: (state, getters, rootState, rootGetters) =>
+      state.mine.map((booking) => {
+        const ref = booking.carId
+        const carId = ref && typeof ref === 'object' ? ref._id : ref
+        const car = carId ? rootGetters['cars/byId'](carId) : null
+        return {
+          booking,
+          carId: carId ?? null,
+          car,
+          plate: car?.registrationNumber ?? ref?.registrationNumber ?? '',
+        }
+      }),
   },
   mutations: {
     // On sign-out, so the next user never sees these bookings

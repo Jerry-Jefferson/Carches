@@ -2,6 +2,7 @@ import { createStore } from 'vuex'
 
 import auth from './modules/auth'
 import bookings from './modules/bookings'
+import carDetails from './modules/carDetails'
 import cars from './modules/cars'
 import geo from './modules/geo'
 
@@ -17,6 +18,7 @@ export default createStore({
   modules: {
     auth,
     bookings,
+    carDetails,
     cars,
     geo,
   },

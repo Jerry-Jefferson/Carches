@@ -57,6 +57,24 @@ describe('bookings module', () => {
     expect(store.state.bookings.error).toBe('Invalid token')
   })
 
+  it('trips joins bookings with the fleet and keeps the plate of removed cars', async () => {
+    vi.mocked(bookingsApi.listMine).mockResolvedValue([
+      { ...ACTIVE, carId: { _id: 'car1', registrationNumber: '1234 AB-7', productionInfo: 'p1' } },
+      { ...COMPLETED, carId: { _id: 'gone', registrationNumber: '9999 ZZ-7' } },
+      { ...UPCOMING, carId: null },
+    ])
+    const car = { ...FREE_CAR, registrationNumber: '1234 AB-7', productionInfo: { brand: 'Kia' } }
+    vi.mocked(carsApi.list).mockResolvedValue([car])
+    const store = makeStore()
+    await Promise.all([store.dispatch('bookings/fetchMine'), store.dispatch('cars/fetchCars')])
+
+    const [active, completed, upcoming] = store.getters['bookings/trips']
+
+    expect(active).toMatchObject({ carId: 'car1', car, plate: '1234 AB-7' })
+    expect(completed).toMatchObject({ carId: 'gone', car: null, plate: '9999 ZZ-7' })
+    expect(upcoming).toMatchObject({ carId: null, car: null, plate: '' })
+  })
+
   describe('checkBookable', () => {
     it('returns the fresh car and puts it into the cars list', async () => {
       vi.mocked(carsApi.getById).mockResolvedValue({ ...FREE_CAR, status: 'in_use' })
@@ -98,6 +116,18 @@ describe('bookings module', () => {
       expect(payload).toMatchObject({ carId: 'car1', startFuelLevel: 82, startMileage: 18420 })
       expect(Math.abs(new Date(payload.startDate) - Date.now())).toBeLessThan(5000)
       expect(store.state.bookings.isSubmitting).toBe(false)
+    })
+
+    it('passes a scheduled start date through', async () => {
+      vi.mocked(carsApi.getById).mockResolvedValue(FREE_CAR)
+      vi.mocked(bookingsApi.listMine).mockResolvedValue([])
+      vi.mocked(bookingsApi.create).mockResolvedValue({ _id: 'new' })
+      const store = makeStore()
+      const startDate = iso(2 * HOUR)
+
+      await store.dispatch('bookings/createBooking', { carId: 'car1', startDate })
+
+      expect(bookingsApi.create).toHaveBeenCalledWith(expect.objectContaining({ startDate }))
     })
 
     it('re-checks the bookings even when they are cached', async () => {

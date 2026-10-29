@@ -36,6 +36,9 @@ export default defineConfig(({ mode }) => {
       setupFiles: ['./src/test/setup.js'],
       globals: true,
       css: false,
+      // The first test of a file pays for importing Ant Design; with every file in its
+      // own worker that can exceed the 5 s default on a busy machine
+      testTimeout: 15000,
       server: {
         deps: {
           inline: ['ant-design-vue'],
