@@ -71,6 +71,40 @@ export const formatDateTime = (value) => {
   return date ? `${dateFormat.format(date)}, ${timeFormat.format(date)}` : EMPTY
 }
 
+// "2026-10-29" — the calendar day in Minsk, for grouping and comparing dates
+const dayKeyFormat = new Intl.DateTimeFormat('en-CA', {
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+  timeZone: TIME_ZONE,
+})
+
+export const dayKey = (value) => {
+  const date = toDate(value)
+  return date ? dayKeyFormat.format(date) : null
+}
+
+const relativeFormat = new Intl.RelativeTimeFormat(LOCALE_DATE, { numeric: 'auto' })
+const RELATIVE_UNITS = [
+  ['year', 365 * 24 * 3600],
+  ['month', 30 * 24 * 3600],
+  ['week', 7 * 24 * 3600],
+  ['day', 24 * 3600],
+  ['hour', 3600],
+  ['minute', 60],
+]
+
+// "5 minutes ago", "yesterday"; under a minute is "just now"
+export const formatRelative = (value, now = Date.now()) => {
+  const date = toDate(value)
+  if (!date) return EMPTY
+  const seconds = Math.round((date.getTime() - now) / 1000)
+  for (const [unit, size] of RELATIVE_UNITS) {
+    if (Math.abs(seconds) >= size) return relativeFormat.format(Math.trunc(seconds / size), unit)
+  }
+  return 'just now'
+}
+
 export const formatDuration = (ms) => {
   if (!isNumber(ms) || ms < 0) return EMPTY
   const totalMinutes = Math.floor(ms / 60000)
