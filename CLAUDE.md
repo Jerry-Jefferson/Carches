@@ -138,7 +138,8 @@ Carshes/
         │   └── modules/
         │       ├── auth.js            ← session: signIn, signUp, logout, bootstrap (GET /users/me)
         │       ├── cars.js            ← GET /cars (30 s cache), fleet filters, sorting, counts, nearest free car, upsertCar
-        │       ├── bookings.js        ← GET /bookings/my (60 s cache), checkBookable + createBooking with pre-checks (Q2–Q4)
+        │       ├── bookings.js        ← GET /bookings/my (60 s cache), checkBookable + createBooking with pre-checks (Q2–Q4), 	rips (bookings joined with cars, Q5)
+        │       ├── carDetails.js      ← GET /cars/:id for the car page (not-found flag, silent refresh for polling), distance
         │       └── geo.js             ← browser location on request (answer remembered per tab), Minsk fallback
         ├── layouts/                   ← AuthLayout, AppLayout (header + footer), AdminLayout (sidebar + top bar)
         ├── views/                     ← AuthView, FleetView, CarDetailsView, MyTripsView, MyProfileView, AdminView, NotFoundView
@@ -146,7 +147,10 @@ Carshes/
         │   ├── brand/                 ← BrandWordmark
         │   ├── common/                ← StatusTag, EnergyBar, PillGroup, InfoCallout, EmptyState, ErrorState, CarPlaceholder, InitialsAvatar, MapView (Leaflet, lazy)
         │   ├── layout/                ← AppHeader, MainNav, HeaderSearch, UserMenu, AppFooter
-        │   ├── cars/                  ← FleetHeader, FleetFilters (+ FleetFilterControls), SortDropdown, CarCard, CarGrid, FleetMap, QuickBookModal
+        │   ├── cars/                  ← fleet: FleetHeader, FleetFilters (+ FleetFilterControls), SortDropdown, CarCard, CarGrid, FleetMap, QuickBookModal; car page: CarDetailsHeader, ShareButton, SpecCard, CarLocationMap
+        │   ├── booking/               ← BookingPanel (now / schedule), StartTimePicker, BookingSummary, BookingConfirmedModal, MobileBookingBar
+        │   ├── trips/                 ← ActiveTripCard, TripListItem, tripDisplay.js (car name / link for a joined trip)
+        │   ├── profile/               ← ProfileCard
         │   └── auth/                  ← AuthCard, AuthTabs, SignInForm, RegisterForm, schemas.js (Zod rules + mapAuthError)
         ├── styles/
         │   ├── main.css               ← CSS entry: layer order, Tailwind, antd reset, token → Tailwind color mapping
@@ -160,6 +164,7 @@ Carshes/
         │   ├── format.js              ← display formatters (ru-BY numbers, BYN, English dates in Europe/Minsk, km, %, coords, names)
         │   ├── derive.js              ← booking status, trip metrics, car/booking status meta (label, tone, icon), fuel tone
         │   ├── fleetFilters.js        ← fleet filter defaults, URL query ⇄ filters, client-side filter / sort / counts
+        │   ├── schedule.js            ← scheduled booking start: 7-day window, picker value ⇄ Date, disabled days / times
         │   ├── geo.js                 ← GeoJSON [lng, lat] ↔ { lat, lng }, Haversine, walking time, Minsk centre, map links
         │   ├── csv.js                 ← CSV export (BOM, escaping, formula-injection guard) + download helper
         │   ├── tokenStorage.js        ← JWT in localStorage ("Remember me") or sessionStorage
@@ -391,8 +396,8 @@ export default {
 2. **JWT_SECRET validation**: The app will crash on startup if `JWT_SECRET` is missing or < 32 characters. Same for `BCRYPT_SALT_ROUNDS` outside 10–15 range.
 3. **No shared dependencies**: Do not try to hoist deps or use workspace-level `package.json`. Each part is fully standalone.
 4. **Swagger is static**: `swagger.json` is hand-maintained. It is not auto-generated from code — keep it in sync when changing routes.
-5. **Implementation plan**: `implementation-plan.md` (repo root) is the frontend roadmap — phases 1–4 (foundations, platform, auth, fleet) are done; car details, trips/profile and admin views are still placeholders.
-6. **Store modules so far**: `auth`, `cars`, `bookings`, `geo`. Add the rest (`carDetails`, `admin/*`, …) per plan §13 using the `vuex-module` skill.
+5. **Implementation plan**: `implementation-plan.md` (repo root) is the frontend roadmap — phases 1–5 (foundations, platform, auth, fleet, car details / trips / profile) are done; the admin view is still a placeholder.
+6. **Store modules so far**: `auth`, `cars`, `carDetails`, `bookings`, `geo`. Add the rest (`admin/*`) per plan §13 using the `vuex-module` skill.
 7. **Dev server proxy**: In development, the Vite dev server proxies `/api` to the backend. This means API calls just use relative paths (`/api/v2/...`) — no CORS setup needed in dev.
 8. **Zod must stay on v3**: VeeValidate 4 does not validate Zod 4 schemas (invalid values pass). Keep `zod@^3` with `@vee-validate/zod`.
 9. **Tokens need a `jti`**: every JWT carries a unique ID used for logout/revocation; tokens without one are rejected.
@@ -404,6 +409,8 @@ export default {
 15. **Vitest stubs CSS**: `css: false` turns `.css?raw` imports into empty strings — tests that need a stylesheet read it with `node:fs` (see `styles/__tests__/contrast.spec.js`).
 16. **Fleet filters live in the URL**: `/fleet?q=&brand=&available=0&status=&fuel=&sort=&map=1` is the source of truth; `FleetView` copies it into the `cars` store (only while on `/fleet`, so filters survive a trip to a car page). Change filters with `router.replace`, never by committing directly.
 17. **Lazy components vs auto-import**: `unplugin-vue-components` resolves any tag matching a file in `src/components` to a *static* import, defeating `defineAsyncComponent`. Register lazy components under another name (e.g. `LazyFleetMap`). In tests, mock such modules with `__esModule: true`.
+18. **Booking times**: the scheduled-start picker works in the browser's local time (`SCHEDULE_VALUE_FORMAT` strings, no direct `dayjs` import — it is only a dependency of Ant Design), while dates are displayed in Minsk time. The two match for users in Minsk.
+19. **Vitest timeout is 15 s** (`vite.config.js`): each test file runs in its own worker and its first test imports Ant Design, which can exceed the 5 s default when the whole suite runs.
 
 ---
 
