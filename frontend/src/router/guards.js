@@ -1,4 +1,4 @@
-import { SITE } from '@/config/site'
+import { SITE } from '@/constants/site'
 
 // Accepts only in-app paths ("/cars/1"), never "//evil.com" or "https://…"
 export const safeRedirect = (value) =>
