@@ -1,6 +1,6 @@
 <script>
 import BrandWordmark from '@/components/brand/BrandWordmark.vue'
-import { FOOTER_LINKS, SITE } from '@/config/site'
+import { FOOTER_LINKS, SITE } from '@/constants/site'
 
 export default {
   name: 'AppFooter',

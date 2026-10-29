@@ -124,30 +124,40 @@ Carshes/
     ├── .prettierrc.json / .prettierignore
     ├── public/                        ← static assets
     └── src/
-        ├── main.js                    ← creates Vue app, installs router + store
-        ├── App.vue                    ← root component
+        ├── main.js                    ← installs the session interceptors, creates the app with router + store
+        ├── App.vue                    ← root: Ant Design theme + layout picked by route.meta.layout
         ├── api/
-        │   └── http.js                ← axios instance (baseURL from VITE_API_URL, defaults to /api/v2)
+        │   ├── http.js                ← axios instance (baseURL from VITE_API_URL, defaults to /api/v2), unwrap, error normalising
+        │   ├── session.js             ← wires http to the store/router: Bearer token, 401 → /auth?redirect=
+        │   └── auth.js / users.js / cars.js / bookings.js ← thin wrappers for E1–E23, used only by Vuex actions
         ├── router/
-        │   └── index.js               ← routes: / (HomeView), catch-all (NotFoundView)
+        │   ├── index.js               ← route table (meta: layout, guestOnly, roles, title)
+        │   └── guards.js              ← auth guard, safeRedirect(), document title
         ├── store/
-        │   └── index.js               ← Vuex store (empty modules, strict in dev)
-        ├── views/
-        │   ├── HomeView.vue
-        │   └── NotFoundView.vue
-        ├── components/                ← reusable components (empty, kept by .gitkeep)
+        │   ├── index.js               ← Vuex store (strict in dev)
+        │   └── modules/auth.js        ← session: signIn, signUp, logout, bootstrap (GET /users/me)
+        ├── layouts/                   ← AuthLayout, AppLayout (header + footer), AdminLayout (sidebar + top bar)
+        ├── views/                     ← AuthView, FleetView, CarDetailsView, MyTripsView, MyProfileView, AdminView, NotFoundView
+        ├── components/
+        │   ├── brand/                 ← BrandWordmark
+        │   ├── common/                ← StatusTag, EnergyBar, PillGroup, InfoCallout, EmptyState, ErrorState, CarPlaceholder, InitialsAvatar, MapView (Leaflet, lazy)
+        │   ├── layout/                ← AppHeader, MainNav, HeaderSearch, UserMenu, AppFooter
+        │   └── auth/                  ← AuthCard, AuthTabs, SignInForm, RegisterForm, schemas.js (Zod rules + mapAuthError)
         ├── styles/
         │   ├── main.css               ← CSS entry: layer order, Tailwind, antd reset, token → Tailwind color mapping
         │   └── design-system.css      ← design tokens (HSL channels) for light and `.dark` themes
         ├── theme/
-        │   └── antd.js                ← builds the Ant Design theme from the CSS design tokens
-        ├── config/
+        │   ├── antd.js                ← builds the Ant Design theme from the CSS design tokens
+        │   └── tones.js               ← tone name → full Tailwind class names (soft / solid / text)
+        ├── constants/
         │   └── site.js                ← brand name, tagline, city, support contacts, footer links
         ├── utils/
         │   ├── format.js              ← display formatters (ru-BY numbers, BYN, English dates in Europe/Minsk, km, %, coords, names)
         │   ├── derive.js              ← booking status, trip metrics, car/booking status meta (label, tone, icon), fuel tone
         │   ├── geo.js                 ← GeoJSON [lng, lat] ↔ { lat, lng }, Haversine, walking time, Minsk centre, map links
-        │   └── csv.js                 ← CSV export (BOM, escaping, formula-injection guard) + download helper
+        │   ├── csv.js                 ← CSV export (BOM, escaping, formula-injection guard) + download helper
+        │   ├── tokenStorage.js        ← JWT in localStorage ("Remember me") or sessionStorage
+        │   └── notify.js              ← toasts / notifications (use instead of Ant Design's message directly)
         ├── test/
         │   └── setup.js               ← Vitest setup: matchMedia / ResizeObserver polyfills for Ant Design
         └── __tests__/
@@ -188,8 +198,11 @@ main.js → createApp(App)
         → mount('#app')
 ```
 
-- **Routing**: lazy-loaded views, catch-all 404.
-- **API calls**: go through the shared `axios` instance in `api/http.js`; the Vite dev server proxies `/api` requests to the backend (`VITE_BACKEND_URL`).
+- **Routing**: lazy-loaded views, catch-all 404. `route.meta.layout` (`auth` / `app` default / `admin`) picks the layout in `App.vue`.
+- **Access** (`router/guards.js`): the guard first restores the stored session (`auth/bootstrap` → `GET /users/me`). Guests can open only `meta.guestOnly` routes (`/auth`); everything else redirects to `/auth?redirect=<target>`. Signed-in users are sent from `/auth` to `/fleet`; `meta.roles` routes (`/admin`) send other roles to `/fleet` with a warning.
+- **Session**: the token is kept by `utils/tokenStorage.js` (localStorage with "Remember me", otherwise sessionStorage; sign-up uses sessionStorage). `api/session.js` adds the Bearer header and, on a 401 from any request except sign-in/sign-up (or one sent with `{ skipAuthRedirect: true }`), clears the session and redirects to `/auth?redirect=…`.
+- **Auth screen**: `/auth?mode=signin|signup&redirect=/path`. The forms dispatch `auth/signIn` / `auth/signUp` and emit `success`; `AuthView` goes to `safeRedirect(redirect)` or `/fleet`. Backend errors go through `mapAuthError()` — known messages (duplicate e-mail / licence number, invalid e-mail, password length) appear under the field, everything else in a form-level alert.
+- **API calls**: components never call HTTP — Vuex actions call the `api/*.js` wrappers, which use the shared `axios` instance in `api/http.js`; errors carry `statusCode` and the backend `message`. The Vite dev server proxies `/api` requests to the backend (`VITE_BACKEND_URL`).
 - **Component auto-import**: Ant Design Vue components are auto-resolved by `unplugin-vue-components` — no manual imports needed.
 - **Theming**: one source of truth — CSS variables in `styles/design-system.css`. Tailwind reads them through `@theme inline` in `main.css`; Ant Design reads them at runtime through `buildAntdTheme()` in `theme/antd.js`. `App.vue` keeps the result in `data()` and rebuilds it from a `MutationObserver` when the `.dark` class on `<html>` changes.
 
@@ -372,8 +385,8 @@ export default {
 2. **JWT_SECRET validation**: The app will crash on startup if `JWT_SECRET` is missing or < 32 characters. Same for `BCRYPT_SALT_ROUNDS` outside 10–15 range.
 3. **No shared dependencies**: Do not try to hoist deps or use workspace-level `package.json`. Each part is fully standalone.
 4. **Swagger is static**: `swagger.json` is hand-maintained. It is not auto-generated from code — keep it in sync when changing routes.
-5. **No components yet**: `src/components/` only holds a `.gitkeep`; remove it once the first component is added.
-6. **Vuex store is empty**: The store has no modules yet — ready to be populated as features are built.
+5. **Implementation plan**: `implementation-plan.md` (repo root) is the frontend roadmap — phases 1–3 (foundations, platform, auth) are done; fleet, car details, trips/profile and admin views are still placeholders.
+6. **Only the `auth` store module exists**: add further modules (`cars`, `bookings`, `admin/*`, …) per plan §13 using the `vuex-module` skill.
 7. **Dev server proxy**: In development, the Vite dev server proxies `/api` to the backend. This means API calls just use relative paths (`/api/v2/...`) — no CORS setup needed in dev.
 8. **Zod must stay on v3**: VeeValidate 4 does not validate Zod 4 schemas (invalid values pass). Keep `zod@^3` with `@vee-validate/zod`.
 9. **Tokens need a `jti`**: every JWT carries a unique ID used for logout/revocation; tokens without one are rejected.
