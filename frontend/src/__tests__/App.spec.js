@@ -4,10 +4,13 @@ import { createRouter, createMemoryHistory } from 'vue-router'
 import { createStore } from 'vuex'
 
 import App from '@/App.vue'
+import admin from '@/store/modules/admin'
 import auth from '@/store/modules/auth'
+import cars from '@/store/modules/cars'
 
 const mountAt = async (path) => {
-  const store = createStore({ modules: { auth } })
+  // The admin layout's sidebar and search read the fleet and users
+  const store = createStore({ modules: { admin, auth, cars } })
   store.commit('auth/SET_SESSION', {
     user: { email: 'a@carshes.by', firstName: 'Ann', lastName: 'Lee', role: 'admin' },
     token: 'jwt',

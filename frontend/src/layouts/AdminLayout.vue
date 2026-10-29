@@ -1,14 +1,16 @@
 <script>
 import BrandWordmark from '@/components/brand/BrandWordmark.vue'
+import AdminSearch from '@/components/layout/AdminSearch.vue'
+import AdminSidebar from '@/components/layout/AdminSidebar.vue'
 import UserMenu from '@/components/layout/UserMenu.vue'
 
 /**
  * Admin console chrome: sidebar (a drawer below `lg`), top bar, content.
- * Slots: default (content), `sidebar` (navigation and widgets), `topbar` (search).
+ * The console data (cars, users) is loaded by AdminView; the sidebar and search read the store.
  */
 export default {
   name: 'AdminLayout',
-  components: { BrandWordmark, UserMenu },
+  components: { AdminSearch, AdminSidebar, BrandWordmark, UserMenu },
   data() {
     return {
       isDrawerOpen: false,
@@ -25,14 +27,14 @@ export default {
     >
       <BrandWordmark :to="{ name: 'admin' }" size="sm" admin class="px-2" />
       <div class="flex-1 overflow-y-auto">
-        <slot name="sidebar" />
+        <AdminSidebar />
       </div>
     </aside>
 
     <a-drawer v-model:open="isDrawerOpen" placement="left" :width="280" :closable="false">
       <div class="flex h-full flex-col gap-6" @click="isDrawerOpen = false">
         <BrandWordmark :to="{ name: 'admin' }" size="sm" admin />
-        <slot name="sidebar" />
+        <AdminSidebar />
       </div>
     </a-drawer>
 
@@ -50,7 +52,7 @@ export default {
           <template #icon><MenuOutlined /></template>
         </a-button>
         <div class="min-w-0 flex-1">
-          <slot name="topbar" />
+          <AdminSearch />
         </div>
         <a-button type="text" aria-label="Back to app" @click="$router.push({ name: 'fleet' })">
           <template #icon><ArrowLeftOutlined /></template>

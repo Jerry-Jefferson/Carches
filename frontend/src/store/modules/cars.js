@@ -80,6 +80,9 @@ export default {
       if (index === -1) state.items = [...state.items, car]
       else state.items = state.items.map((item, i) => (i === index ? car : item))
     },
+    REMOVE_CAR(state, id) {
+      state.items = state.items.filter((item) => item._id !== id)
+    },
     SET_LOADING(state, isLoading) {
       state.isLoading = isLoading
     },
@@ -122,6 +125,11 @@ export default {
     // Puts a freshly fetched car (GET /cars/:id) into the list
     upsertCar({ commit }, car) {
       if (car?._id) commit('UPSERT_CAR', car)
+    },
+
+    // After an admin removed a car (E13)
+    removeCar({ commit }, id) {
+      commit('REMOVE_CAR', id)
     },
 
     // Only commits when something changed, so URL → store syncing stays cheap

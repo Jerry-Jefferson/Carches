@@ -134,23 +134,25 @@ Carshes/
         │   ├── index.js               ← route table (meta: layout, guestOnly, roles, title)
         │   └── guards.js              ← auth guard, safeRedirect(), document title
         ├── store/
-        │   ├── index.js               ← Vuex store (strict in dev); resetOnSignOut plugin clears `bookings` on auth/CLEAR_SESSION
+        │   ├── index.js               ← Vuex store (strict in dev); resetOnSignOut plugin clears `bookings` and `admin/*` data on auth/CLEAR_SESSION
         │   └── modules/
         │       ├── auth.js            ← session: signIn, signUp, logout, bootstrap (GET /users/me)
         │       ├── cars.js            ← GET /cars (30 s cache), fleet filters, sorting, counts, nearest free car, upsertCar
         │       ├── bookings.js        ← GET /bookings/my (60 s cache), checkBookable + createBooking with pre-checks (Q2–Q4), 	rips (bookings joined with cars, Q5)
         │       ├── carDetails.js      ← GET /cars/:id for the car page (not-found flag, silent refresh for polling), distance
-        │       └── geo.js             ← browser location on request (answer remembered per tab), Minsk fallback
+        │       ├── geo.js             ← browser location on request (answer remembered per tab), Minsk fallback
+        │       └── admin/             ← console (`admin/loadAll`): fleet (E11–E17, widgets, table filters), users (E5–E8), trips (E19–E23; completeTrip = E22 + E12), insights (selected day, KPIs)
         ├── layouts/                   ← AuthLayout, AppLayout (header + footer), AdminLayout (sidebar + top bar)
         ├── views/                     ← AuthView, FleetView, CarDetailsView, MyTripsView, MyProfileView, AdminView, NotFoundView
         ├── components/
         │   ├── brand/                 ← BrandWordmark
         │   ├── common/                ← StatusTag, EnergyBar, PillGroup, InfoCallout, EmptyState, ErrorState, CarPlaceholder, InitialsAvatar, MapView (Leaflet, lazy)
-        │   ├── layout/                ← AppHeader, MainNav, HeaderSearch, UserMenu, AppFooter
+        │   ├── layout/                ← AppHeader, MainNav, HeaderSearch, UserMenu, AppFooter; AdminSidebar, AdminSearch (rendered by AdminLayout)
         │   ├── cars/                  ← fleet: FleetHeader, FleetFilters (+ FleetFilterControls), SortDropdown, CarCard, CarGrid, FleetMap, QuickBookModal; car page: CarDetailsHeader, ShareButton, SpecCard, CarLocationMap
         │   ├── booking/               ← BookingPanel (now / schedule), StartTimePicker, BookingSummary, BookingConfirmedModal, MobileBookingBar
         │   ├── trips/                 ← ActiveTripCard, TripListItem, tripDisplay.js (car name / link for a joined trip)
         │   ├── profile/               ← ProfileCard
+        │   ├── admin/                 ← KpiCard, AdminSparkline, StackedBar; AdminFleetSection / AdminTripsSection / AdminUsersSection with their tables, forms (Zod schemas in *Schema.js), drawers, map and widgets
         │   └── auth/                  ← AuthCard, AuthTabs, SignInForm, RegisterForm, schemas.js (Zod rules + mapAuthError)
         ├── styles/
         │   ├── main.css               ← CSS entry: layer order, Tailwind, antd reset, token → Tailwind color mapping
@@ -164,6 +166,8 @@ Carshes/
         │   ├── format.js              ← display formatters (ru-BY numbers, BYN, English dates in Europe/Minsk, km, %, coords, names)
         │   ├── derive.js              ← booking status, trip metrics, car/booking status meta (label, tone, icon), fuel tone
         │   ├── fleetFilters.js        ← fleet filter defaults, URL query ⇄ filters, client-side filter / sort / counts
+        │   ├── admin.js               ← console KPIs, table filters, maintenance previews, global search, ADMIN_TABS
+        │   ├── adminExport.js         ← CSV columns for the fleet / users / trips export
         │   ├── schedule.js            ← scheduled booking start: 7-day window, picker value ⇄ Date, disabled days / times
         │   ├── geo.js                 ← GeoJSON [lng, lat] ↔ { lat, lng }, Haversine, walking time, Minsk centre, map links
         │   ├── csv.js                 ← CSV export (BOM, escaping, formula-injection guard) + download helper
@@ -396,8 +400,8 @@ export default {
 2. **JWT_SECRET validation**: The app will crash on startup if `JWT_SECRET` is missing or < 32 characters. Same for `BCRYPT_SALT_ROUNDS` outside 10–15 range.
 3. **No shared dependencies**: Do not try to hoist deps or use workspace-level `package.json`. Each part is fully standalone.
 4. **Swagger is static**: `swagger.json` is hand-maintained. It is not auto-generated from code — keep it in sync when changing routes.
-5. **Implementation plan**: `implementation-plan.md` (repo root) is the frontend roadmap — phases 1–5 (foundations, platform, auth, fleet, car details / trips / profile) are done; the admin view is still a placeholder.
-6. **Store modules so far**: `auth`, `cars`, `carDetails`, `bookings`, `geo`. Add the rest (`admin/*`) per plan §13 using the `vuex-module` skill.
+5. **Implementation plan**: `implementation-plan.md` (repo root) is the frontend roadmap — phases 1–6 (foundations, platform, auth, fleet, car details / trips / profile, admin console) are done; phase 7 (quality and release) remains.
+6. **Store modules**: `auth`, `cars`, `carDetails`, `bookings`, `geo` and the nested `admin` module (`admin/fleet`, `admin/users`, `admin/trips`, `admin/insights`). The admin console's car list is the root `cars` module. Add new modules with the `vuex-module` skill.
 7. **Dev server proxy**: In development, the Vite dev server proxies `/api` to the backend. This means API calls just use relative paths (`/api/v2/...`) — no CORS setup needed in dev.
 8. **Zod must stay on v3**: VeeValidate 4 does not validate Zod 4 schemas (invalid values pass). Keep `zod@^3` with `@vee-validate/zod`.
 9. **Tokens need a `jti`**: every JWT carries a unique ID used for logout/revocation; tokens without one are rejected.
@@ -411,6 +415,7 @@ export default {
 17. **Lazy components vs auto-import**: `unplugin-vue-components` resolves any tag matching a file in `src/components` to a *static* import, defeating `defineAsyncComponent`. Register lazy components under another name (e.g. `LazyFleetMap`). In tests, mock such modules with `__esModule: true`.
 18. **Booking times**: the scheduled-start picker works in the browser's local time (`SCHEDULE_VALUE_FORMAT` strings, no direct `dayjs` import — it is only a dependency of Ant Design), while dates are displayed in Minsk time. The two match for users in Minsk.
 19. **Vitest timeout is 15 s** (`vite.config.js`): each test file runs in its own worker and its first test imports Ant Design, which can exceed the 5 s default when the whole suite runs.
+20. **Admin console URL**: `/admin?tab=fleet|trips|users` picks the section; `&car=`, `&trip=`, `&user=` point at a row (search results and the history / user drawers link through these). `AdminLayout` renders the sidebar and search itself, because `App.vue` only fills its default slot. Admin data reloads every 60 s while the tab is visible.
 
 ---
 
