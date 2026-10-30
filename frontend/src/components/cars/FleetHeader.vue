@@ -59,7 +59,7 @@ export default {
           <span class="size-2 rounded-full bg-success" aria-hidden="true" />
           {{ city }} • {{ locationLabel }}
         </span>
-        <span class="text-label-sm text-secondary-hover uppercase">
+        <span class="text-label-sm text-link uppercase">
           {{ countLabel }}
         </span>
       </div>
@@ -78,7 +78,7 @@ export default {
         <router-link
           v-if="nearest"
           :to="nearestRoute"
-          class="text-label-lg text-card-foreground hover:text-secondary-hover"
+          class="text-label-lg text-card-foreground hover:text-link"
         >
           {{ nearestDistance }}
         </router-link>
@@ -106,7 +106,7 @@ export default {
         class="h-auto self-stretch"
         :type="isMapOpen ? 'primary' : 'default'"
         :aria-pressed="isMapOpen"
-        aria-controls="fleet-map"
+        :aria-controls="isMapOpen ? 'fleet-map' : undefined"
         @click="$emit('toggle-map')"
       >
         <template #icon><CompassOutlined /></template>

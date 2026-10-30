@@ -75,18 +75,23 @@ export default {
   },
   actions: {
     // E18. Reuses the list for CACHE_MS unless `force` is set.
-    async fetchMine({ state, commit }, { force = false } = {}) {
+    async fetchMine({ state, commit, rootState }, { force = false } = {}) {
       const isFresh = state.loadedAt && Date.now() - state.loadedAt < CACHE_MS
       if (!force && isFresh && !state.error) return state.mine
+
+      // A response that arrives after sign-out belongs to the previous user: drop it
+      const token = rootState.auth?.token
+      const isSameSession = () => rootState.auth?.token === token
 
       commit('SET_LOADING', true)
       commit('SET_ERROR', null)
       try {
         const bookings = (await bookingsApi.listMine()) ?? []
+        if (!isSameSession()) return []
         commit('SET_MINE', bookings)
         return bookings
       } catch (err) {
-        commit('SET_ERROR', getErrorMessage(err))
+        if (isSameSession()) commit('SET_ERROR', getErrorMessage(err))
         throw err
       } finally {
         commit('SET_LOADING', false)
@@ -107,15 +112,18 @@ export default {
 
     // E21 after fresh pre-checks (the backend checks neither availability nor open
     // bookings, Q2). Start fuel and mileage come from the car, never from the user (Q3);
-    // the payload is whitelisted so users can't send end fields (Q4).
-    async createBooking({ commit, dispatch }, { carId, startDate = null }) {
+    // the payload is whitelisted so users can't send end fields (Q4). `userId` is the
+    // caller: the backend fills it in only for users, so admins must send it themselves.
+    async createBooking({ commit, dispatch, rootState }, { carId, startDate = null }) {
       commit('SET_SUBMITTING', true)
       commit('SET_ERROR', null)
       try {
         const { car, block } = await dispatch('checkBookable', { carId, force: true })
         if (block) throw bookingBlockedError(block)
 
+        const userId = rootState.auth?.user?._id
         const booking = await bookingsApi.create({
+          ...(userId && { userId }),
           carId,
           startDate: startDate ?? new Date().toISOString(),
           startFuelLevel: car.fuelLevel,

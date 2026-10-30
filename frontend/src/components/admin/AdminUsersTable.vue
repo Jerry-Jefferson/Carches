@@ -185,6 +185,7 @@ export default {
           v-if="!isSelf(record)"
           :title="deleteTitle(record)"
           ok-text="Delete"
+          ok-type="default"
           :ok-button-props="{ danger: true }"
           cancel-text="Cancel"
           placement="topRight"

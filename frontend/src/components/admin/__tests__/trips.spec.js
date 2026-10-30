@@ -262,6 +262,19 @@ describe('admin trips', () => {
       expect(wrapper.emitted('saved')).toEqual([[{ _id: 'new' }]])
     })
 
+    it('labels the user and car selects (M5)', async () => {
+      ;({ wrapper } = await mountWith(BookingFormModal, { open: true, trip: null }))
+
+      for (const [id, label] of [
+        ['booking-user', 'User'],
+        ['booking-car', 'Car (available only)'],
+      ]) {
+        const input = document.getElementById(id)
+        expect(input?.getAttribute('role')).toBe('combobox')
+        expect(document.querySelector(`label[for="${id}"]`)?.textContent).toContain(label)
+      }
+    })
+
     it('requires a user and a car', async () => {
       ;({ wrapper } = await mountWith(BookingFormModal, { open: true, trip: null }))
 

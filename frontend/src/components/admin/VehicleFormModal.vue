@@ -328,7 +328,7 @@ export default {
                     :max="100"
                     :disabled="isMutating"
                     class="flex-1"
-                    aria-label="Fuel level"
+                    aria-label-for-handle="Fuel level"
                     @update:value="handleChange"
                   />
                   <a-input-number

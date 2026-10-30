@@ -35,7 +35,6 @@ export default {
     :is="tag"
     :to="to || undefined"
     class="inline-flex items-center gap-2.5 rounded-control text-foreground no-underline focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
-    :aria-label="to ? 'Carshes home' : undefined"
   >
     <span
       class="flex shrink-0 items-center justify-center rounded-full bg-primary/40 text-foreground"
@@ -45,7 +44,7 @@ export default {
       <CarFilled />
     </span>
     <span class="font-bold tracking-tight" :class="classes.text">
-      Car<span class="text-secondary-hover">shes</span>
+      Car<span class="text-link">shes</span>
       <span v-if="admin" class="font-semibold text-muted-foreground"> Admin</span>
     </span>
     <span

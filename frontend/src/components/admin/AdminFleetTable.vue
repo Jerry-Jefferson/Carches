@@ -199,6 +199,7 @@ export default {
           v-else
           :title="`Remove ${carName(record)} (${record.registrationNumber}) from the fleet?`"
           ok-text="Remove"
+          ok-type="default"
           :ok-button-props="{ danger: true, loading: isMutating }"
           cancel-text="Cancel"
           @confirm="remove(record)"

@@ -82,7 +82,7 @@ export default {
         :marks="vertical ? fuelMarks : undefined"
         :tip-formatter="formatFuel"
         :disabled="disabled"
-        aria-labelledby="fleet-min-fuel"
+        aria-labelled-by-for-handle="fleet-min-fuel"
         class="m-0 mx-1"
         @after-change="$emit('change', { minFuel: $event })"
       />

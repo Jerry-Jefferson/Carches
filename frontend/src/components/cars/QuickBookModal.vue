@@ -27,6 +27,8 @@ export default {
       freshCar: null,
       block: null,
       isChecking: false,
+      // Bumped by every check, so a late answer from an earlier opening is ignored
+      checkSeq: 0,
       error: '',
       support: SITE.support,
       noteIcon: SafetyCertificateOutlined,
@@ -35,7 +37,8 @@ export default {
   computed: {
     ...mapState('bookings', ['isSubmitting']),
     shown() {
-      return this.freshCar ?? this.car
+      // A fresh copy only ever replaces the car the modal was opened for
+      return this.freshCar && this.freshCar._id === this.car?._id ? this.freshCar : this.car
     },
     name() {
       return this.shown ? carName(this.shown) : ''
@@ -77,21 +80,25 @@ export default {
     async check() {
       if (!this.car) return
       this.reset()
+      const seq = ++this.checkSeq
+      const carId = this.car._id
+      const isCurrent = () => seq === this.checkSeq && this.open && this.car?._id === carId
       this.isChecking = true
       try {
-        const { car, block } = await this.checkBookable({ carId: this.car._id })
+        const { car, block } = await this.checkBookable({ carId })
+        if (!isCurrent()) return
         this.freshCar = car
         this.block = block
       } catch (err) {
-        this.error = err.message
+        if (isCurrent()) this.error = err.message
       } finally {
-        this.isChecking = false
+        if (seq === this.checkSeq) this.isChecking = false
       }
     },
     async confirm() {
       this.error = ''
       try {
-        const booking = await this.createBooking({ carId: this.shown._id })
+        const booking = await this.createBooking({ carId: this.car._id })
         notify.success('Car booked. Your trip has started.')
         this.$emit('booked', booking)
         this.close()
@@ -119,7 +126,7 @@ export default {
   >
     <template #title>
       <span class="flex items-center gap-2">
-        <KeyOutlined class="text-secondary-hover" aria-hidden="true" />
+        <KeyOutlined class="text-link" aria-hidden="true" />
         Book this car
       </span>
     </template>

@@ -71,7 +71,7 @@ export default {
   >
     <div class="flex items-center justify-between gap-2">
       <p class="m-0 flex items-center gap-2 text-label-lg">
-        <EnvironmentOutlined class="text-secondary-hover" aria-hidden="true" />
+        <EnvironmentOutlined class="text-link" aria-hidden="true" />
         {{ caption }}
       </p>
       <a-button type="text" shape="circle" aria-label="Close map" @click="$emit('close')">

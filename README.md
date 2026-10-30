@@ -93,12 +93,35 @@ Other scripts:
 |----------------------|---------------------------------|
 | `npm run build`      | Production build into `dist/`   |
 | `npm run preview`    | Serve the production build      |
-| `npm test`           | Run unit tests once (Vitest)    |
+| `npm test`           | Run unit and component tests once (Vitest) |
 | `npm run test:watch` | Run unit tests in watch mode    |
 | `npm run lint`       | Check code with ESLint          |
 | `npm run lint:fix`   | Fix ESLint issues automatically |
 | `npm run format`     | Format code with Prettier       |
 | `npm run format:check` | Check formatting without changing files |
+| `npm run test:e2e`   | End-to-end checks with Playwright (see below) |
+| `npm run test:e2e:report` | Open the last end-to-end report |
+
+### Using the app
+
+- Visitors can only open `/auth` (sign in / register); every other page redirects there and comes back after signing in.
+- Users: **Fleet** (`/fleet` — filters, map, quick booking), **car page** (`/cars/:id` — book now or schedule up to 7 days ahead), **My Trips** (`/trips`), **My Profile** (`/profile`). Users can't finish or cancel trips; the app points them to support.
+- Admins also get the **admin console** (`/admin`): KPIs, the fleet (add / edit / remove cars, maintenance actions), trips and bookings (create, edit, complete, delete) and users (view, edit, delete), plus CSV export. Sign in with the account created by `migrate:admin`.
+
+### End-to-end checks (Playwright)
+
+They run against the real stack, so start the backend in Docker first (with the admin migration run and sample data seeded). The dev server is started automatically if it isn't running.
+
+```bash
+npx playwright install chromium   # once
+npm run test:e2e
+```
+
+- **Layout** (`e2e/layout.spec.js`): every screen at 375, 1024 and 1440 px — no serious accessibility violations (axe, WCAG 2.1 AA), one `h1`, no sideways page scrolling. Full-page screenshots are attached to the report.
+- **Journeys** (`e2e/journeys.spec.js`): guest redirect, sign up → book → My Trips → admin completes the trip → car free again, admin adds / edits / removes a car, keyboard focus.
+- **Endpoints** (`e2e/api-coverage.spec.js`): all 23 API endpoints with the access rules and backend behaviours the frontend relies on.
+
+The admin login comes from `E2E_ADMIN_EMAIL` / `E2E_ADMIN_PASSWORD`, or from `ADMIN_EMAIL` / `ADMIN_PASSWORD` in `backend/.env`. Every run creates its own `e2e.*@carshes.test` user and test car and removes them at the end. The endpoint check also runs the two maintenance actions, which change matching cars in the database — re-seed to get the sample data back.
 
 ## Claude Code: MongoDB MCP
 
@@ -127,11 +150,16 @@ Use the `MONGO_INITDB_ROOT_USERNAME` / `MONGO_INITDB_ROOT_PASSWORD` values from 
 │   └── package.json
 ├── frontend/
 │   ├── src/
-│   │   ├── api/             # axios instance
-│   │   ├── router/          # Vue Router
-│   │   ├── store/           # Vuex store
-│   │   ├── styles/          # Tailwind entry
-│   │   └── views/
+│   │   ├── api/             # axios instance, session interceptors, one wrapper per resource
+│   │   ├── components/      # admin, auth, booking, cars, common, layout, profile, trips
+│   │   ├── layouts/         # auth, app and admin page chrome
+│   │   ├── router/          # routes and access guards
+│   │   ├── store/           # Vuex modules (auth, cars, carDetails, bookings, geo, admin/*)
+│   │   ├── styles/          # Tailwind entry and design tokens
+│   │   ├── utils/           # formatting, derived values, filters, CSV, geo helpers
+│   │   └── views/           # one per route
+│   ├── e2e/                 # Playwright checks against the running stack
+│   ├── playwright.config.js
 │   ├── vite.config.js
 │   └── package.json
 └── README.md

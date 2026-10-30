@@ -45,6 +45,8 @@ const contrast = (a, b) => {
 
 const STATUS_TOKENS = ['destructive', 'success', 'warning', 'info']
 const SURFACES = ['background', 'card', 'popover']
+// Small text that also sits on bg-muted (pills, chips, callouts)
+const TEXT_TOKENS = ['link', 'muted-foreground']
 
 describe.each([
   ['light', light],
@@ -57,7 +59,20 @@ describe.each([
     },
   )
 
+  it.each(TEXT_TOKENS.flatMap((t) => [...SURFACES, 'muted', 'surface'].map((s) => [t, s])))(
+    '%s text is readable on %s',
+    (token, surface) => {
+      expect(contrast(tokens[token], tokens[surface])).toBeGreaterThanOrEqual(AA)
+    },
+  )
+
   it.each([...STATUS_TOKENS, 'surface'])('%s-foreground is readable on %s', (token) => {
     expect(contrast(tokens[`${token}-foreground`], tokens[token])).toBeGreaterThanOrEqual(AA)
+  })
+
+  // Ant Design's colorTextLightSolid is primary-foreground: the text on every solid fill
+  // (primary buttons, selected date cells). Solid fills must therefore be primary ones.
+  it.each(['primary', 'primary-hover'])('primary-foreground is readable on %s', (fill) => {
+    expect(contrast(tokens['primary-foreground'], tokens[fill])).toBeGreaterThanOrEqual(AA)
   })
 })

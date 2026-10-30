@@ -81,6 +81,71 @@ describe('carDetails module', () => {
     expect(store.state.carDetails.car._id).toBe('car2')
   })
 
+  // Resolves the next getById call by hand
+  const deferGetById = () => {
+    const call = {}
+    vi.mocked(carsApi.getById).mockReturnValueOnce(
+      new Promise((resolve, reject) => Object.assign(call, { resolve, reject })),
+    )
+    return call
+  }
+
+  it('ignores a late answer for the previous car (M1)', async () => {
+    const store = makeStore()
+    const first = deferGetById()
+    const second = deferGetById()
+    const loadA = store.dispatch('carDetails/fetchCar', { id: 'car1' })
+    const loadB = store.dispatch('carDetails/fetchCar', { id: 'car2' })
+
+    second.resolve({ ...CAR, _id: 'car2' })
+    await loadB
+    expect(store.state.carDetails.isLoading).toBe(false)
+
+    first.resolve(CAR)
+    await expect(loadA).resolves.toBeNull()
+    expect(store.state.carDetails.car._id).toBe('car2')
+  })
+
+  it('does not mark the current car as not found because of an older request', async () => {
+    const store = makeStore()
+    const first = deferGetById()
+    const loadA = store.dispatch('carDetails/fetchCar', { id: 'bad-id' })
+    vi.mocked(carsApi.getById).mockResolvedValueOnce({ ...CAR, _id: 'car2' })
+    await store.dispatch('carDetails/fetchCar', { id: 'car2' })
+
+    first.reject(apiError('Invalid car ID format', 400))
+    await expect(loadA).resolves.toBeNull()
+    expect(store.state.carDetails.notFound).toBe(false)
+    expect(store.state.carDetails.error).toBeNull()
+  })
+
+  it('keeps the loading state while the latest request is pending', async () => {
+    const store = makeStore()
+    const first = deferGetById()
+    deferGetById()
+    const loadA = store.dispatch('carDetails/fetchCar', { id: 'car1' })
+    store.dispatch('carDetails/fetchCar', { id: 'car2' })
+
+    first.resolve(CAR)
+    await loadA
+    expect(store.state.carDetails.isLoading).toBe(true)
+  })
+
+  it('ignores a slow poll for a car the page has left', async () => {
+    vi.mocked(carsApi.getById).mockResolvedValueOnce(CAR)
+    const store = makeStore()
+    await store.dispatch('carDetails/fetchCar', { id: 'car1' })
+    const poll = deferGetById()
+    const polling = store.dispatch('carDetails/fetchCar', { id: 'car1', silent: true })
+
+    vi.mocked(carsApi.getById).mockResolvedValueOnce({ ...CAR, _id: 'car2' })
+    await store.dispatch('carDetails/fetchCar', { id: 'car2' })
+    poll.resolve({ ...CAR, status: 'in_use' })
+
+    await expect(polling).resolves.toBeNull()
+    expect(store.state.carDetails.car._id).toBe('car2')
+  })
+
   it('measures the distance from the user', async () => {
     vi.mocked(carsApi.getById).mockResolvedValue(CAR)
     const store = makeStore()

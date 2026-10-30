@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { mount } from '@vue/test-utils'
+import { mount, flushPromises } from '@vue/test-utils'
 import { createRouter, createMemoryHistory } from 'vue-router'
 import { createStore } from 'vuex'
 
@@ -100,6 +100,41 @@ describe('QuickBookModal', () => {
     await vi.waitFor(() => expect(bodyText()).toContain('You already have an active trip'))
     expect(document.body.querySelector('a[href="/trips"]')).not.toBeNull()
     expect(confirmButton().disabled).toBe(true)
+  })
+
+  it('ignores a late check from an earlier opening and books the car shown (H2)', async () => {
+    const CAR_B = {
+      ...CAR,
+      _id: 'car2',
+      productionInfo: { brand: 'Kia', model: 'Rio', year: 2021 },
+      registrationNumber: '5678 CD-7',
+    }
+    const checks = {}
+    vi.mocked(carsApi.getById)
+      .mockReturnValueOnce(new Promise((r) => (checks.a = r)))
+      .mockReturnValueOnce(new Promise((r) => (checks.b = r)))
+      .mockResolvedValueOnce(CAR_B)
+    vi.mocked(bookingsApi.listMine).mockResolvedValue([])
+    vi.mocked(bookingsApi.create).mockResolvedValue({ _id: 'b1' })
+    wrapper = setup()
+
+    // Cancel car A while its check is pending, open the modal for car B
+    await wrapper.setProps({ open: false })
+    await wrapper.setProps({ car: CAR_B, open: true })
+    checks.a(CAR)
+    await flushPromises()
+    expect(carsApi.getById).toHaveBeenCalledTimes(2)
+
+    expect(bodyText()).toContain('Kia Rio')
+    expect(bodyText()).not.toContain('Toyota Camry')
+    expect(confirmButton().disabled).toBe(true)
+
+    checks.b(CAR_B)
+    await vi.waitFor(() => expect(confirmButton().disabled).toBe(false))
+    confirmButton().click()
+
+    await vi.waitFor(() => expect(bookingsApi.create).toHaveBeenCalledTimes(1))
+    expect(bookingsApi.create).toHaveBeenCalledWith(expect.objectContaining({ carId: 'car2' }))
   })
 
   it('keeps the modal open with the backend message when booking fails', async () => {

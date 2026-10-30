@@ -15,7 +15,7 @@ export default {
 <template>
   <div class="flex flex-col gap-1 rounded-card bg-card p-4 text-card-foreground shadow-card">
     <dt class="flex items-center gap-1.5 text-label-sm text-muted-foreground uppercase">
-      <component :is="icon" v-if="icon" class="text-secondary-hover" aria-hidden="true" />
+      <component :is="icon" v-if="icon" class="text-link" aria-hidden="true" />
       {{ label }}
     </dt>
     <dd class="m-0 flex flex-col gap-2">

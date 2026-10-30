@@ -17,7 +17,6 @@ Work inside `frontend/`. Read `CLAUDE.md` §8.2–8.3 if anything below is uncle
 - PascalCase, **multi-word** names (`vue/multi-word-component-names` is an error).
 - A new view also needs a lazy route in `src/router/index.js`:
   `{ path: '/cars', name: 'cars', component: () => import('@/views/CarListView.vue') }` — add it **before** the catch-all `/:pathMatch(.*)*`.
-- Delete `src/components/.gitkeep` once the first component lands there.
 
 ## 2. Options API skeleton
 
@@ -63,12 +62,12 @@ export default {
 Rules:
 - Option order: `name, components, props, emits, data, computed, watch, lifecycle hooks, methods`.
 - Always declare `emits`; props use the object syntax with `type` (and `required` / `default`).
-- Store, router, HTTP: `mapState` / `mapGetters` / `mapActions` (see the `vuex-module` skill), `this.$router`, `this.$route`. Never call `axios` directly — go through a Vuex action that uses `@/api/http`.
+- Store, router, HTTP: `mapState` / `mapGetters` / `mapActions` (see the `vuex-module` skill), `this.$router`, `this.$route`. Never call `axios` or `@/api/*` from a component — go through a Vuex action (it calls the `src/api/*.js` wrappers).
 - Comments and UI text in English.
 
 ## 3. Styling with the design system
 
-- Colors **only** from tokens: `bg-background`, `text-foreground`, `bg-card`, `text-card-foreground`, `bg-popover`, `bg-primary`, `hover:bg-primary-hover`, `text-primary-foreground`, `bg-secondary`, `hover:bg-secondary-hover`, `text-secondary-foreground`, `bg-muted`, `text-muted-foreground`, `bg-accent`, `text-accent-foreground`, `bg-surface`, `border-border`, `border-input`, `ring-ring`; status colours `destructive`, `success`, `warning`, `info` (+ `-foreground`, soft backgrounds via `bg-success/15`). Status labels/tones come from `@/utils/derive` (`carStatusMeta`, `bookingStatusMeta`, `fuelTone`); display values from `@/utils/format`.
+- Colors **only** from tokens: `bg-background`, `text-foreground`, `bg-card`, `text-card-foreground`, `bg-popover`, `bg-primary`, `hover:bg-primary-hover`, `text-primary-foreground`, `bg-secondary`, `hover:bg-secondary-hover`, `text-secondary-foreground`, `bg-muted`, `text-muted-foreground`, `text-link` (accent text and links — not `text-secondary`/`text-secondary-hover`, which fail contrast as text), `bg-accent`, `text-accent-foreground`, `bg-surface`, `border-border`, `border-input`, `ring-ring`; status colours `destructive`, `success`, `warning`, `info` (+ `-foreground`, soft backgrounds via `bg-success/15`). Status labels/tones come from `@/utils/derive` (`carStatusMeta`, `bookingStatusMeta`, `fuelTone`); display values from `@/utils/format`.
 - Typography and shape from the theme: `text-headline-sm`, `text-body-md`, `text-label-sm uppercase`, …; `rounded-control` / `rounded-card` / `rounded-dialog`; `shadow-card` / `shadow-popover`.
 - Never `text-gray-500`, `bg-blue-600`, hex or `rgb()` values. Opacity works: `bg-primary/50`.
 - Dark mode: tokens switch automatically with `.dark` on `<html>`; use `dark:` only for layout differences, not colors.
@@ -82,6 +81,9 @@ Rules:
 - Icons from `@ant-design/icons-vue` are auto-imported too (`resolveIcons: true`): write `<CarOutlined />` in the template with no import or `components` entry.
 - Ant Design colors come from the design tokens via `ConfigProvider` in `App.vue` — don't pass `color` props or override `.ant-*` classes for color.
 - `v-model` on Ant Design inputs is `v-model:value`, not `v-model`.
+- Danger actions are never solid: Ant Design writes text on solid fills with `colorTextLightSolid` = the dark `primary-foreground`, which is unreadable on red. Use `<a-button danger>` (no `type="primary"`), and `ok-type="default"` on an `a-popconfirm` / `a-modal` whose `ok-button-props` has `danger: true`. `src/theme/__tests__/dangerButtons.spec.js` enforces this.
+- `a-select` drops `aria-label`. Name it with `html-for="x"` on the `a-form-item` plus `id="x"` on the select, or wrap it in a `<label>` (visible or `sr-only`).
+- Async results in components (a check run when a modal opens, a debounced route update) must still apply when they land: keep a request counter or re-check the route / props before using them.
 
 ## 5. Forms: VeeValidate + Zod 3
 
@@ -191,7 +193,7 @@ describe('LoginForm', () => {
 Testing notes:
 - No need to install Ant Design in tests: Vitest uses `vite.config.js`, so `<a-*>` components and icons are auto-imported there too.
 - VeeValidate validates asynchronously — use `vi.waitFor(...)`, not a single `flushPromises()`.
-- Components using the store or router: pass `createStore({ modules: { … } })` / a `createRouter({ history: createMemoryHistory(), routes })` in `global.plugins`, and mock `@/api/http` with `vi.mock`.
+- Components using the store or router: pass `createStore({ modules: { … } })` / a `createRouter({ history: createMemoryHistory(), routes })` in `global.plugins`, and mock the `@/api/<resource>` wrappers with `vi.mock`. Lazy components registered under another name (`LazyFleetMap`) are mocked with `__esModule: true`; stub `MapView` (Leaflet) with `global.stubs`.
 - `beforeEach` / `afterEach` callbacks must not **return** a function (`() => mock.mockReset()` returns the mock, and Vitest runs it as teardown). Use braces.
 
 ## 7. Finish

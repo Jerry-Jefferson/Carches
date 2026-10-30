@@ -157,13 +157,16 @@ export default {
         >
           <template #prefix><SearchOutlined class="text-muted-foreground" /></template>
         </a-input>
-        <a-select
-          :value="filters.brand"
-          :options="brandOptions"
-          aria-label="Brand"
-          class="w-40"
-          @update:value="setFilters({ brand: $event })"
-        />
+        <!-- a-select drops aria-label, so it is labelled by a wrapping <label> -->
+        <label>
+          <span class="sr-only">Brand</span>
+          <a-select
+            :value="filters.brand"
+            :options="brandOptions"
+            class="w-40"
+            @update:value="setFilters({ brand: $event })"
+          />
+        </label>
         <a-input-number
           :value="filters.yearFrom"
           :min="1886"

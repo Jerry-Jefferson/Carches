@@ -55,11 +55,7 @@ export default {
       <div class="min-w-0">
         <p class="m-0 text-label-sm text-muted-foreground uppercase">Current trip</p>
         <h2 id="active-trip-title" class="m-0 text-headline-md">
-          <router-link
-            v-if="carRoute"
-            :to="carRoute"
-            class="text-card-foreground hover:text-secondary-hover"
-          >
+          <router-link v-if="carRoute" :to="carRoute" class="text-card-foreground hover:text-link">
             {{ name }}
           </router-link>
           <template v-else>{{ name }}</template>

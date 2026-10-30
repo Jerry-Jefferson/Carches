@@ -92,7 +92,7 @@ export default {
 
     <template #footer>
       <a-button :disabled="isDeleting" @click="close">Cancel</a-button>
-      <a-button type="primary" danger :loading="isDeleting" @click="confirm">Delete</a-button>
+      <a-button danger :loading="isDeleting" @click="confirm">Delete</a-button>
     </template>
   </a-modal>
 </template>

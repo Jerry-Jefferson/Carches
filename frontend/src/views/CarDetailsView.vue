@@ -237,22 +237,22 @@ export default {
                 v-if="distanceText"
                 class="inline-flex items-center gap-1.5 rounded-full bg-muted px-2.5 py-0.5 text-label-md"
               >
-                <AimOutlined class="text-secondary-hover" aria-hidden="true" />
+                <AimOutlined class="text-link" aria-hidden="true" />
                 {{ distanceText }}
               </span>
             </div>
             <div>
               <h1 class="m-0 text-headline-lg">{{ name }}</h1>
-              <p class="m-0 text-headline-sm text-secondary-hover">{{ subtitle }}</p>
+              <p class="m-0 text-headline-sm text-link">{{ subtitle }}</p>
             </div>
             <p v-if="hasPoint" class="m-0 flex flex-wrap items-center gap-2 text-body-md">
-              <EnvironmentOutlined class="text-secondary-hover" aria-hidden="true" />
+              <EnvironmentOutlined class="text-link" aria-hidden="true" />
               <span class="text-muted-foreground">{{ coords }}</span>
               <a
                 :href="mapLink"
                 target="_blank"
                 rel="noopener noreferrer"
-                class="text-label-md text-secondary-hover hover:underline"
+                class="text-label-md text-link hover:underline"
               >
                 Open in maps
                 <span class="sr-only">(opens in a new tab)</span>
@@ -300,6 +300,7 @@ export default {
       :car="confirmed?.car"
       :booking="confirmed?.booking"
       :scheduled="confirmed?.scheduled ?? false"
+      @closed="focusBooking"
     />
   </div>
 </template>
