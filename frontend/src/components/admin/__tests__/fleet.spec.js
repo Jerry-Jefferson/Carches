@@ -9,7 +9,9 @@ import auth from '@/store/modules/auth'
 import cars from '@/store/modules/cars'
 import geo from '@/store/modules/geo'
 import notify from '@/utils/notify'
+import AdminFleetSection from '../AdminFleetSection.vue'
 import AdminFleetTable from '../AdminFleetTable.vue'
+import LowFuelAlerts from '../LowFuelAlerts.vue'
 import MaintenanceActions from '../MaintenanceActions.vue'
 import ReservedCardsWidget from '../ReservedCardsWidget.vue'
 import VehicleFormModal from '../VehicleFormModal.vue'
@@ -82,6 +84,38 @@ describe('admin fleet section', () => {
     wrapper?.unmount()
     wrapper = null
     document.body.innerHTML = ''
+  })
+
+  describe('AdminFleetSection', () => {
+    it('focuses a ?car= once and keeps the admin filters on later reloads (M9)', async () => {
+      const store = makeStore([car('a'), car('b')])
+      wrapper = mount(AdminFleetSection, {
+        props: { focusId: 'b' },
+        global: {
+          plugins: [store, makeRouter()],
+          stubs: {
+            AdminFleetTable: true,
+            AdminFleetMap: true,
+            LowFuelAlerts: true,
+            ReservedCardsWidget: true,
+            MaintenanceActions: true,
+            VehicleFormModal: true,
+            VehicleHistoryDrawer: true,
+          },
+        },
+      })
+      await flushPromises()
+      expect(store.state.admin.fleet.filters.q).toBe('VINB')
+
+      // The 3 s highlight ends, the admin clears the search and picks a brand, then the
+      // 60 s refresh lands
+      wrapper.vm.highlightId = null
+      await store.dispatch('admin/fleet/setFilters', { q: '', brand: 'Toyota' })
+      store.commit('cars/SET_ITEMS', [car('a'), car('b')])
+      await flushPromises()
+
+      expect(store.state.admin.fleet.filters).toMatchObject({ q: '', brand: 'Toyota' })
+    })
   })
 
   describe('AdminFleetTable', () => {
@@ -252,6 +286,59 @@ describe('admin fleet section', () => {
         .find((b) => b.text() === 'Show on map')
         .trigger('click')
       expect(wrapper.emitted('show-on-map')[0][0]._id).toBe('a')
+    })
+
+    it('shows a failed load as an error with Retry, not as an empty group (M11)', async () => {
+      const store = makeStore([car('a', { status: 'reserved' })])
+      vi.mocked(carsApi.listReserved)
+        .mockRejectedValueOnce(new Error('Network error.'))
+        .mockResolvedValueOnce([{ vin: 'VINA', userFirstName: 'Hanna', userLicenseNumber: 'AB1' }])
+      wrapper = mountWith(ReservedCardsWidget, { store })
+      await store.dispatch('admin/fleet/fetchWidgets')
+      await flushPromises()
+
+      expect(wrapper.text()).toContain('Reserved cars could not be loaded')
+      expect(wrapper.text()).not.toContain('No reserved cars in this group')
+
+      await wrapper
+        .findAll('button')
+        .find((b) => b.text() === 'Retry')
+        .trigger('click')
+      await flushPromises()
+      expect(wrapper.text()).toContain('Hanna')
+    })
+
+    it('lists a reserved car once, for its current driver (M13)', async () => {
+      const store = makeStore([car('a', { status: 'reserved' })])
+      store.commit('admin/trips/SET_ITEMS', [
+        { _id: 't1', carId: 'a', endDate: null, userId: { licenseNumber: 'NOW222' } },
+      ])
+      vi.mocked(carsApi.listReserved).mockResolvedValue([
+        { vin: 'VINA', userFirstName: 'Old', userLastName: 'Booker', userLicenseNumber: 'OLD111' },
+        { vin: 'VINA', userFirstName: 'Vera', userLastName: 'Now', userLicenseNumber: 'NOW222' },
+        { vin: 'VINA', userFirstName: 'Vera', userLastName: 'Now', userLicenseNumber: 'NOW222' },
+      ])
+      wrapper = mountWith(ReservedCardsWidget, { store })
+      await store.dispatch('admin/fleet/fetchReserved', false)
+      await flushPromises()
+
+      expect(wrapper.findAll('li')).toHaveLength(1)
+      expect(wrapper.text()).toContain('Vera Now')
+      expect(wrapper.text()).not.toContain('Old Booker')
+    })
+  })
+
+  describe('LowFuelAlerts', () => {
+    it('shows a failed load as an error, not as "no low-fuel cars" (M11)', async () => {
+      const store = makeStore()
+      vi.mocked(carsApi.listInUseLowFuel).mockRejectedValueOnce(new Error('Network error.'))
+      vi.mocked(carsApi.listReserved).mockResolvedValue([])
+      wrapper = mountWith(LowFuelAlerts, { store })
+      await store.dispatch('admin/fleet/fetchWidgets')
+      await flushPromises()
+
+      expect(wrapper.text()).toContain('Fuel alerts could not be loaded')
+      expect(wrapper.text()).not.toContain('No low-fuel cars')
     })
   })
 })

@@ -5,6 +5,8 @@ import { test, expect } from '@playwright/test'
 import {
   adminCredentials,
   call,
+  createTestCar,
+  latestBookingId,
   newUserProfile,
   removeBooking,
   removeCar,
@@ -49,7 +51,10 @@ test('sign up → book a car → My Trips → the admin completes the trip → t
 }) => {
   const profile = newUserProfile()
   let userId = null
+  let token = null
   let bookingId = null
+  // Its own free car: no skipping when the seeded ones are taken or in service
+  const car = await createTestCar(request, admin.token)
   try {
     // Sign up through the form
     await page.goto('/auth?mode=signup')
@@ -62,11 +67,9 @@ test('sign up → book a car → My Trips → the admin completes the trip → t
     await page.locator('form button[type="submit"]').click()
     await expect(page).toHaveURL(/\/fleet/)
 
-    const { token, user } = await signInByApi(request, profile)
-    userId = user._id
-    const { body } = await call(request, 'GET', '/cars', { token })
-    const car = body.data.find((item) => item.status === 'free')
-    test.skip(!car, 'no free car: re-seed the cars')
+    const session = await signInByApi(request, profile)
+    token = session.token
+    userId = session.user._id
 
     // Book it from the car page
     await page.goto(`/cars/${car._id}`)
@@ -100,8 +103,11 @@ test('sign up → book a car → My Trips → the admin completes the trip → t
     const after = await call(request, 'GET', `/cars/${car._id}`, { token })
     expect(after.body.data.status).toBe('free')
   } finally {
-    await removeBooking(request, admin.token, bookingId)
+    // A run that failed before noting the booking still removes it; the car goes too, so
+    // no seeded car is left "In trip"
+    await removeBooking(request, admin.token, bookingId ?? (await latestBookingId(request, token)))
     await removeUser(request, admin.token, userId)
+    await removeCar(request, admin.token, car.vin)
   }
 })
 
@@ -146,6 +152,8 @@ test('keyboard: skip link, and the booking window returns focus when closed', as
   request,
 }) => {
   const user = await signUpByApi(request)
+  // Guarantees at least one bookable car on the fleet page
+  const car = await createTestCar(request, admin.token)
   try {
     await useToken(page, user.token)
     await page.goto('/fleet')
@@ -158,7 +166,6 @@ test('keyboard: skip link, and the booking window returns focus when closed', as
     await expect(page.locator('#main')).toBeFocused()
 
     const book = page.getByRole('button', { name: /Book Now/ }).first()
-    test.skip((await book.count()) === 0, 'no free car: re-seed the cars')
     await book.focus()
     await page.keyboard.press('Enter')
     const dialog = page.getByRole('dialog')
@@ -172,5 +179,6 @@ test('keyboard: skip link, and the booking window returns focus when closed', as
     await expect(book).toBeFocused()
   } finally {
     await removeUser(request, admin.token, user.user._id)
+    await removeCar(request, admin.token, car.vin)
   }
 })

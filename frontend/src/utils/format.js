@@ -49,7 +49,9 @@ export const formatPercent = (value) =>
 
 export const formatDistance = (meters) => {
   if (!isNumber(meters)) return EMPTY
-  if (meters < 1000) return `${Math.round(meters / 10) * 10} m`
+  // Rounded first, so 995 m is "1.0 km", not "1000 m"
+  const rounded = Math.round(meters / 10) * 10
+  if (rounded < 1000) return `${rounded} m`
   return `${(meters / 1000).toFixed(1)} km`
 }
 

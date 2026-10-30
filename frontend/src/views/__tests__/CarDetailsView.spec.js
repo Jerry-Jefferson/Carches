@@ -9,10 +9,15 @@ import bookings from '@/store/modules/bookings'
 import carDetails from '@/store/modules/carDetails'
 import cars from '@/store/modules/cars'
 import geo from '@/store/modules/geo'
+import notify from '@/utils/notify'
 import CarDetailsView, { POLL_MS } from '../CarDetailsView.vue'
+import NotFoundView from '../NotFoundView.vue'
 
 vi.mock('@/api/cars', () => ({ list: vi.fn(), getById: vi.fn() }))
 vi.mock('@/api/bookings', () => ({ listMine: vi.fn(), create: vi.fn() }))
+vi.mock('@/utils/notify', () => ({
+  default: { success: vi.fn(), error: vi.fn(), apiError: vi.fn() },
+}))
 
 const CAR = {
   _id: 'car1',
@@ -85,8 +90,44 @@ describe('CarDetailsView', () => {
     )
     ;({ wrapper } = await setup('nope'))
 
-    expect(text(wrapper)).toContain('This car is not in the fleet')
-    expect(wrapper.find('h1').exists()).toBe(false)
+    expect(wrapper.find('h1').text()).toBe('This car is not in the fleet')
+  })
+
+  it('keeps one h1 while loading and on the error state (L14)', async () => {
+    vi.mocked(carsApi.getById).mockReturnValueOnce(new Promise(() => {}))
+    ;({ wrapper } = await setup())
+    expect(wrapper.findAll('h1').map((h) => h.text())).toEqual(['Loading car'])
+    wrapper.unmount()
+
+    vi.mocked(carsApi.getById).mockRejectedValueOnce(new Error('Network error.'))
+    ;({ wrapper } = await setup())
+    expect(wrapper.findAll('h1')).toHaveLength(1)
+  })
+
+  it('sets the tab title when the car is already in the store (L22)', async () => {
+    vi.mocked(carsApi.getById).mockResolvedValue(CAR)
+    let store, router
+    ;({ wrapper, store, router } = await setup())
+    wrapper.unmount()
+    document.title = 'Car details — Carshes'
+
+    wrapper = mount(CarDetailsView, {
+      props: { id: 'car1' },
+      global: { plugins: [store, router], stubs: { MapView: MapViewStub } },
+    })
+
+    expect(document.title).toBe('Toyota Camry — Carshes')
+  })
+
+  it('reports a failed refresh of a car already on screen (L22)', async () => {
+    vi.mocked(carsApi.getById).mockResolvedValueOnce(CAR)
+    ;({ wrapper } = await setup())
+    vi.mocked(carsApi.getById).mockRejectedValueOnce(new Error('Network error.'))
+
+    await wrapper.vm.load()
+
+    expect(notify.apiError).toHaveBeenCalledWith(expect.any(Error), 'Could not refresh the car')
+    expect(wrapper.find('h1').text()).toBe('Toyota Camry')
   })
 
   it('offers a retry for other errors', async () => {
@@ -122,5 +163,13 @@ describe('CarDetailsView', () => {
     vi.advanceTimersByTime(POLL_MS)
     await flushPromises()
     expect(carsApi.getById).toHaveBeenCalledTimes(2)
+  })
+})
+
+describe('NotFoundView', () => {
+  it('has an h1 (L14)', () => {
+    const wrapper = mount(NotFoundView, { global: { mocks: { $router: { push: vi.fn() } } } })
+    expect(wrapper.find('h1').text()).toBe('Page not found')
+    wrapper.unmount()
   })
 })

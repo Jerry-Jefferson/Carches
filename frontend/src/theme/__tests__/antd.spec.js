@@ -29,6 +29,16 @@ describe('buildAntdTheme', () => {
     expect(token.colorInfo).toBe('#185b8b')
   })
 
+  it('maps every link state, so pressed links do not flash Ant blue (L24)', () => {
+    root.style.setProperty('--link', '45 60% 30%')
+    root.style.setProperty('--foreground', '353 14% 15%')
+
+    const { token } = buildAntdTheme(root)
+
+    expect(token.colorLinkHover).toBe(token.colorLinkActive)
+    expect(token.colorLinkActive).toBeDefined()
+  })
+
   it('sets radii and the font from --font-sans', () => {
     root.style.setProperty('--font-sans', "'Plus Jakarta Sans', sans-serif")
 

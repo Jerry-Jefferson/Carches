@@ -4,6 +4,7 @@ import { mapActions, mapState } from 'vuex'
 import CarPlaceholder from '@/components/common/CarPlaceholder.vue'
 import EnergyBar from '@/components/common/EnergyBar.vue'
 import StatusTag from '@/components/common/StatusTag.vue'
+import { copyText } from '@/utils/clipboard'
 import { CAR_STATUS, carStatusMeta } from '@/utils/derive'
 import { carName, formatCoords, formatKm, formatRelative } from '@/utils/format'
 import notify from '@/utils/notify'
@@ -90,7 +91,7 @@ export default {
     },
     async copyVin(vin) {
       try {
-        await navigator.clipboard.writeText(vin)
+        await copyText(vin)
         notify.success('VIN copied')
       } catch {
         notify.error('Could not copy the VIN')

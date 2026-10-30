@@ -132,6 +132,21 @@ describe('auth module', () => {
       expect(loadToken()).toBeNull()
     })
 
+    it.each([
+      ['offline', apiError('Network error. Check your connection.', null)],
+      ['a server error', apiError('Internal server error', 500)],
+    ])('keeps the stored token when %s', async (label, error) => {
+      saveToken('jwt', { remember: true })
+      vi.mocked(usersApi.getMe).mockRejectedValue(error)
+      const store = makeStore()
+
+      await store.dispatch('auth/bootstrap')
+
+      expect(store.getters['auth/isAuthenticated']).toBe(false)
+      expect(store.state.auth.status).toBe('ready')
+      expect(loadToken()).toEqual({ token: 'jwt', remember: true })
+    })
+
     it('runs once for concurrent and later calls', async () => {
       saveToken('jwt')
       vi.mocked(usersApi.getMe).mockResolvedValue(USER)

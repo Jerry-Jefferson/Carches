@@ -84,6 +84,12 @@ Rules:
 - Danger actions are never solid: Ant Design writes text on solid fills with `colorTextLightSolid` = the dark `primary-foreground`, which is unreadable on red. Use `<a-button danger>` (no `type="primary"`), and `ok-type="default"` on an `a-popconfirm` / `a-modal` whose `ok-button-props` has `danger: true`. `src/theme/__tests__/dangerButtons.spec.js` enforces this.
 - `a-select` drops `aria-label`. Name it with `html-for="x"` on the `a-form-item` plus `id="x"` on the select, or wrap it in a `<label>` (visible or `sr-only`).
 - Async results in components (a check run when a modal opens, a debounced route update) must still apply when they land: keep a request counter or re-check the route / props before using them.
+- A failed load is never shown as an empty state ("No alerts", "Nothing here"): render the stored error with a Retry action instead.
+- Defaults such as "now" belong to the moment a modal opens, not to a cached computed: refresh them in an `open` watcher.
+- `aria-label` on a plain `<span>` / `<div>` is ignored by screen readers. Make the visible text clear on its own, or pair an `aria-hidden="true"` visual (`1 / 2`) with `sr-only` text (`1 completed of 2 trips`).
+- A component rendered twice on one page (inline + in a drawer) must not use fixed `id`s: build them from a module-level counter in `data()`.
+- Copy to the clipboard with `copyText()` from `@/utils/clipboard` (`navigator.clipboard` is missing on non-HTTPS origins).
+- Every view state has one `h1`, loading and error states included; `a-result` renders its `title` as a `div`, so put the `h1` in its `#title` slot.
 
 ## 5. Forms: VeeValidate + Zod 3
 
@@ -150,6 +156,7 @@ Why this shape:
 - Bind inputs with `:value` + `@update:value="handleChange"` + `@blur="handleBlur"`; `v-bind="field"` does not match Ant Design's event names.
 - `onSubmit` only runs when the schema passes; it receives the parsed values.
 - Mirror the backend rules (password 8+ chars and ≤ 72 bytes on sign up; `licenseNumber` 6–20 chars; names 2–50 chars).
+- A rule across fields ("passwords match") in a Zod 3 `.refine` on the whole object runs only once every field has the right type, so it shows up last. Put it on a small object of just those fields and combine with `z.intersection(form, rule)` (see `registerSchema`).
 
 ## 6. Test file
 

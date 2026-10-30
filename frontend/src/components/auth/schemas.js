@@ -42,8 +42,20 @@ export const signInSchema = z.object({
   remember: z.boolean().default(false),
 })
 
-export const registerSchema = z
+// Checked on its own: a Zod 3 refine on the whole form runs only once every field is
+// valid, so "Passwords do not match" would appear last
+const matchingPasswords = z
   .object({
+    password: z.string({ required_error: 'Password is required' }),
+    confirmPassword: z.string({ required_error: 'Confirm your password' }),
+  })
+  .refine((values) => values.password === values.confirmPassword, {
+    message: 'Passwords do not match',
+    path: ['confirmPassword'],
+  })
+
+export const registerSchema = z.intersection(
+  z.object({
     firstName: personName('First name'),
     lastName: personName('Last name'),
     licenseNumber: z
@@ -60,11 +72,9 @@ export const registerSchema = z
         .min(PASSWORD_MIN_LENGTH, `Password must be at least ${PASSWORD_MIN_LENGTH} characters`),
     ),
     confirmPassword: z.string({ required_error: 'Confirm your password' }),
-  })
-  .refine((values) => values.password === values.confirmPassword, {
-    message: 'Passwords do not match',
-    path: ['confirmPassword'],
-  })
+  }),
+  matchingPasswords,
+)
 
 // Known backend messages that belong to a single field (section 6.4 of the plan)
 const FIELD_ERRORS = [

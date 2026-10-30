@@ -58,6 +58,7 @@ Carshes/
 ├── .mcp.json                          ← MongoDB MCP server (read-only)
 ├── .claude/skills/                    ← project skills (see §11)
 ├── README.md
+├── implementation-plan.md             ← frontend roadmap (all phases done; backend gaps in §17)
 ├── .gitignore
 │
 ├── backend/
@@ -117,33 +118,33 @@ Carshes/
 │
 └── frontend/
     ├── .env.example                   ← VITE_API_URL, VITE_BACKEND_URL
-    ├── index.html                     ← SPA shell
+    ├── index.html                     ← SPA shell (description and theme-color meta)
     ├── vite.config.js                 ← Vue + Tailwind + auto-import plugins, dev proxy to backend, Vitest (src/** only)
     ├── playwright.config.js           ← e2e projects: layout at 375 / 1024 / 1440 px, smoke (journeys + endpoints); starts the dev server
     ├── e2e/                           ← support.js (accounts, API calls, axe check), layout / journeys / api-coverage specs
     ├── package.json                   ← scripts: dev, build, preview, test, lint, format
     ├── eslint.config.js
     ├── .prettierrc.json / .prettierignore
-    ├── public/                        ← static assets
+    ├── public/                        ← favicons, site.webmanifest (name, theme colour)
     └── src/
         ├── main.js                    ← installs the session interceptors, creates the app with router + store
         ├── App.vue                    ← root: Ant Design theme + layout picked by route.meta.layout
         ├── api/
-        │   ├── http.js                ← axios instance (baseURL from VITE_API_URL, defaults to /api/v2), unwrap, error normalising
+        │   ├── http.js                ← axios instance (baseURL from VITE_API_URL, defaults to /api/v2), unwrap, error normalising, serverNow() (server clock from the `Date` header)
         │   ├── session.js             ← wires http to the store/router: Bearer token, 401 → /auth?redirect=
         │   └── auth.js / users.js / cars.js / bookings.js ← thin wrappers for E1–E23, used only by Vuex actions
         ├── router/
         │   ├── index.js               ← route table (meta: layout, guestOnly, roles, title)
         │   └── guards.js              ← auth guard, safeRedirect(), document title
         ├── store/
-        │   ├── index.js               ← Vuex store (strict in dev); resetOnSignOut plugin clears `bookings` and `admin/*` data on auth/CLEAR_SESSION
+        │   ├── index.js               ← Vuex store (strict in dev); resetOnSignOut plugin clears `bookings`, `admin/*` data and filters and the insights day on auth/CLEAR_SESSION
         │   └── modules/
-        │       ├── auth.js            ← session: signIn, signUp, logout, bootstrap (GET /users/me)
-        │       ├── cars.js            ← GET /cars (30 s cache), fleet filters, sorting, counts, nearest free car, upsertCar
-        │       ├── bookings.js        ← GET /bookings/my (60 s cache), checkBookable + createBooking with pre-checks (Q2–Q4), 	rips (bookings joined with cars, Q5)
+        │       ├── auth.js            ← session: signIn, signUp, logout, bootstrap (GET /users/me; drops the stored token only on 401 / 403 / 404)
+        │       ├── cars.js            ← GET /cars (30 s cache; a forced fetch never reuses an in-flight request), fleet filters, sorting, counts, nearest free car, upsertCar
+        │       ├── bookings.js        ← GET /bookings/my (60 s cache), checkBookable + createBooking with pre-checks (Q2–Q4), trips (bookings joined with cars, Q5)
         │       ├── carDetails.js      ← GET /cars/:id for the car page (not-found flag, silent refresh for polling), distance
         │       ├── geo.js             ← browser location on request (answer remembered per tab), Minsk fallback
-        │       └── admin/             ← console (`admin/loadAll`): fleet (E11–E17, widgets, table filters), users (E5–E8), trips (E19–E23; completeTrip = E22 + E12), insights (selected day, KPIs)
+        │       └── admin/             ← console (`admin/loadAll`): fleet (E11–E17, widgets, table filters), users (E5–E8), trips (E19–E23; completeTrip = E22 + E12), insights (selected day — follows midnight while "today" is picked — and KPIs)
         ├── layouts/                   ← AuthLayout, AppLayout (header + footer), AdminLayout (sidebar + top bar)
         ├── views/                     ← AuthView, FleetView, CarDetailsView, MyTripsView, MyProfileView, AdminView, NotFoundView
         ├── components/
@@ -173,6 +174,7 @@ Carshes/
         │   ├── schedule.js            ← scheduled booking start: 7-day window, picker value ⇄ Date, disabled days / times
         │   ├── geo.js                 ← GeoJSON [lng, lat] ↔ { lat, lng }, Haversine, walking time, Minsk centre, map links
         │   ├── csv.js                 ← CSV export (BOM, escaping, formula-injection guard) + download helper
+        │   ├── clipboard.js           ← copyText(): Clipboard API, with an execCommand fallback for non-HTTPS origins
         │   ├── tokenStorage.js        ← JWT in localStorage ("Remember me") or sessionStorage
         │   └── notify.js              ← toasts / notifications (use instead of Ant Design's message directly)
         ├── test/
@@ -216,10 +218,10 @@ main.js → createApp(App)
 ```
 
 - **Routing**: lazy-loaded views, catch-all 404. `route.meta.layout` (`auth` / `app` default / `admin`) picks the layout in `App.vue`.
-- **Access** (`router/guards.js`): the guard first restores the stored session (`auth/bootstrap` → `GET /users/me`). Guests can open only `meta.guestOnly` routes (`/auth`); everything else redirects to `/auth?redirect=<target>`. Signed-in users are sent from `/auth` to `/fleet`; `meta.roles` routes (`/admin`) send other roles to `/fleet` with a warning.
+- **Access** (`router/guards.js`): the guard first restores the stored session (`auth/bootstrap` → `GET /users/me`). A token the backend rejects (401 / 403 / 404) is deleted; after a network or 5xx error it stays stored, so a reload can restore the session. Guests can open only `meta.guestOnly` routes (`/auth`); everything else redirects to `/auth?redirect=<target>`. Signed-in users are sent from `/auth` to `/fleet`; `meta.roles` routes (`/admin`) send other roles to `/fleet` with a warning.
 - **Session**: the token is kept by `utils/tokenStorage.js` (localStorage with "Remember me", otherwise sessionStorage; sign-up uses sessionStorage). `api/session.js` adds the Bearer header and, on a 401 from any request except sign-in/sign-up (or one sent with `{ skipAuthRedirect: true }`), clears the session and redirects to `/auth?redirect=…`.
 - **Auth screen**: `/auth?mode=signin|signup&redirect=/path`. The forms dispatch `auth/signIn` / `auth/signUp` and emit `success`; `AuthView` goes to `safeRedirect(redirect)` or `/fleet`. Backend errors go through `mapAuthError()` — known messages (duplicate e-mail / licence number, invalid e-mail, password length) appear under the field, everything else in a form-level alert.
-- **API calls**: components never call HTTP — Vuex actions call the `api/*.js` wrappers, which use the shared `axios` instance in `api/http.js`; errors carry `statusCode` and the backend `message`. The Vite dev server proxies `/api` requests to the backend (`VITE_BACKEND_URL`).
+- **API calls**: components never call HTTP — Vuex actions call the `api/*.js` wrappers, which use the shared `axios` instance in `api/http.js`; errors carry `statusCode` and the backend `message`. `http.js` also tracks the server clock from each response's `Date` header: "now" sent to the backend (a booking that starts now) comes from `serverNow()`. Lists refreshed on a timer drop responses older than the newest committed one. The Vite dev server proxies `/api` requests to the backend (`VITE_BACKEND_URL`).
 - **Component auto-import**: Ant Design Vue components are auto-resolved by `unplugin-vue-components` — no manual imports needed.
 - **Theming**: one source of truth — CSS variables in `styles/design-system.css`. Tailwind reads them through `@theme inline` in `main.css`; Ant Design reads them at runtime through `buildAntdTheme()` in `theme/antd.js`. `App.vue` keeps the result in `data()` and rebuilds it from a `MutationObserver` when the `.dark` class on `<html>` changes.
 
@@ -407,7 +409,7 @@ export default {
 5. **Implementation plan**: `implementation-plan.md` (repo root) is the frontend roadmap — all 7 phases are done (foundations, platform, auth, fleet, car details / trips / profile, admin console, quality and release). Backend gaps the UI deliberately leaves out are listed in its §17.
 6. **Store modules**: `auth`, `cars`, `carDetails`, `bookings`, `geo` and the nested `admin` module (`admin/fleet`, `admin/users`, `admin/trips`, `admin/insights`). The admin console's car list is the root `cars` module. Add new modules with the `vuex-module` skill.
 7. **Dev server proxy**: In development, the Vite dev server proxies `/api` to the backend. This means API calls just use relative paths (`/api/v2/...`) — no CORS setup needed in dev.
-8. **Zod must stay on v3**: VeeValidate 4 does not validate Zod 4 schemas (invalid values pass). Keep `zod@^3` with `@vee-validate/zod`.
+8. **Zod must stay on v3**: VeeValidate 4 does not validate Zod 4 schemas (invalid values pass). Keep `zod@^3` with `@vee-validate/zod`. A Zod 3 `.refine` on a whole object runs only once every field has the right type, so cross-field rules ("passwords match") go in a small object combined with `z.intersection` (see `registerSchema`).
 9. **Tokens need a `jti`**: every JWT carries a unique ID used for logout/revocation; tokens without one are rejected.
 10. **Ant Design dark mode shifts primary**: Ant Design's dark algorithm slightly darkens `colorPrimary`, so primary buttons are a bit darker than `#FADF7F` in dark mode.
 11. **Windows host**: the project lives on Windows (`D:\Carshes`). `node_modules` must be installed on the machine that runs the code — never copy `node_modules` from Linux (platform-specific binaries for Vite/Rolldown, Tailwind and Lightning CSS).
@@ -419,10 +421,12 @@ export default {
 17. **Lazy components vs auto-import**: `unplugin-vue-components` resolves any tag matching a file in `src/components` to a *static* import, defeating `defineAsyncComponent`. Register lazy components under another name (e.g. `LazyFleetMap`). In tests, mock such modules with `__esModule: true`.
 18. **Booking times**: the scheduled-start picker works in the browser's local time (`SCHEDULE_VALUE_FORMAT` strings, no direct `dayjs` import — it is only a dependency of Ant Design), while dates are displayed in Minsk time. The two match for users in Minsk.
 19. **Vitest timeout is 15 s** (`vite.config.js`): each test file runs in its own worker and its first test imports Ant Design, which can exceed the 5 s default when the whole suite runs.
-20. **Admin console URL**: `/admin?tab=fleet|trips|users` picks the section; `&car=`, `&trip=`, `&user=` point at a row (search results and the history / user drawers link through these). `AdminLayout` renders the sidebar and search itself, because `App.vue` only fills its default slot. Admin data reloads every 60 s while the tab is visible.
+20. **Admin console URL**: `/admin?tab=fleet|trips|users` picks the section; `&car=`, `&trip=`, `&user=` point at a row (search results and the history / user drawers link through these); `&date=YYYY-MM-DD` is the day for the trip statistics (left out for today; `AdminView` puts it back after links that drop it). `AdminLayout` renders the sidebar and search itself, because `App.vue` only fills its default slot. Admin data reloads every 60 s while the tab is visible.
 21. **Ant Design accessibility quirks**: `a-select` drops `aria-label` — wrap it in a `<label>` (visible or `sr-only` text), or pair `html-for` on its `a-form-item` with an `id` on the select. `a-slider` labels its handle only through `aria-label-for-handle` / `aria-labelled-by-for-handle`. Some violations come from Ant Design's own markup (closed select combobox ARIA, sorter icons, the pagination page-size select); `e2e/support.js` lists them in `LIBRARY_ISSUES` — add to that list only for markup the app can't change.
 22. **End-to-end checks** (`frontend/e2e/`) need the Docker stack with the admin migration and seeded cars. They read the admin login from `E2E_ADMIN_*` or `backend/.env`, create and remove their own `e2e.*@carshes.test` users and test cars, and the endpoint check runs E16 / E17, which change matching cars (re-seed to reset). Vitest only collects `src/**`.
 23. **No solid danger buttons**: Ant Design's `colorTextLightSolid` is the dark `primary-foreground` (right for yellow primary buttons and selected date cells), so a solid red button has ~1.7 : 1 text. Use `danger` without `type="primary"`, and `ok-type="default"` on popconfirms / modals with a danger OK button — enforced by `src/theme/__tests__/dangerButtons.spec.js`.
+24. **Accessibility rules**: one `h1` per screen state, loading, error and 404 included (the e2e layout run counts them; `a-result` renders `title` as a `div`, so use its `#title` slot); no `aria-label` on plain `span` / `div` (use `sr-only` text); no fixed `id`s in components rendered twice (inline + drawer); soft status pills (`bg-<tone>/15`) are contrast-tested on every surface, and `.dark` must define every `:root` token (`styles/__tests__/contrast.spec.js`).
+25. **Clipboard**: use `copyText()` from `utils/clipboard.js`; `navigator.clipboard` is missing on non-HTTPS origins.
 
 ---
 

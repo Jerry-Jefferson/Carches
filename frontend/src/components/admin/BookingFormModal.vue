@@ -40,6 +40,8 @@ export default {
     return {
       formError: '',
       isSubmitting: false,
+      // "Now" for a new booking's start, taken each time the modal opens
+      openedAt: Date.now(),
       valueFormat: SCHEDULE_VALUE_FORMAT,
       showTime: { format: 'HH:mm', minuteStep: SCHEDULE_STEP_MINUTES },
       hint: 'Setting an end date completes the trip and frees the car; a future start reserves it.',
@@ -63,7 +65,7 @@ export default {
         return {
           userId: null,
           carId: null,
-          startDate: toPickerValue(new Date()),
+          startDate: toPickerValue(new Date(this.openedAt)),
           startFuelLevel: null,
           startMileage: null,
         }
@@ -97,6 +99,12 @@ export default {
     },
     formKey() {
       return `${this.trip?._id ?? 'new'}-${this.open}`
+    },
+  },
+  watch: {
+    // The modal stays mounted, so the default start must not stay at the first opening
+    open(isOpen) {
+      if (isOpen) this.openedAt = Date.now()
     },
   },
   methods: {

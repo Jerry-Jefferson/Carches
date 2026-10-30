@@ -3,6 +3,7 @@ import { getErrorMessage } from '@/api/http'
 import {
   DEFAULT_FLEET_FILTERS,
   carStatusCounts,
+  currentReservedRows,
   filterAdminCars,
   relocationCandidates,
   serviceCandidates,
@@ -18,7 +19,9 @@ export default {
     // Which E15 list is shown: reserved cars whose booker's card is (not) authorised
     reservedAuthorized: false,
     isLoadingWidgets: false,
-    widgetsError: null,
+    // Per widget, so a failure is never shown as "nothing to report"
+    lowFuelError: null,
+    reservedError: null,
     isMutating: false,
   }),
   getters: {
@@ -35,12 +38,20 @@ export default {
       serviceCandidates(rootState.cars.items),
     previewRelocationCandidates: (state, getters, rootState) =>
       relocationCandidates(rootState.cars.items, rootState.admin.trips.items),
+    // E15 rows without past bookers and duplicate cards
+    reservedRows: (state, getters, rootState) =>
+      currentReservedRows(state.reserved, {
+        cars: rootState.cars.items,
+        trips: rootState.admin.trips.items,
+      }),
   },
   mutations: {
     RESET(state) {
+      state.filters = { ...DEFAULT_FLEET_FILTERS }
       state.lowFuel = []
       state.reserved = []
-      state.widgetsError = null
+      state.lowFuelError = null
+      state.reservedError = null
     },
     SET_FILTERS(state, filters) {
       state.filters = { ...DEFAULT_FLEET_FILTERS, ...filters }
@@ -55,8 +66,11 @@ export default {
     SET_LOADING_WIDGETS(state, isLoading) {
       state.isLoadingWidgets = isLoading
     },
-    SET_WIDGETS_ERROR(state, error) {
-      state.widgetsError = error
+    SET_LOW_FUEL_ERROR(state, error) {
+      state.lowFuelError = error
+    },
+    SET_RESERVED_ERROR(state, error) {
+      state.reservedError = error
     },
     SET_MUTATING(state, isMutating) {
       state.isMutating = isMutating
@@ -80,10 +94,17 @@ export default {
       }
     },
 
+    // Reload after a change that already succeeded. A failed reload must not look like a
+    // failed change (the admin would repeat it), so it is not thrown: the cars module
+    // keeps the error for the list.
+    reloadCars({ dispatch }) {
+      return dispatch('cars/fetchCars', { force: true }, { root: true }).catch(() => {})
+    },
+
     // E11. The response is not populated (Q9), so the whole list is reloaded.
     async createCar({ dispatch }, car) {
       const created = await dispatch('mutate', () => carsApi.create(car))
-      await dispatch('cars/fetchCars', { force: true }, { root: true })
+      await dispatch('reloadCars')
       return created
     },
 
@@ -100,44 +121,53 @@ export default {
       await dispatch('cars/removeCar', car._id, { root: true })
     },
 
-    // E14 and E15 for the side widgets. Errors are kept for the widgets, not thrown.
+    // E14 and E15 for the side widgets. Each widget keeps its own error; nothing is thrown.
     async fetchWidgets({ state, commit, dispatch }) {
       commit('SET_LOADING_WIDGETS', true)
-      commit('SET_WIDGETS_ERROR', null)
       try {
-        await Promise.all([
+        await Promise.allSettled([
           dispatch('fetchLowFuel'),
           dispatch('fetchReserved', state.reservedAuthorized),
         ])
-      } catch (err) {
-        commit('SET_WIDGETS_ERROR', getErrorMessage(err))
       } finally {
         commit('SET_LOADING_WIDGETS', false)
       }
     },
 
     async fetchLowFuel({ commit }) {
-      const cars = await carsApi.listInUseLowFuel()
-      commit('SET_LOW_FUEL', cars ?? [])
-      return cars
+      try {
+        const cars = (await carsApi.listInUseLowFuel()) ?? []
+        commit('SET_LOW_FUEL', cars)
+        commit('SET_LOW_FUEL_ERROR', null)
+        return cars
+      } catch (err) {
+        commit('SET_LOW_FUEL_ERROR', getErrorMessage(err))
+        throw err
+      }
     },
 
     async fetchReserved({ commit }, authorized = false) {
-      const rows = await carsApi.listReserved(authorized)
-      commit('SET_RESERVED', { authorized, rows: rows ?? [] })
-      return rows
+      try {
+        const rows = (await carsApi.listReserved(authorized)) ?? []
+        commit('SET_RESERVED', { authorized, rows })
+        commit('SET_RESERVED_ERROR', null)
+        return rows
+      } catch (err) {
+        commit('SET_RESERVED_ERROR', getErrorMessage(err))
+        throw err
+      }
     },
 
     // E16, E17: Mongo update results ({ modifiedCount, … }); the list is reloaded after
     async sendToService({ dispatch }) {
       const result = await dispatch('mutate', () => carsApi.sendOldOrWornToService())
-      await dispatch('cars/fetchCars', { force: true }, { root: true })
+      await dispatch('reloadCars')
       return result
     },
 
     async relocateFrequent({ dispatch }) {
       const result = await dispatch('mutate', () => carsApi.relocateFrequentlyBooked())
-      await dispatch('cars/fetchCars', { force: true }, { root: true })
+      await dispatch('reloadCars')
       return result
     },
   },

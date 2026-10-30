@@ -1,4 +1,5 @@
 <script>
+import { copyText } from '@/utils/clipboard'
 import notify from '@/utils/notify'
 
 // Shares the current page with the Web Share API, or copies its link
@@ -22,10 +23,11 @@ export default {
         }
       }
       try {
-        await navigator.clipboard.writeText(url)
+        await copyText(url)
         notify.success('Link copied')
       } catch {
-        notify.error('Could not copy the link')
+        // Nothing worked: show the link so it can be copied by hand
+        notify.error(`Could not copy the link: ${url}`)
       }
     },
   },

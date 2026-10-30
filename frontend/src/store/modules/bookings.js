@@ -1,6 +1,6 @@
 import * as bookingsApi from '@/api/bookings'
 import * as carsApi from '@/api/cars'
-import { getErrorMessage } from '@/api/http'
+import { getErrorMessage, serverNow } from '@/api/http'
 import { BOOKING_STATUS, CAR_STATUS, bookingStatus } from '@/utils/derive'
 
 export const CACHE_MS = 60000
@@ -21,6 +21,11 @@ export const bookingBlockedError = (code) =>
 
 const byStatus = (status) => (state) =>
   state.mine.filter((booking) => bookingStatus(booking) === status)
+
+// Counts the fetchMine calls
+let mineSeq = 0
+// The newest call whose response has been committed
+let mineCommitted = 0
 
 export default {
   namespaced: true,
@@ -82,19 +87,23 @@ export default {
       // A response that arrives after sign-out belongs to the previous user: drop it
       const token = rootState.auth?.token
       const isSameSession = () => rootState.auth?.token === token
+      // An overlapping refresh can answer out of order: never replace newer data
+      const seq = ++mineSeq
 
       commit('SET_LOADING', true)
       commit('SET_ERROR', null)
       try {
         const bookings = (await bookingsApi.listMine()) ?? []
         if (!isSameSession()) return []
+        if (seq < mineCommitted) return state.mine
+        mineCommitted = seq
         commit('SET_MINE', bookings)
         return bookings
       } catch (err) {
-        if (isSameSession()) commit('SET_ERROR', getErrorMessage(err))
+        if (isSameSession() && seq > mineCommitted) commit('SET_ERROR', getErrorMessage(err))
         throw err
       } finally {
-        commit('SET_LOADING', false)
+        if (seq === mineSeq) commit('SET_LOADING', false)
       }
     },
 
@@ -114,6 +123,8 @@ export default {
     // bookings, Q2). Start fuel and mileage come from the car, never from the user (Q3);
     // the payload is whitelisted so users can't send end fields (Q4). `userId` is the
     // caller: the backend fills it in only for users, so admins must send it themselves.
+    // "Now" is the server's: with a fast browser clock the backend would see a future
+    // start and reserve the car instead of starting the trip.
     async createBooking({ commit, dispatch, rootState }, { carId, startDate = null }) {
       commit('SET_SUBMITTING', true)
       commit('SET_ERROR', null)
@@ -125,7 +136,7 @@ export default {
         const booking = await bookingsApi.create({
           ...(userId && { userId }),
           carId,
-          startDate: startDate ?? new Date().toISOString(),
+          startDate: startDate ?? serverNow().toISOString(),
           startFuelLevel: car.fuelLevel,
           startMileage: car.mileage,
         })

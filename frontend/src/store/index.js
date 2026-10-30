@@ -7,7 +7,7 @@ import carDetails from './modules/carDetails'
 import cars from './modules/cars'
 import geo from './modules/geo'
 
-// Drops per-user data when the session ends (logout, expired token)
+// Drops per-user data and admin filters when the session ends (logout, expired token)
 export const resetOnSignOut = (store) => {
   store.subscribe((mutation) => {
     if (mutation.type !== 'auth/CLEAR_SESSION') return
@@ -15,6 +15,7 @@ export const resetOnSignOut = (store) => {
     // Test stores may be built without the admin modules
     if (!store.hasModule('admin')) return
     store.commit('admin/fleet/RESET')
+    store.commit('admin/insights/RESET')
     store.commit('admin/trips/RESET')
     store.commit('admin/users/RESET')
   })

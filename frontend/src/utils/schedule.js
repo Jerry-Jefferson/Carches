@@ -57,13 +57,21 @@ export const isDayDisabled = (day, now = Date.now()) => {
   return time < startOfDay(now) || time > startOfDay(latestStart(now))
 }
 
-// For a-date-picker's disabled-time: past hours and minutes of today
+// For a-date-picker's disabled-time: past hours and minutes of today, and on the last
+// allowed day the times after latestStart
 export const disabledTimeOf = (day, now = Date.now()) => {
   const current = new Date(now)
+  const last = new Date(latestStart(now))
   const isToday = day && startOfDay(day) === startOfDay(now)
+  const isLastDay = day && startOfDay(day) === startOfDay(last)
   return {
-    disabledHours: () => (isToday ? range(0, current.getHours()) : []),
-    disabledMinutes: (hour) =>
-      isToday && hour === current.getHours() ? range(0, current.getMinutes() + 1) : [],
+    disabledHours: () => [
+      ...(isToday ? range(0, current.getHours()) : []),
+      ...(isLastDay ? range(last.getHours() + 1, 24) : []),
+    ],
+    disabledMinutes: (hour) => [
+      ...(isToday && hour === current.getHours() ? range(0, current.getMinutes() + 1) : []),
+      ...(isLastDay && hour === last.getHours() ? range(last.getMinutes() + 1, 60) : []),
+    ],
   }
 }

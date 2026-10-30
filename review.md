@@ -240,8 +240,8 @@ Repo-wide greps over `src/` (tests excluded), each confirmed by reading the hits
 | Priority | Items | Effort |
 |---|---|---|
 | **Before merge** | H1, H2, H3; ★ M1, M2, M3, M4, M5; M8 (regression in the working tree). ✅ **Done 2026-10-30, see §12.** | ~1–1.5 days |
-| **Next sprint** | M6, M7, M9–M15; L14, L15, L27; axe scans of modals; contrast-test extension; coverage tooling + thresholds; race-condition tests | ~3 days |
-| **Backlog** | Remaining Low items; lint rules for conventions; byId map refactor; backend notes for E15 (open booking only) and E16 (`isDeleted` filter) | as capacity allows |
+| **Next sprint** | M6, M7, M9–M15 ✅ **done 2026-10-30 (§12)**; L14 ✅, L15 (✅ with M4), L27 ✅; axe scans of modals; contrast-test extension (✅ partly: `input`, `primary-foreground`); coverage tooling + thresholds; race-condition tests (✅ for the fixed paths) | ~3 days |
+| **Backlog** | Remaining Low items ✅ **all done 2026-10-30 (§12)**; lint rules for conventions; byId map refactor; backend notes for E15 (open booking only) and E16 (`isDeleted` filter) | as capacity allows |
 | **Process** | **T1 — align all components and store modules with the `vue-component` / `vuex-module` skills** (§11). Can run alongside the fixes above; the fixes that touch components or modules must follow the same skill rules. | ~2–3 days |
 
 ---
@@ -395,4 +395,84 @@ Process: the `vue-component` and `vuex-module` skills were invoked with the Skil
 - `npm run build` ✅
 - `npx playwright test`: **35 / 35** ✅
 
-**Still open:** M6, M7, M9–M15 and all Low items (see §9 "Next sprint" / "Backlog"), and T1.
+### 2026-10-30 — remaining Medium items (M6, M7, M9–M15)
+
+As before, every new regression test was checked to **fail on the old code** (9 of 9 failed) and pass with the fix.
+
+| ID | Fix | Files | Tests |
+|---|---|---|---|
+| M6 | `--input` (Ant Design `colorBorder`, every control outline) darkened to `47 29% 46%` in light mode and lightened to `353 10% 48%` in dark mode. It is now ≥ 3 : 1 on `surface`, `card`, `popover` and `background` in both themes (was 1.65 : 1) | `styles/design-system.css` | `contrast.spec.js`: new `NON_TEXT` (3 : 1) check for `input` on 4 backgrounds × 2 themes |
+| M7 | `role="img"` and its label moved to an inner layer; slot content (the fuel chip) renders beside it, so screen readers announce it | `components/common/CarPlaceholder.vue` | `common.spec.js` |
+| M9 | A `?car=` is applied once per id (`focusedId`); later reloads no longer reset the admin's filters | `components/admin/AdminFleetSection.vue` | `fleet.spec.js` (first test mounting the section) |
+| M10 | A failed reload after a successful create no longer rejects the action. `createTrip` catches `fetchTrips`; `createCar`, `sendToService` and `relocateFrequent` use a new non-throwing `reloadCars`. The reloaded module keeps its own `error`, and the 60 s refresh reports it | `store/modules/admin/trips.js`, `admin/fleet.js` | `admin.spec.js` × 2 |
+| M11 | Widget errors are per widget (`lowFuelError`, `reservedError`, set by `fetchLowFuel` / `fetchReserved`; `fetchWidgets` uses `allSettled`). Both widgets show the error with **Retry** instead of "No low-fuel cars" / "No reserved cars", and the duplicate toasts are gone | `admin/fleet.js`, `LowFuelAlerts.vue`, `ReservedCardsWidget.vue` | `fleet.spec.js` × 2 |
+| M12 | `openedAt` is refreshed by an `open` watcher and used for the default start, instead of a cached `new Date()` | `components/admin/BookingFormModal.vue` | `trips.spec.js` (fake `Date`) |
+| M13 | New `currentReservedRows()` (pure, in `utils/admin.js`) behind a `reservedRows` getter. It keeps one row per car and driver and, when the loaded trips name the open booking's driver, only that driver (past bookers and duplicate cards are dropped). Rows are keyed by VIN + licence. The backend gap in E15 remains | `utils/admin.js`, `admin/fleet.js`, `ReservedCardsWidget.vue` | `admin.spec.js` (utils) × 3, `fleet.spec.js` |
+| M14 | Journeys create their own free test car (`createTestCar`: current year, 100 km, so E16 never touches it) instead of `test.skip` when no seeded car is free. Clean-up removes the car and finds the booking through `latestBookingId` if the run failed before noting it. `api-coverage` also removes its future booking in `finally` | `e2e/support.js`, `e2e/journeys.spec.js`, `e2e/api-coverage.spec.js` | the e2e run itself |
+| M15 | `MapView` re-fits only when the marker places change (`placesKey` = ids + coordinates + user location), not on every refresh. An open popup whose marker disappeared is closed | `components/common/MapView.vue` | `MapView.spec.js` × 2 |
+| L19 | Fleet and admin map markers include the status label in their title | `FleetMap.vue`, `AdminFleetMap.vue` | `cars.spec.js` |
+| L17 (part) | The low-fuel count uses `sr-only` text instead of `aria-label` on a `span` | `LowFuelAlerts.vue` | — |
+
+**Skills (T1 rule 4):**
+- `vuex-module`: a reload after a successful change is not thrown.
+- `vue-component`: a failed load is never shown as an empty state; "now" defaults are refreshed when a modal opens.
+
+**Verification:**
+- `npm run lint` ✅
+- `npm run format:check` ✅
+- `npm test`: 40 files, **506 tests** ✅ (+21)
+- `npm run build` ✅
+- `npx playwright test`: **35 / 35** ✅ (journeys ran on their own cars, none skipped)
+
+### 2026-10-30 — Low items (L1–L14, L16–L18, L20–L29)
+
+Every regression test was checked against the old source (source reverted, tests kept): each one listed below failed there and passes with the fix. Exceptions are noted in the table.
+
+| ID | Fix | Files | Tests |
+|---|---|---|---|
+| L1 | `bootstrap` drops the stored token only when `GET /users/me` rejects it (401 / 403 / 404). After a network or 5xx error the token stays stored, so a reload restores the session | `store/modules/auth.js` | `auth.spec.js` × 2 |
+| L2 | A forced `fetchCars` while a request is in flight queues one more request after it, shared by every forced caller in the meantime, instead of returning the possibly stale one | `store/modules/cars.js` | `cars.spec.js` |
+| L3 | "Book now" sends `serverNow()`. `http.js` tracks the server clock from each response's `Date` header (whole seconds, so it is never ahead of the server) and falls back to the browser clock | `api/http.js`, `store/modules/bookings.js` | `http.spec.js` × 2, `bookings.spec.js` |
+| L4 | `fetchMine`, `admin/trips/fetchTrips` and `admin/users/fetchUsers` number their calls. An older response that lands after a newer one is dropped, and `isLoading` is cleared by the latest call | `bookings.js`, `admin/trips.js`, `admin/users.js` | `admin.spec.js` |
+| L5 | `deleteUser` refuses the signed-in admin's own id (`SELF_DELETE_MESSAGE`) before calling E8 | `admin/users.js` | `admin.spec.js` |
+| L6 | A 404 from the follow-up car update (the car was soft-deleted) counts as "nothing to update" in `completeTrip`, `deleteTrip` and `retryCarUpdate` | `admin/trips.js` | `admin.spec.js` |
+| L7 | `formatDistance` rounds before choosing the unit: 995 m → "1.0 km" (the old test expected the bug and was corrected) | `utils/format.js` | `format.spec.js` |
+| L8 | "Also mark the car as Available" is shown only for an open booking, and not when another open booking holds the same car | `DeleteTripModal.vue` | `trips.spec.js` × 2 |
+| L9 | Previews skip cars already `in_service` (E16) and cars already at the depot (E17). `DEPOT_POINT` now holds the backend's exact coordinates | `utils/admin.js`, `utils/geo.js` | `admin.spec.js` (utils) |
+| L10 | Sign-out resets the fleet, trips and users filters and the insights day (`admin/insights/RESET`). While "today" is selected, `tick` moves the day forward at midnight; a picked day stays | `store/index.js`, `admin/*.js`, `admin/insights.js` | `admin.spec.js` × 2 |
+| L11 | `?date=YYYY-MM-DD` is synced both ways with the insights day. It is left out for today and added back after links that drop it (sidebar, search); invalid values are removed | `views/AdminView.vue` | `AdminView.spec.js` |
+| L12 | The default end in "Complete trip" is the later of now and the start, taken when the modal opens, so an Upcoming booking opens without an error | `CompleteTripModal.vue`, `bookingSchema.js` (`defaultEndTime`) | `trips.spec.js`, `bookingSchema.spec.js` |
+| L13 | The users table has controlled pagination and jumps to the highlighted user's page, in the current sort order. The highlight is on the cells, which Ant Design paints over the row | `AdminUsersTable.vue` | `users.spec.js` |
+| L14 | `h1` added to Not Found and to the car page's 404, error and loading states (in the `a-result` `#title` slot or as `sr-only` text). The e2e Not Found check now uses the full `check()` (one `h1` and axe) | `NotFoundView.vue`, `CarDetailsView.vue`, `e2e/layout.spec.js` | `CarDetailsView.spec.js` × 3 |
+| L16 | The min-fuel label id is built per instance, so the drawer copy no longer duplicates it | `FleetFilterControls.vue` | `cars.spec.js` |
+| L17 | `PillGroup`: the ignored `aria-label` is removed; the visible count is already part of the button name ("BMW 2"). Users table: `aria-hidden` "1 / 2" plus `sr-only` "1 completed of 2 trips" | `PillGroup.vue`, `AdminUsersTable.vue` | existing tests (no behaviour to assert) |
+| L18 | The mobile admin drawer has the title "Admin navigation" and a close button, like the app's "Menu" drawer | `layouts/AdminLayout.vue` | e2e layout runs |
+| L20 | The "passwords match" rule sits in its own object, combined with `z.intersection`, so it is reported while other fields are still empty | `components/auth/schemas.js` | `schemas.spec.js` × 2 |
+| L21 | `disabledTimeOf` also disables hours and minutes after `latestStart` on the last allowed day | `utils/schedule.js` | `schedule.spec.js` |
+| L22 | The car page's title watcher is `immediate`. A failed refresh of a car already shown raises a toast. The fleet's empty state no longer requires `!error`, only no blocking error | `CarDetailsView.vue`, `FleetView.vue` | `CarDetailsView.spec.js` × 2, `FleetView.spec.js` |
+| L23 | New `copyText()` uses the Clipboard API, then a textarea + `execCommand('copy')`. Used by Share, copy e-mail and copy VIN. Share shows the link if both fail | `utils/clipboard.js`, `ShareButton.vue`, `AdminUsersTable.vue`, `AdminFleetTable.vue` | `clipboard.spec.js` × 3 (new helper, so not a revert check) |
+| L24 | `colorLinkActive` mapped to `foreground` | `theme/antd.js` | `antd.spec.js` |
+| L25 | `completeEndDate()` in `bookingSchema.js` is the single clamp rule. It keeps the picked end when the start is missing or invalid (no `RangeError`) | `bookingSchema.js`, `CompleteTripModal.vue` | `bookingSchema.spec.js` × 3 |
+| L26 | Dark `--destructive` → `0 75% 76%`, so soft pills are ≥ 4.5 : 1 on every surface. `--secondary-hover` defined in `.dark` | `styles/design-system.css` | `contrast.spec.js`: new soft-pill check (4 tones × 4 surfaces × 2 themes), and a check that `.dark` defines every `:root` token |
+| L27 | `LIBRARY_ISSUES` matches only the select's search input (`#rc_select_N`), and only for the exact attributes Ant Design leaves wrong while closed: `aria-expanded` missing, and `aria-owns` / `aria-controls` / `aria-activedescendant` pointing at the unrendered `rc_select_N_list`. Checked against a live axe run first | `e2e/support.js` | e2e layout runs (all pass) |
+| L28 | `index.html` has `description` and `theme-color`. The manifest has name, short name and description, plus `theme_color` / `background_color` from the `primary` / `background` tokens | `index.html`, `public/site.webmanifest` | — |
+| L29 | `deleteUser` reloads the trips. `TripDetailsDrawer.load` ignores answers for a booking that is no longer requested. **Correction:** the popconfirm already showed a loading state, because the inline `@confirm` handler returns the request's promise. A regression test now guards it | `admin/users.js`, `TripDetailsDrawer.vue` | `admin.spec.js`, `trips.spec.js`, `users.spec.js` (guard) |
+
+**Skills and docs:**
+- `vue-component`: `aria-label` on plain elements; per-instance ids; `copyText`; one `h1` per state; cross-field Zod rules via `z.intersection`.
+- `vuex-module`: newest response wins for timed lists; a forced reload never reuses an in-flight request; backend gaps are enforced in actions; `serverNow()` for "now".
+- `CLAUDE.md`: gotcha 20 (`&date=`); the directory map lists `clipboard.js` and `serverNow()`.
+
+**Verification:**
+- `npm run lint` ✅
+- `npm run format:check` ✅
+- `npm test`: 41 files, **575 tests** ✅ (+69)
+- `npm run build` ✅
+- `npx playwright test`: **35 / 35** ✅
+
+**Still open:**
+- **From §9:** axe scans of opened modals and popconfirms; coverage tooling with thresholds; lint rules for conventions; the `byId` map refactor.
+- **Backend notes:**
+  - E15 should return only the open booking.
+  - E16 should filter `isDeleted`. Its `updateMany` also matches deleted and in-use cars, which the L9 preview cannot show.
+- **T1.**

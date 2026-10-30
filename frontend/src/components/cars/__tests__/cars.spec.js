@@ -4,6 +4,7 @@ import { createRouter, createMemoryHistory } from 'vue-router'
 
 import { DEFAULT_FILTERS } from '@/utils/fleetFilters'
 import CarCard from '../CarCard.vue'
+import FleetFilterControls from '../FleetFilterControls.vue'
 import FleetFilters from '../FleetFilters.vue'
 import FleetHeader from '../FleetHeader.vue'
 import FleetMap from '../FleetMap.vue'
@@ -121,6 +122,26 @@ describe('FleetFilters', () => {
   })
 })
 
+describe('FleetFilterControls', () => {
+  it('gives each copy its own slider label id (L16)', () => {
+    const props = { filters: { ...DEFAULT_FILTERS } }
+    const inline = mount(FleetFilterControls, { props, attachTo: document.body })
+    const drawer = mount(FleetFilterControls, {
+      props: { ...props, vertical: true },
+      attachTo: document.body,
+    })
+
+    const ids = [...document.querySelectorAll('[id^="fleet-min-fuel"]')].map((el) => el.id)
+    expect(new Set(ids).size).toBe(2)
+    for (const wrapper of [inline, drawer]) {
+      const labelId = wrapper.find('[id^="fleet-min-fuel"]').attributes('id')
+      expect(wrapper.find('[role="slider"]').attributes('aria-labelledby')).toBe(labelId)
+    }
+    inline.unmount()
+    drawer.unmount()
+  })
+})
+
 describe('SortDropdown', () => {
   it('disables "Distance to you" without location', () => {
     const wrapper = mount(SortDropdown, { props: { value: 'fuel', distanceEnabled: false } })
@@ -186,6 +207,8 @@ describe('FleetMap', () => {
       expect.objectContaining({ id: 'car1', lat: 53.9023, lng: 27.5615, tone: 'success' }),
       expect.objectContaining({ id: 'car2', tone: 'info' }),
     ])
+    // The status is in the label as well as the colour (WCAG 1.4.1)
+    expect(markers[1].label).toMatch(/, In trip$/)
     expect(wrapper.text()).toContain('2 cars on the map')
   })
 

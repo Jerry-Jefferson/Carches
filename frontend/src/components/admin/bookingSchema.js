@@ -6,6 +6,8 @@ import { z } from 'zod'
 
 import { fromPickerValue } from '@/utils/schedule'
 
+const MINUTE = 60000
+
 const time = (value) => fromPickerValue(value)?.getTime() ?? NaN
 
 const dateField = (label) =>
@@ -65,6 +67,25 @@ export const editBookingSchema = z
     }
   })
 
+// The trip's start in ms, NaN when it is missing or invalid
+const startTime = (trip) => new Date(trip?.startDate ?? NaN).getTime()
+
+// End time sent with E22: the picked end, but never before the start (a trip that started
+// at 15:53:40 and ends "now" at 15:53 ends at its start). Without a valid start the
+// picked end is kept.
+export const completeEndDate = (value, trip) => {
+  const end = time(value)
+  const start = startTime(trip)
+  return new Date(Number.isNaN(start) ? end : Math.max(end, start)).toISOString()
+}
+
+// Default end for the form: now, or the start of a trip that has not begun yet (Upcoming),
+// so the form does not open with an error
+export const defaultEndTime = (trip, now = Date.now()) => {
+  const start = startTime(trip)
+  return Number.isNaN(start) ? now : Math.max(now, start)
+}
+
 // Built per trip: the end and the finish mileage are compared with the trip's start
 export const completeTripSchema = (trip) =>
   z
@@ -75,8 +96,8 @@ export const completeTripSchema = (trip) =>
     })
     .superRefine((values, ctx) => {
       // The picker has no seconds: an end in the start's own minute is fine (it is sent
-      // as the start itself, see CompleteTripModal)
-      const startMinute = Math.floor(new Date(trip?.startDate).getTime() / 60000) * 60000
+      // as the start itself, see completeEndDate)
+      const startMinute = Math.floor(startTime(trip) / MINUTE) * MINUTE
       if (time(values.endDate) < startMinute) {
         ctx.addIssue({ code: 'custom', path: ['endDate'], message: 'End must be after the start' })
       }

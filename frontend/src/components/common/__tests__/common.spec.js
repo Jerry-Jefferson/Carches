@@ -127,9 +127,21 @@ describe('CarPlaceholder and InitialsAvatar', () => {
     const car = { productionInfo: { brand: 'Toyota', model: 'Camry', year: 2023 } }
     const wrapper = mount(CarPlaceholder, { props: { car, size: 'hero' } })
 
-    expect(wrapper.attributes('role')).toBe('img')
-    expect(wrapper.attributes('aria-label')).toBe('Toyota Camry (no photo)')
-    expect(wrapper.text()).toBe('T')
+    const image = wrapper.find('[role="img"]')
+    expect(image.attributes('aria-label')).toBe('Toyota Camry (no photo)')
+    expect(image.text()).toBe('T')
+  })
+
+  it('CarPlaceholder keeps slot content outside the image, readable (M7)', () => {
+    const car = { productionInfo: { brand: 'Toyota', model: 'Camry', year: 2023 } }
+    const wrapper = mount(CarPlaceholder, {
+      props: { car },
+      slots: { default: '<span class="chip">Fuel level 80 %</span>' },
+    })
+
+    const chip = wrapper.find('.chip')
+    expect(chip.exists()).toBe(true)
+    expect(chip.element.closest('[role="img"]')).toBeNull()
   })
 
   it('InitialsAvatar shows the initials', () => {

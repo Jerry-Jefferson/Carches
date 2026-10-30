@@ -2,6 +2,9 @@
 import { ALL } from '@/utils/fleetFilters'
 import { CAR_STATUS_META } from '@/utils/derive'
 
+// The controls are rendered twice (inline and in the mobile drawer): ids must differ
+let instanceCount = 0
+
 // "Available only", status and minimum fuel. Shown inline from `md`
 // and inside the mobile filter drawer (`vertical`).
 export default {
@@ -20,6 +23,7 @@ export default {
       // Follows the slider while dragging; the filter changes when it is released
       fuel: this.filters.minFuel,
       fuelMarks: { 0: '0 %', 50: '50 %', 100: '100 %' },
+      fuelLabelId: `fleet-min-fuel-${++instanceCount}`,
     }
   },
   computed: {
@@ -71,7 +75,7 @@ export default {
     </label>
 
     <div class="flex min-w-56 flex-col gap-1" :class="vertical ? '' : 'flex-1 md:max-w-72'">
-      <span id="fleet-min-fuel" class="text-label-md text-muted-foreground">
+      <span :id="fuelLabelId" class="text-label-md text-muted-foreground">
         Minimum fuel: <span class="text-foreground">{{ formatFuel(fuel) }}</span>
       </span>
       <a-slider
@@ -82,7 +86,7 @@ export default {
         :marks="vertical ? fuelMarks : undefined"
         :tip-formatter="formatFuel"
         :disabled="disabled"
-        aria-labelled-by-for-handle="fleet-min-fuel"
+        :aria-labelled-by-for-handle="fuelLabelId"
         class="m-0 mx-1"
         @after-change="$emit('change', { minFuel: $event })"
       />

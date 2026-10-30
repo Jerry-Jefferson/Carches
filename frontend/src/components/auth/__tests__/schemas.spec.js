@@ -64,6 +64,21 @@ describe('registerSchema', () => {
   ])('rejects %j', (override, field, message) => {
     expect(errorsOf(registerSchema, { ...VALID_PROFILE, ...override })[field]).toContain(message)
   })
+  it('reports mismatching passwords while other fields are still invalid (L20)', () => {
+    // An untouched field is undefined: a type error, which stops a whole-form refine
+    const errors = errorsOf(registerSchema, {
+      ...VALID_PROFILE,
+      firstName: undefined,
+      confirmPassword: 'different1',
+    })
+    expect(errors.firstName).toContain('First name is required')
+    expect(errors.confirmPassword).toContain('Passwords do not match')
+  })
+
+  it('reports a missing password once, with its own message', () => {
+    const { password } = errorsOf(registerSchema, { ...VALID_PROFILE, password: undefined })
+    expect(password[0]).toBe('Password is required')
+  })
 })
 
 describe('mapAuthError', () => {

@@ -22,6 +22,7 @@ export default {
       trip: null,
       isLoading: false,
       error: '',
+      loadSeq: 0,
     }
   },
   computed: {
@@ -95,15 +96,18 @@ export default {
     ...mapActions('admin/trips', ['fetchTrip']),
     async load() {
       if (!this.tripId) return
+      // Opening another booking while one loads: only the latest answer is shown
+      const seq = ++this.loadSeq
       this.trip = null
       this.error = ''
       this.isLoading = true
       try {
-        this.trip = await this.fetchTrip(this.tripId)
+        const trip = await this.fetchTrip(this.tripId)
+        if (seq === this.loadSeq) this.trip = trip
       } catch (err) {
-        this.error = err.message
+        if (seq === this.loadSeq) this.error = err.message
       } finally {
-        this.isLoading = false
+        if (seq === this.loadSeq) this.isLoading = false
       }
     },
     close() {

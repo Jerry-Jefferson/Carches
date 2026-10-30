@@ -3,6 +3,7 @@ import { createStore } from 'vuex'
 
 import * as bookingsApi from '@/api/bookings'
 import * as carsApi from '@/api/cars'
+import { trackServerClock } from '@/api/http'
 import { resetOnSignOut } from '@/store'
 import auth from '../auth'
 import bookings, { BOOKING_BLOCK } from '../bookings'
@@ -116,6 +117,26 @@ describe('bookings module', () => {
       expect(payload).toMatchObject({ carId: 'car1', startFuelLevel: 82, startMileage: 18420 })
       expect(Math.abs(new Date(payload.startDate) - Date.now())).toBeLessThan(5000)
       expect(store.state.bookings.isSubmitting).toBe(false)
+    })
+
+    it('starts "now" by the server clock, not a fast browser clock (L3)', async () => {
+      // The browser clock is 10 minutes ahead of the server
+      trackServerClock({ headers: { date: new Date(Date.now() - 10 * 60000).toUTCString() } })
+      vi.mocked(carsApi.getById).mockResolvedValue(FREE_CAR)
+      vi.mocked(bookingsApi.listMine).mockResolvedValue([])
+      vi.mocked(bookingsApi.create).mockResolvedValue({ _id: 'new' })
+      const store = makeStore()
+
+      try {
+        await store.dispatch('bookings/createBooking', { carId: 'car1' })
+      } finally {
+        trackServerClock({ headers: { date: new Date().toUTCString() } })
+      }
+
+      const { startDate } = vi.mocked(bookingsApi.create).mock.calls[0][0]
+      const behind = Date.now() - new Date(startDate)
+      expect(behind).toBeGreaterThan(9 * 60000)
+      expect(behind).toBeLessThan(11 * 60000)
     })
 
     it('sends the signed-in caller as userId, which admins need (H1)', async () => {

@@ -174,6 +174,37 @@ describe('admin users section', () => {
     expect(store.state.admin.users.items.map((user) => user._id)).toEqual(['admin1'])
   })
 
+  // Regression guard: the confirm handler returns the request, which Ant Design shows as
+  // loading (L29 reported this as missing; it was already the case)
+  it('keeps the delete confirmation loading until the request ends', async () => {
+    let finish
+    vi.mocked(usersApi.remove).mockReturnValue(new Promise((resolve) => (finish = resolve)))
+    ;({ wrapper } = await mountWith(AdminUsersSection))
+
+    await wrapper.find('button[aria-label="Delete Hanna Paulava"]').trigger('click')
+    await vi.waitFor(() => expect(bodyButton('Delete')).toBeTruthy())
+    bodyButton('Delete').click()
+    await flushPromises()
+
+    expect(bodyButton('Delete').classList.contains('ant-btn-loading')).toBe(true)
+    finish()
+    await flushPromises()
+  })
+
+  it('shows a highlighted user that sits past the first page (L13)', async () => {
+    const many = Array.from({ length: 12 }, (_, i) => ({
+      ...HANNA,
+      _id: `u${i}`,
+      firstName: `User${String(i).padStart(2, '0')}`,
+    }))
+    ;({ wrapper } = await mountWith(AdminUsersTable, {
+      props: { users: many, highlightId: 'u11' },
+    }))
+
+    expect(wrapper.text()).toContain('User11')
+    expect(wrapper.find('.ant-pagination-item-active').text()).toBe('2')
+  })
+
   it('filters by role with counts', async () => {
     ;({ wrapper } = await mountWith(AdminUsersSection))
     const pills = wrapper.find('[aria-label="Role"]').findAll('button')
@@ -197,7 +228,8 @@ describe('admin users section', () => {
     }))
 
     expect(store.state.admin.users.filters.role).toBe('all')
-    expect(wrapper.find('tr.bg-primary\\/15').exists()).toBe(true)
+    // On the cells: Ant Design paints their background over the row's (L13)
+    expect(wrapper.find('tr[data-row-key="user1"]').classes()).toContain('[&>td]:bg-primary/15')
     await vi.waitFor(() => expect(bodyText()).toContain('User details'))
 
     bodyButton('Close').click()

@@ -7,6 +7,7 @@ import * as usersApi from '@/api/users'
 import { resetOnSignOut } from '@/store'
 import admin from '../admin'
 import { CAR_UPDATE_FAILED } from '../admin/trips'
+import { SELF_DELETE_MESSAGE } from '../admin/users'
 import auth from '../auth'
 import bookings from '../bookings'
 import cars from '../cars'
@@ -214,6 +215,29 @@ describe('admin store', () => {
     expect(store.state.admin.trips.items).toEqual([])
   })
 
+  it('createTrip succeeds when only the reload after it fails (M10)', async () => {
+    const store = await loaded()
+    vi.mocked(bookingsApi.create).mockResolvedValue({ _id: 'new' })
+    vi.mocked(bookingsApi.list).mockRejectedValueOnce(new Error('Network error.'))
+
+    await expect(store.dispatch('admin/trips/createTrip', { carId: 'car1' })).resolves.toEqual({
+      _id: 'new',
+    })
+    expect(bookingsApi.create).toHaveBeenCalledTimes(1)
+    expect(store.state.admin.trips.error).toBe('Network error.')
+  })
+
+  it('createCar succeeds when only the reload after it fails (M10)', async () => {
+    const store = await loaded()
+    vi.mocked(carsApi.create).mockResolvedValue({ _id: 'car2' })
+    vi.mocked(carsApi.list).mockRejectedValueOnce(new Error('Network error.'))
+
+    await expect(store.dispatch('admin/fleet/createCar', { vin: 'VIN2' })).resolves.toEqual({
+      _id: 'car2',
+    })
+    expect(store.state.cars.error).toBe('Network error.')
+  })
+
   it('drops user and trip lists that arrive after sign-out (M2)', async () => {
     const pending = {}
     vi.mocked(usersApi.list).mockReturnValueOnce(new Promise((r) => (pending.users = r)))
@@ -231,5 +255,101 @@ describe('admin store', () => {
     await expect(trips).resolves.toEqual([])
     expect(store.state.admin.users.items).toEqual([])
     expect(store.state.admin.trips.items).toEqual([])
+  })
+
+  it('keeps the newer list when an older refresh answers last (L4)', async () => {
+    const pending = []
+    vi.mocked(bookingsApi.list).mockImplementation(
+      () => new Promise((resolve) => pending.push(resolve)),
+    )
+    const store = makeStore()
+    const older = store.dispatch('admin/trips/fetchTrips')
+    const newer = store.dispatch('admin/trips/fetchTrips')
+
+    pending[1]([{ ...TRIP, endDate: '2026-10-29T09:00:00Z' }])
+    await newer
+    pending[0]([TRIP])
+    await older
+
+    expect(store.state.admin.trips.items[0].endDate).toBe('2026-10-29T09:00:00Z')
+    expect(store.state.admin.trips.isLoading).toBe(false)
+  })
+
+  it('refuses to delete the signed-in admin (L5)', async () => {
+    const store = await loaded()
+    store.commit('auth/SET_SESSION', { user: USER, token: 't', remember: false })
+
+    await expect(store.dispatch('admin/users/deleteUser', 'u1')).rejects.toThrow(
+      SELF_DELETE_MESSAGE,
+    )
+    expect(usersApi.remove).not.toHaveBeenCalled()
+  })
+
+  it('reloads trips after deleting a user (L29)', async () => {
+    const store = await loaded()
+    store.commit('auth/SET_SESSION', { user: { _id: 'admin1' }, token: 't', remember: false })
+    vi.mocked(usersApi.remove).mockResolvedValue(undefined)
+
+    await store.dispatch('admin/users/deleteUser', 'u1')
+
+    expect(store.state.admin.users.items).toEqual([])
+    expect(bookingsApi.list).toHaveBeenCalledTimes(2)
+  })
+
+  it('treats a car deleted meanwhile as nothing to update (L6)', async () => {
+    const store = await loaded()
+    const ended = { ...TRIP, endDate: '2026-10-29T09:00:00Z' }
+    vi.mocked(bookingsApi.update).mockResolvedValue(ended)
+    vi.mocked(carsApi.update).mockRejectedValue(
+      Object.assign(new Error('Car not found'), { statusCode: 404 }),
+    )
+
+    await expect(
+      store.dispatch('admin/trips/completeTrip', {
+        trip: TRIP,
+        endDate: ended.endDate,
+        finishFuelLevel: 40,
+        finishMileage: 1031,
+      }),
+    ).resolves.toEqual(ended)
+    await expect(
+      store.dispatch('admin/trips/retryCarUpdate', { vin: 'VIN1', changes: { fuelLevel: 40 } }),
+    ).resolves.toBeUndefined()
+    await expect(
+      store.dispatch('admin/trips/deleteTrip', { trip: TRIP, freeCar: true }),
+    ).resolves.toBeUndefined()
+  })
+
+  it('resets admin filters and the selected day on sign-out (L10)', async () => {
+    const store = await loaded()
+    store.dispatch('admin/fleet/setFilters', { q: 'kia' })
+    store.dispatch('admin/users/setFilters', { q: 'anna' })
+    store.dispatch('admin/trips/setFilters', { q: 'b1' })
+    store.dispatch('admin/insights/setDate', '2026-01-01')
+
+    store.commit('auth/CLEAR_SESSION')
+
+    expect(store.state.admin.fleet.filters.q).toBe('')
+    expect(store.state.admin.users.filters.q).toBe('')
+    expect(store.state.admin.trips.filters.q).toBe('')
+    expect(store.getters['admin/insights/isToday']).toBe(true)
+  })
+
+  it('moves "today" to the next day at midnight, but keeps a picked day (L10)', async () => {
+    vi.useFakeTimers()
+    try {
+      vi.setSystemTime(new Date('2026-10-29T20:59:00Z')) // 23:59 in Minsk
+      const store = makeStore()
+      vi.setSystemTime(new Date('2026-10-29T21:01:00Z'))
+      await store.dispatch('admin/insights/tick')
+      expect(store.state.admin.insights.date).toBe('2026-10-30')
+
+      store.dispatch('admin/insights/setDate', '2026-10-01')
+      vi.setSystemTime(new Date('2026-10-30T21:01:00Z'))
+      await store.dispatch('admin/insights/tick')
+      expect(store.state.admin.insights.date).toBe('2026-10-01')
+    } finally {
+      vi.useRealTimers()
+    }
   })
 })

@@ -23,11 +23,18 @@ import notify from '@/utils/notify'
 
 export const REFRESH_MS = 60000
 
+// ?date= holds a Minsk dayKey ("2026-10-29")
+const isDayKey = (value) =>
+  typeof value === 'string' &&
+  /^\d{4}-\d{2}-\d{2}$/.test(value) &&
+  !Number.isNaN(Date.parse(`${value}T12:00:00Z`))
+
 /**
  * Fleet Dispatch & Control (E5–E23 except E1–E4, E18). Loads cars, users and bookings in
  * parallel, then the side widgets; everything else is computed client-side (Q13).
- * Reloads every 60 s while the tab is visible. Sections are deep-linked with ?tab=, and
- * ?car= / ?trip= / ?user= point at a row (search results, history links).
+ * Reloads every 60 s while the tab is visible. Sections are deep-linked with ?tab=,
+ * ?car= / ?trip= / ?user= point at a row (search results, history links), and ?date= is
+ * the day for the trip statistics (left out for today, and put back after links that drop it).
  */
 export default {
   name: 'AdminView',
@@ -106,6 +113,21 @@ export default {
       return Object.fromEntries(this.cars.map((car) => [car._id, car]))
     },
   },
+  watch: {
+    '$route.query.date': {
+      handler(value) {
+        if (isDayKey(value)) {
+          if (value !== this.date) this.setDate(value)
+        } else {
+          this.syncDateQuery()
+        }
+      },
+      immediate: true,
+    },
+    date() {
+      this.syncDateQuery()
+    },
+  },
   created() {
     this.refresh()
   },
@@ -132,11 +154,20 @@ export default {
       this.tick()
       if (document.visibilityState === 'visible') this.refresh()
     },
+    // The selected day → ?date= (none for today)
+    syncDateQuery() {
+      if (this.$route.name !== 'admin') return
+      const date = this.isToday ? undefined : this.date
+      if (this.$route.query.date === date) return
+      this.$router.replace({ query: { ...this.$route.query, date } })
+    },
     selectTab(tab) {
-      this.$router.replace({ name: 'admin', query: { tab } })
+      this.$router.replace({ name: 'admin', query: { tab, date: this.$route.query.date } })
     },
     async addVehicle() {
-      if (this.tab !== ADMIN_TABS.FLEET) await this.$router.replace({ name: 'admin', query: {} })
+      if (this.tab !== ADMIN_TABS.FLEET) {
+        await this.$router.replace({ name: 'admin', query: { date: this.$route.query.date } })
+      }
       await this.$nextTick()
       this.$refs.fleet?.openCreate()
     },

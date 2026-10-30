@@ -5,6 +5,8 @@ import { cwd } from 'node:process'
 
 // WCAG 2.1 AA for normal text
 const AA = 4.5
+// WCAG 2.1 AA for user-interface components (1.4.11)
+const NON_TEXT = 3
 
 // Read from disk: with `css: false` Vitest stubs `.css?raw` imports as empty strings
 const css = readFileSync(resolve(cwd(), 'src/styles/design-system.css'), 'utf8')
@@ -38,9 +40,25 @@ const luminance = (channels) => {
   return 0.2126 * r + 0.7152 * g + 0.0722 * b
 }
 
-const contrast = (a, b) => {
-  const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x)
+const linear = (v) => (v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4)
+
+const luminanceOfRgb = (rgb) => {
+  const [r, g, b] = rgb.map(linear)
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b
+}
+
+const ratio = (l1, l2) => {
+  const [hi, lo] = [l1, l2].sort((x, y) => y - x)
   return (hi + 0.05) / (lo + 0.05)
+}
+
+const contrast = (a, b) => ratio(luminance(a), luminance(b))
+
+// `bg-<tone>/15` over a surface (soft pills), as the browser blends it in sRGB
+const SOFT_ALPHA = 0.15
+const softFill = (tone, surface) => {
+  const top = toRgb(tone)
+  return toRgb(surface).map((v, i) => top[i] * SOFT_ALPHA + v * (1 - SOFT_ALPHA))
 }
 
 const STATUS_TOKENS = ['destructive', 'success', 'warning', 'info']
@@ -66,6 +84,21 @@ describe.each([
     },
   )
 
+  // Soft status pills (theme/tones.js): `text-<tone>` on `bg-<tone>/15`
+  it.each(STATUS_TOKENS.flatMap((t) => [...SURFACES, 'surface'].map((s) => [t, s])))(
+    'soft %s pill is readable on %s',
+    (token, surface) => {
+      const fill = luminanceOfRgb(softFill(tokens[token], tokens[surface]))
+      expect(ratio(luminance(tokens[token]), fill)).toBeGreaterThanOrEqual(AA)
+    },
+  )
+
+  // Every token of :root has a value of its own in .dark (L26)
+  it('defines each colour token for this theme', () => {
+    const own = tokens === light ? light : readBlock('.dark')
+    expect(Object.keys(light).filter((name) => !(name in own))).toEqual([])
+  })
+
   it.each([...STATUS_TOKENS, 'surface'])('%s-foreground is readable on %s', (token) => {
     expect(contrast(tokens[`${token}-foreground`], tokens[token])).toBeGreaterThanOrEqual(AA)
   })
@@ -74,5 +107,10 @@ describe.each([
   // (primary buttons, selected date cells). Solid fills must therefore be primary ones.
   it.each(['primary', 'primary-hover'])('primary-foreground is readable on %s', (fill) => {
     expect(contrast(tokens['primary-foreground'], tokens[fill])).toBeGreaterThanOrEqual(AA)
+  })
+
+  // `input` is Ant Design's colorBorder: the outline of every control (WCAG 1.4.11)
+  it.each(['surface', 'card', 'popover', 'background'])('input outline is visible on %s', (bg) => {
+    expect(contrast(tokens.input, tokens[bg])).toBeGreaterThanOrEqual(NON_TEXT)
   })
 })

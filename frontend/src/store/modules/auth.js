@@ -7,6 +7,10 @@ import { clearToken, loadToken, saveToken } from '@/utils/tokenStorage'
 // One bootstrap per page load, shared by concurrent callers (guard + components)
 let bootstrapPromise = null
 
+// GET /users/me answers these when the token itself is no good (expired, revoked, user
+// deleted). Anything else (offline, 5xx) says nothing about the token.
+const REJECTED_TOKEN_STATUSES = [401, 403, 404]
+
 export default {
   namespaced: true,
   state: () => ({
@@ -97,7 +101,8 @@ export default {
       }
     },
 
-    // E4. Restores a stored session once per page load; any failure drops the token.
+    // E4. Restores a stored session once per page load. A rejected token is dropped; on a
+    // network or server error the token stays stored, so a reload can restore the session.
     bootstrap({ state, commit }) {
       if (state.status === 'ready') return Promise.resolve()
       if (bootstrapPromise) return bootstrapPromise
@@ -114,8 +119,8 @@ export default {
         // A 401 here is handled below, not by the global "session expired" redirect
         .getMe({ skipAuthRedirect: true })
         .then((user) => commit('SET_USER', user))
-        .catch(() => {
-          clearToken()
+        .catch((err) => {
+          if (REJECTED_TOKEN_STATUSES.includes(err?.statusCode)) clearToken()
           commit('CLEAR_SESSION')
         })
         .finally(() => {

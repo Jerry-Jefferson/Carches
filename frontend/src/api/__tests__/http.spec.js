@@ -1,7 +1,14 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import axios from 'axios'
 
-import { NETWORK_ERROR_MESSAGE, getErrorMessage, installInterceptors, unwrap } from '@/api/http'
+import {
+  NETWORK_ERROR_MESSAGE,
+  getErrorMessage,
+  installInterceptors,
+  serverNow,
+  trackServerClock,
+  unwrap,
+} from '@/api/http'
 
 // An axios instance whose adapter answers with `reply(config)` instead of the network
 const makeInstance = (reply) =>
@@ -20,6 +27,24 @@ describe('unwrap', () => {
   it('returns the data of the { message, data } envelope', () => {
     expect(unwrap({ data: { message: 'ok', data: [1] } })).toEqual([1])
     expect(unwrap({ data: '' })).toBeUndefined()
+  })
+})
+
+describe('serverNow', () => {
+  afterEach(() => {
+    trackServerClock({ headers: { date: new Date().toUTCString() } })
+  })
+
+  it('follows the Date header of the last response', () => {
+    trackServerClock({ headers: { date: new Date(Date.now() + 3600000).toUTCString() } })
+    expect(serverNow() - Date.now()).toBeGreaterThan(3590000)
+  })
+
+  it('ignores responses without a usable Date header', () => {
+    trackServerClock({ headers: { date: new Date(Date.now() - 3600000).toUTCString() } })
+    trackServerClock({ headers: {} })
+    trackServerClock({ headers: { date: 'nonsense' } })
+    expect(Date.now() - serverNow()).toBeGreaterThan(3590000)
   })
 })
 

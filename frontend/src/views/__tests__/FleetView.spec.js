@@ -115,6 +115,18 @@ describe('FleetView', () => {
     expect(wrapper.findAll('article')).toHaveLength(2)
   })
 
+  it('still shows the empty state after a failed background refresh (L22)', async () => {
+    vi.mocked(carsApi.list).mockResolvedValue(CARS)
+    let store
+    ;({ wrapper, store } = await setup('/fleet?q=zzz'))
+    vi.mocked(carsApi.list).mockRejectedValueOnce(new Error('Network error.'))
+
+    await store.dispatch('cars/fetchCars', { force: true }).catch(() => {})
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('No cars match your filters')
+  })
+
   it('shows the load error and retries', async () => {
     vi.mocked(carsApi.list)
       .mockRejectedValueOnce(new Error('Network error. Check your connection.'))

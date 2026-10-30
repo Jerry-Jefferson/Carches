@@ -25,6 +25,7 @@ const leaflet = vi.hoisted(() => {
     },
     invalidateSize: vi.fn(),
     remove: state.remove,
+    closePopup: vi.fn(),
   }
   const layer = {
     addTo: () => layer,
@@ -104,6 +105,29 @@ describe('MapView', () => {
 
     await wrapper.setProps({ markers: MARKERS.slice(0, 1) })
     expect(leaflet.state.markers).toHaveLength(2)
+  })
+
+  it('does not re-fit when a refresh changes only tones or labels (M15)', async () => {
+    await mountMap()
+    expect(leaflet.state.fitBounds).toHaveBeenCalledTimes(1)
+
+    // A poll returns new objects: same places, another status
+    await wrapper.setProps({ markers: MARKERS.map((m) => ({ ...m, tone: 'warning' })) })
+    expect(leaflet.state.markers[0].options.icon.html).toContain('bg-warning')
+    expect(leaflet.state.fitBounds).toHaveBeenCalledTimes(1)
+
+    // A car moved: fit again
+    await wrapper.setProps({ markers: [{ ...MARKERS[0], lat: 53.95 }, MARKERS[1]] })
+    expect(leaflet.state.fitBounds).toHaveBeenCalledTimes(2)
+  })
+
+  it('closes the popup when its marker disappears', async () => {
+    await mountMap()
+    leaflet.state.markers[1].handlers.click()
+
+    await wrapper.setProps({ markers: MARKERS.slice(0, 1) })
+
+    expect(wrapper.vm.activeMarkerId).toBeNull()
   })
 
   it('emits marker-click with the marker id', async () => {

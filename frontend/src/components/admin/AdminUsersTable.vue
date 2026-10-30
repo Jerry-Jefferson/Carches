@@ -3,6 +3,7 @@ import { mapActions, mapGetters, mapState } from 'vuex'
 
 import InitialsAvatar from '@/components/common/InitialsAvatar.vue'
 import { ROLE, fullName } from '@/utils/admin'
+import { copyText } from '@/utils/clipboard'
 import { BOOKING_STATUS, bookingStatus } from '@/utils/derive'
 import { formatDate, shortId } from '@/utils/format'
 import notify from '@/utils/notify'
@@ -24,11 +25,11 @@ export default {
   emits: ['view', 'edit'],
   data() {
     return {
-      pagination: {
-        defaultPageSize: 10,
-        pageSizeOptions: ['5', '10', '20', '50'],
-        showSizeChanger: true,
-      },
+      // Controlled, so a highlighted user past page 1 can be brought into view
+      page: 1,
+      pageSize: 10,
+      // Ant Design's sorter state ({ columnKey, order }), to find a row's page
+      sort: { columnKey: null, order: null },
       scroll: { x: 960 },
     }
   },
@@ -61,9 +62,47 @@ export default {
         { key: 'actions', title: 'Actions', align: 'right', width: 150 },
       ]
     },
+    pagination() {
+      return {
+        current: this.page,
+        pageSize: this.pageSize,
+        pageSizeOptions: ['5', '10', '20', '50'],
+        showSizeChanger: true,
+      }
+    },
+    // Rows in the order the table shows them
+    displayed() {
+      const sorter = this.columns.find((column) => column.key === this.sort.columnKey)?.sorter
+      if (!sorter || !this.sort.order) return this.users
+      const direction = this.sort.order === 'descend' ? -1 : 1
+      return this.users.toSorted((a, b) => direction * sorter(a, b))
+    },
+  },
+  watch: {
+    // Jump to the page of the highlighted user
+    highlightId: {
+      handler(id) {
+        this.showRow(id)
+      },
+      immediate: true,
+    },
+    users() {
+      if (this.highlightId) this.showRow(this.highlightId)
+      const lastPage = Math.max(1, Math.ceil(this.users.length / this.pageSize))
+      if (this.page > lastPage) this.page = lastPage
+    },
   },
   methods: {
     ...mapActions('admin/users', ['deleteUser']),
+    showRow(id) {
+      const index = id ? this.displayed.findIndex((user) => user._id === id) : -1
+      if (index !== -1) this.page = Math.floor(index / this.pageSize) + 1
+    },
+    onChange({ current, pageSize }, filters, sorter) {
+      this.page = current
+      this.pageSize = pageSize
+      this.sort = { columnKey: sorter?.columnKey ?? null, order: sorter?.order ?? null }
+    },
     fullName,
     formatDate,
     shortId,
@@ -89,11 +128,12 @@ export default {
       return this.hasActiveTrip(user) ? `${base} They have an active trip.` : base
     },
     rowClass(user) {
-      return user._id === this.highlightId ? 'bg-primary/15' : ''
+      // On the cells: Ant Design paints their background over the row's
+      return user._id === this.highlightId ? '[&>td]:bg-primary/15' : ''
     },
     async copyEmail(email) {
       try {
-        await navigator.clipboard.writeText(email)
+        await copyText(email)
         notify.success('E-mail copied')
       } catch {
         notify.error('Could not copy the e-mail')
@@ -121,6 +161,7 @@ export default {
     :loading="isLoading"
     :scroll="scroll"
     size="middle"
+    @change="onChange"
   >
     <template #bodyCell="{ column, record }">
       <div v-if="column.key === 'user'" class="flex items-center gap-3">
@@ -157,11 +198,13 @@ export default {
         formatDate(record.createdAt)
       }}</template>
 
-      <span
-        v-else-if="column.key === 'trips'"
-        :aria-label="`${countsOf(record).completed} completed of ${countsOf(record).total} trips`"
-      >
-        {{ countsOf(record).completed }} / {{ countsOf(record).total }}
+      <span v-else-if="column.key === 'trips'">
+        <span aria-hidden="true">
+          {{ countsOf(record).completed }} / {{ countsOf(record).total }}
+        </span>
+        <span class="sr-only">
+          {{ countsOf(record).completed }} completed of {{ countsOf(record).total }} trips
+        </span>
       </span>
 
       <div v-else-if="column.key === 'actions'" class="flex justify-end gap-1">

@@ -3,9 +3,9 @@ import { mapActions, mapState } from 'vuex'
 
 import { LOW_FUEL_THRESHOLD } from '@/utils/derive'
 import { carName, formatCoords, formatPercent } from '@/utils/format'
-import notify from '@/utils/notify'
 
-// "Fleet alerts": cars in a trip with less than 25 % fuel (E14)
+// "Fleet alerts": cars in a trip with less than 25 % fuel (E14). A failed load is shown
+// as an error, never as "no alerts".
 export default {
   name: 'LowFuelAlerts',
   emits: ['show-on-map'],
@@ -13,7 +13,8 @@ export default {
     return { isRefreshing: false, threshold: LOW_FUEL_THRESHOLD }
   },
   computed: {
-    ...mapState('admin/fleet', ['lowFuel', 'isLoadingWidgets']),
+    ...mapState('admin/fleet', { lowFuel: 'lowFuel', error: 'lowFuelError' }),
+    ...mapState('admin/fleet', ['isLoadingWidgets']),
   },
   methods: {
     ...mapActions('admin/fleet', ['fetchLowFuel']),
@@ -21,8 +22,8 @@ export default {
       this.isRefreshing = true
       try {
         await this.fetchLowFuel()
-      } catch (err) {
-        notify.apiError(err, 'Could not load the fuel alerts')
+      } catch {
+        // kept in `error` and shown in the widget
       } finally {
         this.isRefreshing = false
       }
@@ -44,11 +45,11 @@ export default {
       <h2 id="low-fuel-title" class="m-0 flex items-center gap-2 text-label-lg">
         Fleet alerts
         <span
+          v-if="!error"
           class="rounded-full px-2 text-label-sm"
           :class="lowFuel.length ? 'bg-destructive/15 text-destructive' : 'bg-muted'"
-          :aria-label="`${lowFuel.length} alerts`"
         >
-          {{ lowFuel.length }}
+          {{ lowFuel.length }}<span class="sr-only"> alerts</span>
         </span>
       </h2>
       <a-button
@@ -65,7 +66,18 @@ export default {
       Cars in a trip with less than {{ threshold }} % fuel.
     </p>
 
-    <a-skeleton v-if="isLoadingWidgets && !lowFuel.length" active :paragraph="{ rows: 2 }" />
+    <a-alert
+      v-if="error"
+      type="error"
+      show-icon
+      message="Fuel alerts could not be loaded"
+      :description="error"
+    >
+      <template #action>
+        <a-button size="small" :loading="isRefreshing" @click="refresh">Retry</a-button>
+      </template>
+    </a-alert>
+    <a-skeleton v-else-if="isLoadingWidgets && !lowFuel.length" active :paragraph="{ rows: 2 }" />
     <p v-else-if="!lowFuel.length" class="m-0 text-body-md text-success">
       <CheckCircleOutlined aria-hidden="true" /> No low-fuel cars in trips.
     </p>

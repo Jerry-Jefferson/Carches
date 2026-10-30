@@ -5,6 +5,7 @@ import {
   DEFAULT_FLEET_FILTERS,
   DEFAULT_TRIP_FILTERS,
   DEFAULT_USER_FILTERS,
+  currentReservedRows,
   dayStats,
   filterAdminCars,
   filterTrips,
@@ -110,12 +111,16 @@ describe('admin helpers', () => {
   })
 
   it('previews the maintenance actions with the backend rules', () => {
-    expect(serviceCandidates(CARS).map((item) => item._id)).toEqual(['b', 'c'])
+    // c is already in service: the update would not change it (L9)
+    expect(serviceCandidates(CARS).map((item) => item._id)).toEqual(['b'])
 
     const trips = ['1', '2', '3'].map((id) => trip(id))
     const busy = ['1', '2', '3'].map((id) => trip(`b${id}`, { carId: 'b' }))
     expect(relocationCandidates(CARS, [...trips, ...busy]).map((item) => item._id)).toEqual(['a'])
     expect(relocationCandidates(CARS, trips.slice(0, 2))).toEqual([])
+    // Already at the depot: not moved, so not counted (L9)
+    const atDepot = car('a', { location: { type: 'Point', coordinates: [27.5442615, 53.8882836] } })
+    expect(relocationCandidates([atDepot], trips)).toEqual([])
   })
 
   it('filters the fleet by search, brand, status and year range', () => {
@@ -187,6 +192,33 @@ describe('admin helpers', () => {
     const tripCsv = toCsv([trip('1')], tripColumns({ carsById: { a: CARS[0] }, now: NOW }))
     expect(tripCsv).toContain('1,Hanna Paulava,hanna@carshes.test,Toyota Camry,A AB-7,Active')
     expect(csvFilename('fleet', '2026-10-29')).toBe('carshes-fleet-2026-10-29.csv')
+  })
+
+  describe('currentReservedRows (M13)', () => {
+    const row = (vin, licence) => ({ vin, userLicenseNumber: licence })
+    const cars = [{ _id: 'a', vin: 'VINA' }]
+
+    it('keeps only the driver of the open booking when the trips know it', () => {
+      const trips = [
+        { carId: 'a', endDate: '2026-10-01T10:00:00Z', userId: { licenseNumber: 'OLD111' } },
+        { carId: { _id: 'a' }, endDate: null, userId: { licenseNumber: 'NOW222' } },
+      ]
+      const rows = [row('VINA', 'OLD111'), row('VINA', 'NOW222'), row('VINA', 'NOW222')]
+
+      expect(currentReservedRows(rows, { cars, trips })).toEqual([row('VINA', 'NOW222')])
+    })
+
+    it('drops a car whose current driver is in the other card group', () => {
+      const trips = [{ carId: 'a', endDate: null, userId: { licenseNumber: 'NOW222' } }]
+
+      expect(currentReservedRows([row('VINA', 'OLD111')], { cars, trips })).toEqual([])
+    })
+
+    it('falls back to one row per car and driver without trip data', () => {
+      const rows = [row('VINA', 'OLD111'), row('VINA', 'OLD111'), row('VINB', 'X')]
+
+      expect(currentReservedRows(rows)).toEqual([row('VINA', 'OLD111'), row('VINB', 'X')])
+    })
   })
 })
 

@@ -4,7 +4,7 @@
 export const DEFAULT_CENTER = Object.freeze({ lat: 53.9023, lng: 27.5615 }) // Minsk centre
 
 // Target of PUT /cars/relocate-frequently-booked (hardcoded in the backend)
-export const DEPOT_POINT = Object.freeze({ lat: 53.8883, lng: 27.5443 })
+export const DEPOT_POINT = Object.freeze({ lat: 53.8882836, lng: 27.5442615 })
 
 const EARTH_RADIUS_M = 6371000
 

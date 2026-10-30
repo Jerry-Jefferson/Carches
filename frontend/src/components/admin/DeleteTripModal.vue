@@ -1,14 +1,17 @@
 <script>
-import { mapActions } from 'vuex'
+import { mapActions, mapGetters } from 'vuex'
 
 import { CAR_UPDATE_FAILED } from '@/store/modules/admin/trips'
+import { refId } from '@/utils/admin'
 import { BOOKING_STATUS, bookingStatus } from '@/utils/derive'
 import { formatDateTime, shortId } from '@/utils/format'
 import notify from '@/utils/notify'
 
 /**
  * Deletes a booking (E23). The backend leaves the car's status as it was (Q8), so for an
- * active or upcoming booking the car is also set to Available (E12) unless unticked.
+ * active or upcoming booking the car is also set to Available (E12) unless unticked. The
+ * option is not offered for a completed booking, or when another open booking holds the
+ * car: its status belongs to that booking then.
  */
 export default {
   name: 'DeleteTripModal',
@@ -25,8 +28,16 @@ export default {
     }
   },
   computed: {
+    ...mapGetters('admin/trips', ['tripsByCar']),
     isOpenTrip() {
       return this.trip ? bookingStatus(this.trip) !== BOOKING_STATUS.COMPLETED : false
+    },
+    canFreeCar() {
+      if (!this.isOpenTrip) return false
+      const others = this.tripsByCar[refId(this.trip.carId)] ?? []
+      return !others.some(
+        (other) => other._id !== this.trip._id && bookingStatus(other) !== BOOKING_STATUS.COMPLETED,
+      )
     },
     description() {
       if (!this.trip) return ''
@@ -37,7 +48,7 @@ export default {
     open: {
       handler(isOpen) {
         if (!isOpen) return
-        this.freeCar = this.isOpenTrip
+        this.freeCar = this.canFreeCar
         this.error = ''
       },
       immediate: true,
@@ -52,7 +63,7 @@ export default {
       this.error = ''
       this.isDeleting = true
       try {
-        await this.deleteTrip({ trip: this.trip, freeCar: this.freeCar })
+        await this.deleteTrip({ trip: this.trip, freeCar: this.canFreeCar && this.freeCar })
         notify.success('Booking deleted')
         this.$emit('done')
         this.close()
@@ -86,7 +97,9 @@ export default {
   >
     <div class="flex flex-col gap-4">
       <p class="m-0 text-body-md text-muted-foreground">{{ description }}</p>
-      <a-checkbox v-model:checked="freeCar">Also mark the car as Available</a-checkbox>
+      <a-checkbox v-if="canFreeCar" v-model:checked="freeCar">
+        Also mark the car as Available
+      </a-checkbox>
       <a-alert v-if="error" type="error" show-icon :message="error" />
     </div>
 

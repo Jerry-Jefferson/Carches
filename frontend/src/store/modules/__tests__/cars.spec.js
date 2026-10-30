@@ -66,6 +66,26 @@ describe('cars module', () => {
       expect(carsApi.list).toHaveBeenCalledTimes(1)
     })
 
+    it('runs a forced fetch again after a request already in flight (L2)', async () => {
+      let resolveFirst
+      vi.mocked(carsApi.list)
+        .mockImplementationOnce(() => new Promise((resolve) => (resolveFirst = resolve)))
+        .mockResolvedValue([car('a', { status: 'in_use' })])
+      const store = makeStore()
+
+      const first = store.dispatch('cars/fetchCars')
+      // A change was saved meanwhile: the in-flight list may predate it
+      const forced = Promise.all([
+        store.dispatch('cars/fetchCars', { force: true }),
+        store.dispatch('cars/fetchCars', { force: true }),
+      ])
+      resolveFirst([car('a')])
+      await Promise.all([first, forced])
+
+      expect(carsApi.list).toHaveBeenCalledTimes(2)
+      expect(store.state.cars.items[0].status).toBe('in_use')
+    })
+
     it('stores the backend error and re-throws', async () => {
       const error = apiError('Token has expired')
       vi.mocked(carsApi.list).mockRejectedValue(error)
