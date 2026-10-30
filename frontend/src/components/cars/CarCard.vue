@@ -84,13 +84,13 @@ export default {
         <h3 class="m-0 text-headline-sm">
           <router-link
             :to="detailsRoute"
-            class="text-card-foreground hover:text-secondary-hover focus-visible:underline"
+            class="text-card-foreground hover:text-link focus-visible:underline"
           >
             {{ name }}
           </router-link>
         </h3>
         <p v-if="distanceText" class="m-0 mt-1 flex items-center gap-1.5 text-body-sm">
-          <AimOutlined class="text-secondary-hover" aria-hidden="true" />
+          <AimOutlined class="text-link" aria-hidden="true" />
           <span class="text-muted-foreground">{{ distanceText }}</span>
         </p>
       </div>
@@ -119,7 +119,7 @@ export default {
       </dl>
 
       <div class="mt-auto flex items-center justify-between gap-2 pt-1">
-        <router-link :to="detailsRoute" class="text-label-lg text-secondary-hover hover:underline">
+        <router-link :to="detailsRoute" class="text-label-lg text-link hover:underline">
           Details
           <span class="sr-only">about {{ name }}</span>
         </router-link>

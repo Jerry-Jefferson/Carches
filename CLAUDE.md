@@ -44,7 +44,7 @@ There is **no monorepo tooling** — each folder has its own `package.json`, `no
 | HTTP client      | **Axios** (instance in `src/api/http.js`)          |
 | Form validation  | **VeeValidate 4** + **Zod 3** (via `@vee-validate/zod`) |
 | Styling          | **Tailwind CSS 4** (via `@tailwindcss/vite` plugin) + custom design-system CSS |
-| Testing          | **Vitest 5** (jsdom env, globals enabled)          |
+| Testing          | **Vitest 5** (jsdom env, globals enabled); **Playwright** + axe-core for end-to-end checks (`e2e/`) |
 | Linting          | ESLint 10 + `eslint-plugin-vue` + `eslint-config-prettier` |
 | Formatting       | Prettier (`.prettierrc.json`)                      |
 
@@ -118,7 +118,9 @@ Carshes/
 └── frontend/
     ├── .env.example                   ← VITE_API_URL, VITE_BACKEND_URL
     ├── index.html                     ← SPA shell
-    ├── vite.config.js                 ← Vue + Tailwind + auto-import plugins, dev proxy to backend
+    ├── vite.config.js                 ← Vue + Tailwind + auto-import plugins, dev proxy to backend, Vitest (src/** only)
+    ├── playwright.config.js           ← e2e projects: layout at 375 / 1024 / 1440 px, smoke (journeys + endpoints); starts the dev server
+    ├── e2e/                           ← support.js (accounts, API calls, axe check), layout / journeys / api-coverage specs
     ├── package.json                   ← scripts: dev, build, preview, test, lint, format
     ├── eslint.config.js
     ├── .prettierrc.json / .prettierignore
@@ -301,6 +303,7 @@ npm run build                  # production build → dist/
 npm run preview                # serve production build
 npm test                       # run Vitest once
 npm run test:watch             # Vitest in watch mode
+npm run test:e2e               # Playwright against the running Docker stack (layout + a11y, journeys, all endpoints)
 npm run lint                   # ESLint check
 npm run lint:fix               # ESLint auto-fix
 npm run format                 # Prettier format
@@ -324,7 +327,7 @@ npm run format:check           # Prettier check only
   - Backend Prettier: double quotes, semicolons, trailing commas `es5`, width 100.
   - Frontend Prettier: single quotes, **no** semicolons, trailing commas `all`, width 100.
 - **Comments and UI text are in English** only.
-- **Before finishing a change**, run in the affected package: `npm run lint` and Prettier (`npm run format:check` in frontend, `npx prettier --check src` in backend); in frontend also `npm test` and `npm run build`. Update `swagger.json` for any endpoint change.
+- **Before finishing a change**, run in the affected package: `npm run lint` and Prettier (`npm run format:check` in frontend, `npx prettier --check src` in backend); in frontend also `npm test` and `npm run build`, and `npm run test:e2e` for UI changes when the Docker stack is running. Update `swagger.json` for any endpoint change.
 
 ### 8.2 Vue: Options API only
 
@@ -362,7 +365,8 @@ export default {
 
 ### 8.3 Styling
 
-- **Colors come from the design system** (`styles/design-system.css`). Use the token classes — `bg-background`, `text-foreground`, `bg-card`, `bg-primary`, `hover:bg-primary-hover`, `text-primary-foreground`, `bg-secondary`, `bg-muted`, `text-muted-foreground`, `bg-accent`, `bg-surface`, `border-border`, `border-input`, `ring-ring` — **not** Tailwind palette colors (`text-gray-500`, `bg-blue-600`) or hex values.
+- **Colors come from the design system** (`styles/design-system.css`). Use the token classes — `bg-background`, `text-foreground`, `bg-card`, `bg-primary`, `hover:bg-primary-hover`, `text-primary-foreground`, `bg-secondary`, `bg-muted`, `text-muted-foreground`, `text-link`, `bg-accent`, `bg-surface`, `border-border`, `border-input`, `ring-ring` — **not** Tailwind palette colors (`text-gray-500`, `bg-blue-600`) or hex values.
+- **Accent text and links use `text-link`** (Ant Design `colorLink`). `secondary` / `secondary-hover` are fill colours: as text they fail WCAG AA on the light surfaces. `link` and `muted-foreground` are contrast-tested on `background`, `card`, `popover`, `muted` and `surface`.
 - **Feedback / status tokens**: `destructive`, `success`, `warning`, `info`, each with a `-foreground` (e.g. `text-destructive`, `bg-success text-success-foreground`). For soft backgrounds use opacity (`bg-success/15 text-success`) — there are no "-soft" tokens. Ant Design reads them as `colorError`, `colorSuccess`, `colorWarning`, `colorInfo`.
 - **`surface`** (white in light mode) is the Ant Design container background (`colorBgContainer`) — inputs, tables, selects. Cards keep the cream `card` color via `bg-card`.
 - **Status → tone mapping** lives in `utils/derive.js` (`CAR_STATUS_META`, `BOOKING_STATUS_META`, `fuelTone`); `tone` is a token name. Cars: `free` Available → `success`, `reserved` Reserved → `warning`, `in_use` In trip → `info`, `unavailable` Unavailable → `muted`, `in_service` In service → `destructive`. Bookings: Active → `info`, Upcoming → `warning`, Completed → `success`. Fuel: < 25 % `destructive`, < 40 % `warning`, else `success`. Always show status as text **and** colour.
@@ -400,7 +404,7 @@ export default {
 2. **JWT_SECRET validation**: The app will crash on startup if `JWT_SECRET` is missing or < 32 characters. Same for `BCRYPT_SALT_ROUNDS` outside 10–15 range.
 3. **No shared dependencies**: Do not try to hoist deps or use workspace-level `package.json`. Each part is fully standalone.
 4. **Swagger is static**: `swagger.json` is hand-maintained. It is not auto-generated from code — keep it in sync when changing routes.
-5. **Implementation plan**: `implementation-plan.md` (repo root) is the frontend roadmap — phases 1–6 (foundations, platform, auth, fleet, car details / trips / profile, admin console) are done; phase 7 (quality and release) remains.
+5. **Implementation plan**: `implementation-plan.md` (repo root) is the frontend roadmap — all 7 phases are done (foundations, platform, auth, fleet, car details / trips / profile, admin console, quality and release). Backend gaps the UI deliberately leaves out are listed in its §17.
 6. **Store modules**: `auth`, `cars`, `carDetails`, `bookings`, `geo` and the nested `admin` module (`admin/fleet`, `admin/users`, `admin/trips`, `admin/insights`). The admin console's car list is the root `cars` module. Add new modules with the `vuex-module` skill.
 7. **Dev server proxy**: In development, the Vite dev server proxies `/api` to the backend. This means API calls just use relative paths (`/api/v2/...`) — no CORS setup needed in dev.
 8. **Zod must stay on v3**: VeeValidate 4 does not validate Zod 4 schemas (invalid values pass). Keep `zod@^3` with `@vee-validate/zod`.
@@ -416,6 +420,9 @@ export default {
 18. **Booking times**: the scheduled-start picker works in the browser's local time (`SCHEDULE_VALUE_FORMAT` strings, no direct `dayjs` import — it is only a dependency of Ant Design), while dates are displayed in Minsk time. The two match for users in Minsk.
 19. **Vitest timeout is 15 s** (`vite.config.js`): each test file runs in its own worker and its first test imports Ant Design, which can exceed the 5 s default when the whole suite runs.
 20. **Admin console URL**: `/admin?tab=fleet|trips|users` picks the section; `&car=`, `&trip=`, `&user=` point at a row (search results and the history / user drawers link through these). `AdminLayout` renders the sidebar and search itself, because `App.vue` only fills its default slot. Admin data reloads every 60 s while the tab is visible.
+21. **Ant Design accessibility quirks**: `a-select` drops `aria-label` — wrap it in a `<label>` (visible or `sr-only` text), or pair `html-for` on its `a-form-item` with an `id` on the select. `a-slider` labels its handle only through `aria-label-for-handle` / `aria-labelled-by-for-handle`. Some violations come from Ant Design's own markup (closed select combobox ARIA, sorter icons, the pagination page-size select); `e2e/support.js` lists them in `LIBRARY_ISSUES` — add to that list only for markup the app can't change.
+22. **End-to-end checks** (`frontend/e2e/`) need the Docker stack with the admin migration and seeded cars. They read the admin login from `E2E_ADMIN_*` or `backend/.env`, create and remove their own `e2e.*@carshes.test` users and test cars, and the endpoint check runs E16 / E17, which change matching cars (re-seed to reset). Vitest only collects `src/**`.
+23. **No solid danger buttons**: Ant Design's `colorTextLightSolid` is the dark `primary-foreground` (right for yellow primary buttons and selected date cells), so a solid red button has ~1.7 : 1 text. Use `danger` without `type="primary"`, and `ok-type="default"` on popconfirms / modals with a danger OK button — enforced by `src/theme/__tests__/dangerButtons.spec.js`.
 
 ---
 

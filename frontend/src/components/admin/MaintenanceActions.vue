@@ -79,7 +79,7 @@ export default {
       class="flex flex-col gap-2 rounded-control bg-surface p-3"
     >
       <p class="m-0 flex items-center gap-2 text-label-md">
-        <component :is="item.icon" class="text-secondary-hover" aria-hidden="true" />
+        <component :is="item.icon" class="text-link" aria-hidden="true" />
         {{ item.title }}
       </p>
       <p class="m-0 text-body-sm text-muted-foreground">{{ item.rule }}</p>
@@ -93,6 +93,7 @@ export default {
       :open="Boolean(action)"
       :title="action?.title"
       ok-text="Run now"
+      ok-type="default"
       :ok-button-props="{ danger: true, loading: isMutating }"
       :cancel-button-props="{ disabled: isMutating }"
       @ok="confirm"

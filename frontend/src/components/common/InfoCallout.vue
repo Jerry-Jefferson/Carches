@@ -15,7 +15,7 @@ export default {
       return this.tone === 'muted' ? 'bg-muted text-foreground' : toneClasses(this.tone).soft
     },
     iconClass() {
-      return this.tone === 'muted' ? 'text-secondary-hover' : ''
+      return this.tone === 'muted' ? 'text-link' : ''
     },
   },
 }

@@ -107,7 +107,7 @@ export default {
   <div class="flex flex-col gap-6 md:gap-8">
     <header class="flex flex-col gap-4">
       <div>
-        <p class="m-0 text-label-sm text-secondary-hover uppercase">
+        <p class="m-0 text-label-sm text-link uppercase">
           {{ isInitialLoad ? 'Loading trips…' : countLabel }}
         </p>
         <h1 class="m-0 text-headline-lg">My Trips</h1>

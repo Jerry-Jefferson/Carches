@@ -54,14 +54,14 @@ export default {
         class="absolute bottom-3 left-3 z-[400] flex max-w-[calc(100%-1.5rem)] flex-wrap items-center gap-3 rounded-card bg-popover p-3 text-popover-foreground shadow-popover"
       >
         <span class="flex items-center gap-2 text-label-md">
-          <EnvironmentOutlined class="text-secondary-hover" aria-hidden="true" />
+          <EnvironmentOutlined class="text-link" aria-hidden="true" />
           {{ coords }}
         </span>
         <a
           :href="directions"
           target="_blank"
           rel="noopener noreferrer"
-          class="inline-flex items-center gap-1.5 text-label-md text-secondary-hover hover:underline"
+          class="inline-flex items-center gap-1.5 text-label-md text-link hover:underline"
         >
           <SendOutlined aria-hidden="true" />
           Get directions

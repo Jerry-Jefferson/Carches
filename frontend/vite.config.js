@@ -39,6 +39,8 @@ export default defineConfig(({ mode }) => {
       // The first test of a file pays for importing Ant Design; with every file in its
       // own worker that can exceed the 5 s default on a busy machine
       testTimeout: 15000,
+      // e2e/ holds the Playwright checks (npm run test:e2e), not unit tests
+      include: ['src/**/*.{test,spec}.js'],
       server: {
         deps: {
           inline: ['ant-design-vue'],

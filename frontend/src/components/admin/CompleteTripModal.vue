@@ -89,13 +89,19 @@ export default {
     onPick(point) {
       this.location = point
     },
+    // A trip that started at 15:53:40 and ends "now" at 15:53 (minute precision) ends at its start
+    endDateOf(value) {
+      const end = fromPickerValue(value).getTime()
+      const start = new Date(this.trip.startDate).getTime()
+      return new Date(Math.max(end, start)).toISOString()
+    },
     async onSubmit(values) {
       this.formError = ''
       this.isSubmitting = true
       try {
         await this.completeTrip({
           trip: this.trip,
-          endDate: fromPickerValue(values.endDate).toISOString(),
+          endDate: this.endDateOf(values.endDate),
           finishFuelLevel: values.finishFuelLevel,
           finishMileage: values.finishMileage,
           location: this.moveCar && this.location ? toGeoJsonPoint(this.location) : null,

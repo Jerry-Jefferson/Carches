@@ -17,7 +17,7 @@ export default {
   <a-empty class="py-10">
     <template #image>
       <span
-        class="mx-auto flex size-16 items-center justify-center rounded-full bg-muted text-3xl text-secondary-hover"
+        class="mx-auto flex size-16 items-center justify-center rounded-full bg-muted text-3xl text-link"
         aria-hidden="true"
       >
         <component :is="icon" />

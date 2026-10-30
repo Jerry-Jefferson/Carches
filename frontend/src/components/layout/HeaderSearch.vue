@@ -20,6 +20,10 @@ export default {
     '$route.query.q'(value) {
       if ((value ?? '') !== this.text.trim()) this.text = value ?? ''
     },
+    // Leaving /fleet (e.g. opening a car) cancels a pending live update
+    isOnFleet(isOnFleet) {
+      if (!isOnFleet) clearTimeout(this.debounceTimer)
+    },
   },
   beforeUnmount() {
     clearTimeout(this.debounceTimer)
@@ -37,6 +41,7 @@ export default {
       if (!this.isOnFleet) return
       clearTimeout(this.debounceTimer)
       this.debounceTimer = setTimeout(() => {
+        if (!this.isOnFleet) return
         this.$router.replace({ name: 'fleet', query: this.queryWith(this.text) })
       }, DEBOUNCE_MS)
     },

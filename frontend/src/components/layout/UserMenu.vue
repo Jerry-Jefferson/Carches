@@ -35,12 +35,16 @@ export default {
     <button
       type="button"
       class="flex items-center gap-2 rounded-full p-1 pr-2 text-foreground transition-colors duration-200 hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
-      :aria-label="`Account menu for ${fullName}`"
       aria-haspopup="menu"
       :aria-expanded="isOpen"
     >
       <InitialsAvatar :user="user" />
-      <span class="hidden max-w-40 truncate text-label-lg sm:inline">{{ fullName }}</span>
+      <!-- Visible (truncated) name from `sm`; screen readers always get the full name.
+           `not-sr-only` would undo `truncate`, so the two are separate spans. -->
+      <span class="hidden max-w-40 truncate text-label-lg sm:block" aria-hidden="true">
+        {{ fullName }}
+      </span>
+      <span class="sr-only">{{ fullName }} (account menu)</span>
       <DownOutlined class="text-xs text-muted-foreground" aria-hidden="true" />
     </button>
     <template #overlay>

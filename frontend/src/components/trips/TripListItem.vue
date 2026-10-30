@@ -62,11 +62,7 @@ export default {
       <CarPlaceholder :car="trip.car" size="thumb" />
       <div class="min-w-0">
         <p class="m-0 truncate text-label-lg">
-          <router-link
-            v-if="carRoute"
-            :to="carRoute"
-            class="text-card-foreground hover:text-secondary-hover"
-          >
+          <router-link v-if="carRoute" :to="carRoute" class="text-card-foreground hover:text-link">
             {{ name }}
           </router-link>
           <span v-else :class="{ 'text-muted-foreground': !trip.car }">{{ name }}</span>
@@ -88,7 +84,7 @@ export default {
       <router-link
         v-if="carRoute"
         :to="carRoute"
-        class="text-label-md whitespace-nowrap text-secondary-hover hover:underline"
+        class="text-label-md whitespace-nowrap text-link hover:underline"
       >
         View car
         <span class="sr-only">{{ name }}</span>

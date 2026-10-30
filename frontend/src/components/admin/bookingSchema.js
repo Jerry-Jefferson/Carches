@@ -74,8 +74,10 @@ export const completeTripSchema = (trip) =>
       finishMileage: mileage('Finish mileage'),
     })
     .superRefine((values, ctx) => {
-      const start = new Date(trip?.startDate).getTime()
-      if (time(values.endDate) < start) {
+      // The picker has no seconds: an end in the start's own minute is fine (it is sent
+      // as the start itself, see CompleteTripModal)
+      const startMinute = Math.floor(new Date(trip?.startDate).getTime() / 60000) * 60000
+      if (time(values.endDate) < startMinute) {
         ctx.addIssue({ code: 'custom', path: ['endDate'], message: 'End must be after the start' })
       }
       if (Number.isFinite(trip?.startMileage) && values.finishMileage < trip.startMileage) {

@@ -81,6 +81,19 @@ describe('HeaderSearch', () => {
     expect(router.currentRoute.value.fullPath).toBe('/fleet?q=bmw')
   })
 
+  it('drops a pending update when the user leaves the fleet page (M3)', async () => {
+    const { router, plugins } = await setup({ path: '/fleet' })
+    const wrapper = mount(HeaderSearch, { global: { plugins } })
+
+    await wrapper.find('input').setValue('bmw')
+    await router.push('/my-trips')
+    await flushPromises()
+    vi.advanceTimersByTime(300)
+    await flushPromises()
+
+    expect(router.currentRoute.value.name).toBe('my-trips')
+  })
+
   it('follows ?q= when the URL changes', async () => {
     const { router, plugins } = await setup({ path: '/fleet?q=audi' })
     const wrapper = mount(HeaderSearch, { global: { plugins } })
@@ -111,6 +124,19 @@ describe('UserMenu', () => {
 
     expect(authApi.logout).toHaveBeenCalled()
     expect(store.getters['auth/isAuthenticated']).toBe(false)
+    wrapper.unmount()
+  })
+
+  it('names the button after the user and keeps the visible name truncatable (M8)', async () => {
+    const { plugins } = await setup()
+    const wrapper = mount(UserMenu, { global: { plugins } })
+
+    const button = wrapper.find('button')
+    expect(button.find('.sr-only').text()).toBe('Vera Davydova (account menu)')
+    const visible = button.find('[aria-hidden="true"].truncate')
+    expect(visible.text()).toBe('Vera Davydova')
+    // `not-sr-only` would reset the overflow / white-space that `truncate` needs
+    expect(visible.classes().some((name) => name.includes('not-sr-only'))).toBe(false)
     wrapper.unmount()
   })
 })

@@ -118,6 +118,23 @@ describe('bookings module', () => {
       expect(store.state.bookings.isSubmitting).toBe(false)
     })
 
+    it('sends the signed-in caller as userId, which admins need (H1)', async () => {
+      vi.mocked(carsApi.getById).mockResolvedValue(FREE_CAR)
+      vi.mocked(bookingsApi.listMine).mockResolvedValue([])
+      vi.mocked(bookingsApi.create).mockResolvedValue({ _id: 'new' })
+      const store = makeStore()
+      const admin = { _id: 'admin1', role: 'admin', firstName: 'Ada', lastName: 'Admin' }
+      store.commit('auth/SET_SESSION', { user: admin, token: 't1', remember: false })
+
+      await store.dispatch('bookings/createBooking', { carId: 'car1' })
+
+      const payload = vi.mocked(bookingsApi.create).mock.calls[0][0]
+      expect(Object.keys(payload).sort()).toEqual(
+        ['carId', 'startDate', 'startFuelLevel', 'startMileage', 'userId'].sort(),
+      )
+      expect(payload.userId).toBe('admin1')
+    })
+
     it('passes a scheduled start date through', async () => {
       vi.mocked(carsApi.getById).mockResolvedValue(FREE_CAR)
       vi.mocked(bookingsApi.listMine).mockResolvedValue([])
@@ -179,5 +196,22 @@ describe('bookings module', () => {
 
     expect(store.state.bookings.mine).toEqual([])
     expect(store.state.bookings.loadedAt).toBeNull()
+  })
+
+  it('drops a bookings response that arrives after sign-out (M2)', async () => {
+    let resolve
+    vi.mocked(bookingsApi.listMine).mockReturnValueOnce(new Promise((r) => (resolve = r)))
+    const store = makeStore()
+    store.commit('auth/SET_SESSION', { user: { _id: 'u1' }, token: 'token-a', remember: false })
+    const pending = store.dispatch('bookings/fetchMine')
+
+    store.commit('auth/CLEAR_SESSION')
+    store.commit('auth/SET_SESSION', { user: { _id: 'u2' }, token: 'token-b', remember: false })
+    resolve([ACTIVE])
+
+    await expect(pending).resolves.toEqual([])
+    expect(store.state.bookings.mine).toEqual([])
+    expect(store.state.bookings.loadedAt).toBeNull()
+    expect(store.state.bookings.isLoading).toBe(false)
   })
 })

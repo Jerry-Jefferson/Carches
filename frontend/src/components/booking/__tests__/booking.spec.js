@@ -150,6 +150,23 @@ describe('BookingPanel', () => {
     expect(text(wrapper)).toContain('Invalid input data.')
     expect(wrapper.emitted('booked')).toBeUndefined()
   })
+
+  it('focuses the confirm button of a bookable car', async () => {
+    await mountPanel()
+
+    wrapper.vm.focusConfirm()
+
+    expect(document.activeElement).toBe(confirmButton(wrapper).element)
+  })
+
+  it('focuses the panel itself while the button is disabled (M4)', async () => {
+    await mountPanel({ car: { ...CAR, status: 'in_use' } })
+
+    wrapper.vm.focusConfirm()
+
+    expect(document.activeElement).toBe(wrapper.element)
+    expect(wrapper.attributes('tabindex')).toBe('-1')
+  })
 })
 
 describe('BookingConfirmedModal', () => {
@@ -186,6 +203,20 @@ describe('BookingConfirmedModal', () => {
 
     expect(router.currentRoute.value.name).toBe('my-trips')
     expect(wrapper.emitted('update:open')).toEqual([[false]])
+    wrapper.unmount()
+  })
+
+  it('is a dialog named by its heading (M4)', async () => {
+    const wrapper = mount(BookingConfirmedModal, {
+      props: { open: true, car: CAR, booking: { _id: 'b1', startDate: new Date().toISOString() } },
+      global: { plugins: [makeRouter()] },
+      attachTo: document.body,
+    })
+    await flushPromises()
+
+    const dialog = document.body.querySelector('[role="dialog"]')
+    const labelId = dialog.getAttribute('aria-labelledby')
+    expect(document.getElementById(labelId)?.textContent).toBe('Booking confirmed')
     wrapper.unmount()
   })
 })

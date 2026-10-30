@@ -81,17 +81,21 @@ export default {
   },
   actions: {
     // E19, newest start first
-    async fetchTrips({ commit }) {
+    async fetchTrips({ commit, rootState }) {
+      // A response that arrives after sign-out is dropped (the next user must not see it)
+      const token = rootState.auth?.token
+      const isSameSession = () => rootState.auth?.token === token
       commit('SET_LOADING', true)
       commit('SET_ERROR', null)
       try {
         const trips = ((await bookingsApi.list()) ?? []).toSorted(
           (a, b) => new Date(b.startDate) - new Date(a.startDate),
         )
+        if (!isSameSession()) return []
         commit('SET_ITEMS', trips)
         return trips
       } catch (err) {
-        commit('SET_ERROR', getErrorMessage(err))
+        if (isSameSession()) commit('SET_ERROR', getErrorMessage(err))
         throw err
       } finally {
         commit('SET_LOADING', false)

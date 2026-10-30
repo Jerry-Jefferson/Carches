@@ -68,7 +68,7 @@ export default {
   >
     <div class="flex flex-wrap items-center justify-between gap-2">
       <h2 id="admin-fleet-map-title" class="m-0 flex items-center gap-2 text-headline-sm">
-        <EnvironmentOutlined class="text-secondary-hover" aria-hidden="true" />
+        <EnvironmentOutlined class="text-link" aria-hidden="true" />
         Fleet map
       </h2>
       <ul class="m-0 flex list-none flex-wrap gap-3 p-0" aria-label="Legend">

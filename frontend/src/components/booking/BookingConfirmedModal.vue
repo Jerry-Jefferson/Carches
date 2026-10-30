@@ -14,7 +14,14 @@ export default {
     // Scheduled for later (car reserved) rather than started now (car in trip)
     scheduled: { type: Boolean, default: false },
   },
-  emits: ['update:open'],
+  // `closed` fires once the modal has gone, for the page to move focus somewhere useful
+  emits: ['update:open', 'closed'],
+  data() {
+    return {
+      // The dialog has no Ant Design title, so it is named by the heading inside
+      wrapProps: { 'aria-labelledby': 'booking-confirmed-title' },
+    }
+  },
   computed: {
     name() {
       return this.car ? carName(this.car) : ''
@@ -44,7 +51,15 @@ export default {
 </script>
 
 <template>
-  <a-modal :open="open" :width="440" :footer="null" centered @cancel="close">
+  <a-modal
+    :open="open"
+    :width="440"
+    :footer="null"
+    :wrap-props="wrapProps"
+    centered
+    @cancel="close"
+    @after-close="$emit('closed')"
+  >
     <div class="flex flex-col items-center gap-4 pt-2 text-center">
       <span
         class="flex size-14 items-center justify-center rounded-full bg-success/15 text-3xl text-success"
@@ -53,7 +68,7 @@ export default {
         <CheckCircleOutlined />
       </span>
       <div>
-        <h2 class="m-0 text-headline-md">Booking confirmed</h2>
+        <h2 id="booking-confirmed-title" class="m-0 text-headline-md">Booking confirmed</h2>
         <p class="m-0 mt-1 text-body-md text-muted-foreground">{{ message }}</p>
       </div>
 

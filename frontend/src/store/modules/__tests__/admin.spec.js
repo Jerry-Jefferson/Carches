@@ -213,4 +213,23 @@ describe('admin store', () => {
     expect(store.state.admin.users.items).toEqual([])
     expect(store.state.admin.trips.items).toEqual([])
   })
+
+  it('drops user and trip lists that arrive after sign-out (M2)', async () => {
+    const pending = {}
+    vi.mocked(usersApi.list).mockReturnValueOnce(new Promise((r) => (pending.users = r)))
+    vi.mocked(bookingsApi.list).mockReturnValueOnce(new Promise((r) => (pending.trips = r)))
+    const store = makeStore()
+    store.commit('auth/SET_SESSION', { user: USER, token: 'token-a', remember: false })
+    const users = store.dispatch('admin/users/fetchUsers')
+    const trips = store.dispatch('admin/trips/fetchTrips')
+
+    store.commit('auth/CLEAR_SESSION')
+    pending.users([USER])
+    pending.trips([TRIP])
+
+    await expect(users).resolves.toEqual([])
+    await expect(trips).resolves.toEqual([])
+    expect(store.state.admin.users.items).toEqual([])
+    expect(store.state.admin.trips.items).toEqual([])
+  })
 })

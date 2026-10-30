@@ -24,11 +24,13 @@
     /* Secondary */
     --secondary: 47 29% 50%; /* #A69658 */
     --secondary-hover: 47 29% 42%;
+    /* Accent text and links: a darker secondary that passes WCAG AA on every surface */
+    --link: 47 30% 32%;
     --secondary-foreground: 48 60% 98%;
 
     /* Muted */
     --muted: 48 50% 88%;
-    --muted-foreground: 47 20% 40%;
+    --muted-foreground: 47 20% 34%;
 
     /* Accent / highlighted states */
     --accent: 43 59% 64%; /* #D9B26F */
@@ -80,6 +82,7 @@
 
     --muted: 353 10% 25%;
     --muted-foreground: 48 30% 75%;
+    --link: 45 60% 70%;
 
     --accent: 43 59% 64%; /* #D9B26F */
     --accent-foreground: 353 14% 15%;

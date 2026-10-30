@@ -22,7 +22,7 @@ export default {
       <h2 class="m-0 text-label-sm text-muted-foreground uppercase">{{ label }}</h2>
       <span
         v-if="icon"
-        class="flex size-9 items-center justify-center rounded-full bg-primary/40 text-lg text-secondary-hover"
+        class="flex size-9 items-center justify-center rounded-full bg-primary/40 text-lg text-link"
         aria-hidden="true"
       >
         <component :is="icon" />

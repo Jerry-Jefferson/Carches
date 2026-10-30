@@ -83,10 +83,13 @@ export default {
   },
   methods: {
     ...mapActions('bookings', ['createBooking']),
-    // Used by the mobile booking bar
+    // Used by the mobile booking bar and after the booking confirmation closes. A disabled
+    // button can't take focus, so while booking is blocked the panel itself gets it.
     focusConfirm() {
       this.$el.scrollIntoView?.({ behavior: 'smooth', block: 'center' })
-      this.$refs.confirm?.$el?.focus?.({ preventScroll: true })
+      const button = this.$refs.confirm?.$el
+      const target = this.canConfirm && button ? button : this.$el
+      target.focus?.({ preventScroll: true })
     },
     async confirm() {
       this.error = ''
@@ -111,7 +114,8 @@ export default {
 <template>
   <section
     id="booking-panel"
-    class="flex flex-col gap-5 rounded-dialog bg-card p-5 text-card-foreground shadow-card"
+    class="flex flex-col gap-5 rounded-dialog bg-card p-5 text-card-foreground shadow-card focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+    tabindex="-1"
     aria-labelledby="booking-panel-title"
   >
     <div class="flex items-center justify-between gap-2">

@@ -194,16 +194,17 @@ export default {
           <VeeField v-slot="{ value, handleChange, errorMessage }" name="userId">
             <a-form-item
               label="User"
+              html-for="booking-user"
               :validate-status="errorMessage ? 'error' : ''"
               :help="errorMessage"
             >
               <a-select
+                id="booking-user"
                 :value="value"
                 :options="userOptions"
                 show-search
                 :filter-option="filterOption"
                 placeholder="Search by name or e-mail"
-                aria-label="User"
                 @update:value="handleChange"
               />
             </a-form-item>
@@ -212,17 +213,18 @@ export default {
           <VeeField v-slot="{ value, handleChange, errorMessage }" name="carId">
             <a-form-item
               label="Car (available only)"
+              html-for="booking-car"
               :validate-status="errorMessage ? 'error' : ''"
               :help="errorMessage"
             >
               <a-select
+                id="booking-car"
                 :value="value"
                 :options="carOptions"
                 show-search
                 :filter-option="filterOption"
                 placeholder="Search by name or plate"
                 not-found-content="No available cars"
-                aria-label="Car"
                 @update:value="onCarChange($event, handleChange, setFieldValue)"
               />
             </a-form-item>
