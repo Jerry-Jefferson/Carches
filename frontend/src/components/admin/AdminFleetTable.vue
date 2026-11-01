@@ -4,6 +4,7 @@ import { mapActions, mapState } from 'vuex'
 import CarPlaceholder from '@/components/common/CarPlaceholder.vue'
 import EnergyBar from '@/components/common/EnergyBar.vue'
 import StatusTag from '@/components/common/StatusTag.vue'
+import { copyText } from '@/utils/clipboard'
 import { CAR_STATUS, carStatusMeta } from '@/utils/derive'
 import { carName, formatCoords, formatKm, formatRelative } from '@/utils/format'
 import notify from '@/utils/notify'
@@ -88,9 +89,12 @@ export default {
     busyReason(car) {
       return `${carStatusMeta(car.status).label} cars can't be removed. Complete or delete the booking first.`
     },
+    deleteTitle(car) {
+      return `Remove ${carName(car)} (${car.registrationNumber}) from the fleet?`
+    },
     async copyVin(vin) {
       try {
-        await navigator.clipboard.writeText(vin)
+        await copyText(vin)
         notify.success('VIN copied')
       } catch {
         notify.error('Could not copy the VIN')
@@ -197,14 +201,15 @@ export default {
         </a-tooltip>
         <a-popconfirm
           v-else
-          :title="`Remove ${carName(record)} (${record.registrationNumber}) from the fleet?`"
+          :title="deleteTitle(record)"
           ok-text="Remove"
           ok-type="default"
-          :ok-button-props="{ danger: true, loading: isMutating }"
+          :ok-button-props="{ danger: true }"
           cancel-text="Cancel"
+          placement="topRight"
           @confirm="remove(record)"
         >
-          <a-button type="text" danger :aria-label="`Delete ${carName(record)}`">
+          <a-button type="text" size="small" danger :aria-label="`Delete ${carName(record)}`">
             <template #icon><DeleteOutlined /></template>
           </a-button>
         </a-popconfirm>

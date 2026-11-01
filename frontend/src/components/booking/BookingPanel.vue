@@ -135,7 +135,7 @@ export default {
     <BookingSummary :car="car" :start-at="startAt" />
 
     <InfoCallout :icon="noteIcon">
-      To finish or cancel a trip, contact support:
+      You can finish an active trip anytime in My Trips. To cancel a reservation, contact support:
       <a :href="support.phoneHref">{{ support.phone }}</a>
     </InfoCallout>
 

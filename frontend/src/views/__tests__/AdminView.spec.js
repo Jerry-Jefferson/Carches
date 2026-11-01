@@ -127,6 +127,27 @@ describe('AdminView', () => {
     expect(shownSection(wrapper)).toBe('AdminTripsSection')
   })
 
+  it('keeps the statistics day in ?date= (L11)', async () => {
+    let store, router
+    ;({ wrapper, store, router } = await setup('/admin?tab=trips&date=2026-10-01'))
+    expect(store.state.admin.insights.date).toBe('2026-10-01')
+
+    // A link without the date (sidebar, search) gets it back
+    await router.replace({ name: 'admin', query: { tab: 'users' } })
+    await flushPromises()
+    expect(router.currentRoute.value.query).toEqual({ tab: 'users', date: '2026-10-01' })
+
+    // Back to today: no date in the URL
+    await store.dispatch('admin/insights/setDate', null)
+    await flushPromises()
+    expect(router.currentRoute.value.query).toEqual({ tab: 'users' })
+
+    await router.replace({ name: 'admin', query: { date: 'nonsense' } })
+    await flushPromises()
+    expect(router.currentRoute.value.query).toEqual({})
+    expect(store.getters['admin/insights/isToday']).toBe(true)
+  })
+
   it('"Add vehicle" opens the fleet section form', async () => {
     let router
     ;({ wrapper, router } = await setup('/admin?tab=users'))

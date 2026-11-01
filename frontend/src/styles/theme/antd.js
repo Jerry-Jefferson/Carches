@@ -30,6 +30,7 @@ const TOKEN_MAP = {
   colorTextLightSolid: 'primary-foreground',
   colorLink: 'link',
   colorLinkHover: 'foreground',
+  colorLinkActive: 'foreground',
   colorText: 'foreground',
   colorTextHeading: 'foreground',
   colorTextSecondary: 'muted-foreground',
@@ -69,5 +70,10 @@ export const buildAntdTheme = (root = document.documentElement) => {
   return {
     algorithm: isDark ? antdTheme.darkAlgorithm : antdTheme.defaultAlgorithm,
     token,
+    components: {
+      Tooltip: {
+        colorTextLightSolid: '#ffffff',
+      },
+    },
   }
 }

@@ -41,6 +41,8 @@ export default {
       isHistoryOpen: false,
       historyCar: null,
       highlightId: null,
+      // The `?car=` already applied: refreshes must not re-apply it over the admin's filters
+      focusedId: null,
     }
   },
   computed: {
@@ -79,13 +81,15 @@ export default {
   watch: {
     focusId: {
       handler(id) {
+        this.focusedId = null
         if (id) this.focus(id)
       },
       immediate: true,
     },
-    // The car may arrive after the focus request (first load)
+    // The car may arrive after the focus request (first load); once found, it is not
+    // focused again on later reloads
     cars() {
-      if (this.focusId && this.highlightId !== this.focusId) this.focus(this.focusId)
+      if (this.focusId && this.focusedId !== this.focusId) this.focus(this.focusId)
     },
   },
   beforeUnmount() {
@@ -119,6 +123,7 @@ export default {
     async focus(id) {
       const car = this.cars.find((item) => item._id === id)
       if (!car) return
+      this.focusedId = id
       await this.resetFilters()
       await this.setFilters({ q: car.vin })
       this.highlightId = id

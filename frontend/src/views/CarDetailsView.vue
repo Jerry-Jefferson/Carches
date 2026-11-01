@@ -23,7 +23,7 @@ import { CAR_STATUS, carStatusMeta, fuelTone } from '@/utils/derive'
 import { filtersToQuery } from '@/utils/fleetFilters'
 import { carName, formatCoords, formatDistance, formatKm, formatPercent } from '@/utils/format'
 import { mapUrl, toLatLng, walkingMinutes } from '@/utils/geo'
-import { toneClasses } from '@/theme/tones'
+import { toneClasses } from '@/styles/theme/tones'
 import notify from '@/utils/notify'
 
 export const POLL_MS = 30000
@@ -139,10 +139,12 @@ export default {
       },
       immediate: true,
     },
+    // Immediate: revisiting a car that is still in the store keeps the same name
     name: {
       handler(name) {
         if (this.shown) document.title = `${name} — ${SITE.name}`
       },
+      immediate: true,
     },
   },
   created() {
@@ -160,10 +162,12 @@ export default {
     ...mapActions('bookings', ['fetchMine']),
     ...mapActions('geo', { initGeo: 'init' }),
     async load() {
+      // A refresh of a car already on screen: the error states replace only an empty page
+      const isRefresh = Boolean(this.shown)
       try {
         await this.fetchCar({ id: this.id })
-      } catch {
-        // shown by the not-found / error states
+      } catch (err) {
+        if (isRefresh && !this.notFound) notify.apiError(err, 'Could not refresh the car')
       }
     },
     async loadBookings() {
@@ -196,23 +200,28 @@ export default {
     <a-result
       v-if="notFound"
       status="404"
-      title="This car is not in the fleet"
       sub-title="It may have been removed, or the link is wrong."
     >
+      <template #title>
+        <h1 class="m-0 text-headline-md">This car is not in the fleet</h1>
+      </template>
       <template #extra>
         <a-button type="primary" @click="$router.push(fleetRoute)">Back to fleet</a-button>
       </template>
     </a-result>
 
-    <ErrorState
-      v-else-if="error && !shown"
-      title="Could not load this car"
-      :message="error"
-      :retrying="isLoading"
-      @retry="load"
-    />
+    <div v-else-if="error && !shown" class="flex flex-col gap-4">
+      <h1 class="m-0 text-headline-lg">Car details</h1>
+      <ErrorState
+        title="Could not load this car"
+        :message="error"
+        :retrying="isLoading"
+        @retry="load"
+      />
+    </div>
 
-    <div v-else-if="!shown" class="flex flex-col gap-6" aria-busy="true" aria-label="Loading car">
+    <div v-else-if="!shown" class="flex flex-col gap-6" aria-busy="true">
+      <h1 class="sr-only">Loading car</h1>
       <a-skeleton active :title="{ width: '40%' }" :paragraph="{ rows: 1 }" />
       <div class="grid grid-cols-1 gap-8 lg:grid-cols-12">
         <div class="flex flex-col gap-6 lg:col-span-7 xl:col-span-8">

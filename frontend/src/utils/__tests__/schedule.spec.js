@@ -54,4 +54,13 @@ describe('schedule', () => {
     expect(tomorrow.disabledHours()).toEqual([])
     expect(tomorrow.disabledMinutes(14)).toEqual([])
   })
+
+  it('disables times after the 7-day limit on the last day (L21)', () => {
+    const limit = new Date(NOW + 7 * DAY)
+    const hour = limit.getHours()
+    const last = disabledTimeOf(new Date(limit.getTime() - 60 * MINUTE), NOW)
+    expect(last.disabledHours()).toEqual([...Array(24).keys()].slice(hour + 1))
+    expect(last.disabledMinutes(hour)).toEqual([...Array(60).keys()].slice(limit.getMinutes() + 1))
+    expect(last.disabledMinutes(hour - 1)).toEqual([])
+  })
 })

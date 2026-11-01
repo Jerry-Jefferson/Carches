@@ -47,10 +47,10 @@ export default {
     >
       <component :is="option.icon" v-if="option.icon" aria-hidden="true" />
       {{ option.label }}
+      <!-- Read as part of the button name ("BMW 2"); aria-label on a span is ignored -->
       <span
         v-if="option.count !== undefined"
         class="rounded-full bg-surface/60 px-1.5 text-label-sm"
-        :aria-label="`${option.count} items`"
       >
         {{ option.count }}
       </span>

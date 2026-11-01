@@ -1,10 +1,11 @@
 <script>
-import { mapActions, mapState } from 'vuex'
+import { mapActions, mapGetters, mapState } from 'vuex'
 
+import { reservedRowKey } from '@/utils/admin'
 import { formatCoords } from '@/utils/format'
-import notify from '@/utils/notify'
 
-// Reserved cars by whether the booker's credit card is authorised (E15)
+// Reserved cars by whether the booker's credit card is authorised (E15). A failed load is
+// shown as an error, never as "no reserved cars".
 export default {
   name: 'ReservedCardsWidget',
   emits: ['show-on-map'],
@@ -18,8 +19,14 @@ export default {
     }
   },
   computed: {
-    ...mapState('admin/fleet', ['reserved', 'reservedAuthorized', 'isLoadingWidgets']),
+    ...mapState('admin/fleet', ['reservedAuthorized', 'isLoadingWidgets']),
+    ...mapState('admin/fleet', { error: 'reservedError' }),
+    ...mapGetters('admin/fleet', { rows: 'reservedRows' }),
     ...mapState('cars', { cars: 'items' }),
+    // E15 rows have no car id, only the VIN
+    carsByVin() {
+      return new Map(this.cars.map((car) => [car.vin, car]))
+    },
   },
   methods: {
     ...mapActions('admin/fleet', ['fetchReserved']),
@@ -27,16 +34,16 @@ export default {
       this.isSwitching = true
       try {
         await this.fetchReserved(authorized)
-      } catch (err) {
-        notify.apiError(err, 'Could not load the reserved cars')
+      } catch {
+        // kept in `error` and shown in the widget
       } finally {
         this.isSwitching = false
       }
     },
-    // E15 rows have no car id, only the VIN
     carOf(row) {
-      return this.cars.find((car) => car.vin === row.vin) ?? null
+      return this.carsByVin.get(row.vin) ?? null
     },
+    rowKey: reservedRowKey,
     driver(row) {
       return [row.userFirstName, row.userLastName].filter(Boolean).join(' ') || 'Unknown driver'
     },
@@ -60,13 +67,26 @@ export default {
     />
 
     <a-spin :spinning="isSwitching || isLoadingWidgets">
-      <p v-if="!reserved.length" class="m-0 py-2 text-body-md text-muted-foreground">
+      <a-alert
+        v-if="error"
+        type="error"
+        show-icon
+        message="Reserved cars could not be loaded"
+        :description="error"
+      >
+        <template #action>
+          <a-button size="small" :loading="isSwitching" @click="select(reservedAuthorized)">
+            Retry
+          </a-button>
+        </template>
+      </a-alert>
+      <p v-else-if="!rows.length" class="m-0 py-2 text-body-md text-muted-foreground">
         No reserved cars in this group.
       </p>
       <ul v-else class="m-0 flex list-none flex-col gap-2 p-0">
         <li
-          v-for="row in reserved"
-          :key="row.vin"
+          v-for="row in rows"
+          :key="rowKey(row)"
           class="flex items-start gap-2 rounded-control bg-surface p-2"
         >
           <div class="min-w-0 flex-1">

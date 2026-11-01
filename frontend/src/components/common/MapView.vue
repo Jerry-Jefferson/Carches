@@ -1,6 +1,6 @@
 <script>
 import { DEFAULT_CENTER } from '@/utils/geo'
-import { toneClasses } from '@/theme/tones'
+import { toneClasses } from '@/styles/theme/tones'
 
 const TILE_URL = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png'
 const TILE_ATTRIBUTION =
@@ -11,6 +11,11 @@ const loadLeaflet = () =>
   Promise.all([import('leaflet'), import('leaflet/dist/leaflet.css')]).then(
     ([module]) => module.default ?? module,
   )
+
+// Where the markers are, ignoring tone and label: the map re-fits only when this changes,
+// so a data refresh (new status, fuel level) doesn't pull back a map the user has moved
+const placesKey = (markers, user) =>
+  JSON.stringify([markers.map(({ id, lat, lng }) => [id, lat, lng]), user && [user.lat, user.lng]])
 
 const markerHtml = (tone, isUser) =>
   isUser
@@ -31,7 +36,7 @@ export default {
     center: { type: Object, default: () => DEFAULT_CENTER },
     zoom: { type: Number, default: 13 },
     userLocation: { type: Object, default: null },
-    // Zoom to show every marker (and the user) whenever markers change
+    // Zoom to show every marker (and the user) whenever the set of places changes
     fitBounds: { type: Boolean, default: true },
     pickable: { type: Boolean, default: false },
     ariaLabel: { type: String, default: 'Map' },
@@ -134,7 +139,17 @@ export default {
         }).addTo(this.layer)
       }
 
-      if (this.fitBounds) this.fitToContent()
+      // An open popup whose marker is gone (e.g. filtered out) would show nothing
+      if (this.activeMarkerId && !this.markerById.has(this.activeMarkerId)) {
+        this.map.closePopup()
+        this.activeMarkerId = null
+      }
+
+      const key = placesKey(this.markers, this.userLocation)
+      if (this.fitBounds && key !== this.fittedKey) {
+        this.fittedKey = key
+        this.fitToContent()
+      }
     },
     fitToContent() {
       const points = this.markers.map((marker) => [marker.lat, marker.lng])

@@ -5,7 +5,7 @@ import StatusTag from '@/components/common/StatusTag.vue'
 import { CAR_STATUS, carStatusMeta, fuelTone } from '@/utils/derive'
 import { carName, formatDistance, formatKm, formatPercent } from '@/utils/format'
 import { walkingMinutes } from '@/utils/geo'
-import { toneClasses } from '@/theme/tones'
+import { toneClasses } from '@/styles/theme/tones'
 
 // One car in the fleet grid. Only free cars can be booked; the others show their status.
 export default {

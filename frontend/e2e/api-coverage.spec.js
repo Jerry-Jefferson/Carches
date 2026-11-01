@@ -33,6 +33,7 @@ test('every endpoint answers as the frontend expects', async ({ request }, testI
   let admin = null
   let userId = null
   let bookingId = null
+  let futureBookingId = null
   try {
     // Auth and "me" (E1–E4)
     const signedUp = await hit('E1', 'POST', '/auth/signup', { data: profile }, 201)
@@ -157,6 +158,7 @@ test('every endpoint answers as the frontend expects', async ({ request }, testI
       },
       201,
     )
+    futureBookingId = future._id
     expect(future.userId).toBe(userId)
     expect((await hit('E10', 'GET', `/cars/${car._id}`, { token }, 200)).status).toBe('reserved')
     for (const authorized of [false, true]) {
@@ -216,6 +218,8 @@ test('every endpoint answers as the frontend expects', async ({ request }, testI
     })
     if (admin) {
       await removeBooking(request, admin.token, bookingId)
+      // Already gone after E23; still removed when a step before it failed
+      await removeBooking(request, admin.token, futureBookingId)
       await removeCar(request, admin.token, vin)
       await removeUser(request, admin.token, userId)
     }

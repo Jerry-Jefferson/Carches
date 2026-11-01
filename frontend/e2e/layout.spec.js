@@ -88,9 +88,8 @@ test.describe('signed in as a user', () => {
 
   test('not found', async ({ page }, testInfo) => {
     await page.goto('/no-such-page')
-    await expect(page.getByText('Page not found')).toBeVisible()
-    await expectAccessible(page, testInfo)
-    await expectNoHorizontalScroll(page)
+    await expect(page.getByRole('heading', { level: 1, name: 'Page not found' })).toBeVisible()
+    await check(page, testInfo, 'not-found')
   })
 })
 

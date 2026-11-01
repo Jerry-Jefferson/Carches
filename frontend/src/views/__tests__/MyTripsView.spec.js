@@ -89,7 +89,7 @@ describe('MyTripsView', () => {
     const active = wrapper.find('[aria-labelledby="active-trip-title"]')
     expect(active.text()).toContain('Toyota Camry')
     expect(active.text()).toContain('1 h 05 min')
-    expect(text(active)).toContain('To finish this trip, contact support')
+    expect(text(active)).toContain('Finish Trip')
 
     const items = wrapper.findAll('article')
     expect(items).toHaveLength(2)

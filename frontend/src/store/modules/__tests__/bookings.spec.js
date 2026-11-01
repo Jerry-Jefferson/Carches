@@ -3,13 +3,14 @@ import { createStore } from 'vuex'
 
 import * as bookingsApi from '@/api/bookings'
 import * as carsApi from '@/api/cars'
+import { trackServerClock } from '@/api/http'
 import { resetOnSignOut } from '@/store'
 import auth from '../auth'
 import bookings, { BOOKING_BLOCK } from '../bookings'
 import cars from '../cars'
 import geo from '../geo'
 
-vi.mock('@/api/bookings', () => ({ listMine: vi.fn(), create: vi.fn() }))
+vi.mock('@/api/bookings', () => ({ listMine: vi.fn(), create: vi.fn(), finish: vi.fn() }))
 vi.mock('@/api/cars', () => ({ list: vi.fn(), getById: vi.fn() }))
 
 const HOUR = 3600000
@@ -29,6 +30,7 @@ describe('bookings module', () => {
   beforeEach(() => {
     vi.mocked(bookingsApi.listMine).mockReset()
     vi.mocked(bookingsApi.create).mockReset()
+    vi.mocked(bookingsApi.finish).mockReset()
     vi.mocked(carsApi.getById).mockReset()
     vi.mocked(carsApi.list).mockReset()
     vi.mocked(carsApi.list).mockResolvedValue([])
@@ -116,6 +118,26 @@ describe('bookings module', () => {
       expect(payload).toMatchObject({ carId: 'car1', startFuelLevel: 82, startMileage: 18420 })
       expect(Math.abs(new Date(payload.startDate) - Date.now())).toBeLessThan(5000)
       expect(store.state.bookings.isSubmitting).toBe(false)
+    })
+
+    it('starts "now" by the server clock, not a fast browser clock (L3)', async () => {
+      // The browser clock is 10 minutes ahead of the server
+      trackServerClock({ headers: { date: new Date(Date.now() - 10 * 60000).toUTCString() } })
+      vi.mocked(carsApi.getById).mockResolvedValue(FREE_CAR)
+      vi.mocked(bookingsApi.listMine).mockResolvedValue([])
+      vi.mocked(bookingsApi.create).mockResolvedValue({ _id: 'new' })
+      const store = makeStore()
+
+      try {
+        await store.dispatch('bookings/createBooking', { carId: 'car1' })
+      } finally {
+        trackServerClock({ headers: { date: new Date().toUTCString() } })
+      }
+
+      const { startDate } = vi.mocked(bookingsApi.create).mock.calls[0][0]
+      const behind = Date.now() - new Date(startDate)
+      expect(behind).toBeGreaterThan(9 * 60000)
+      expect(behind).toBeLessThan(11 * 60000)
     })
 
     it('sends the signed-in caller as userId, which admins need (H1)', async () => {
@@ -213,5 +235,21 @@ describe('bookings module', () => {
     expect(store.state.bookings.mine).toEqual([])
     expect(store.state.bookings.loadedAt).toBeNull()
     expect(store.state.bookings.isLoading).toBe(false)
+  })
+
+  it('finishTrip finishes the trip and refreshes bookings and fleet', async () => {
+    const finished = { ...ACTIVE, endDate: new Date().toISOString(), finishMileage: 18500, finishFuelLevel: 75 }
+    vi.mocked(bookingsApi.finish).mockResolvedValue(finished)
+    vi.mocked(bookingsApi.listMine).mockResolvedValue([finished])
+    vi.mocked(carsApi.list).mockResolvedValue([FREE_CAR])
+    const store = makeStore()
+
+    const result = await store.dispatch('bookings/finishTrip', { bookingId: 'b2' })
+
+    expect(bookingsApi.finish).toHaveBeenCalledWith('b2')
+    expect(result).toEqual(finished)
+    expect(store.state.bookings.isSubmitting).toBe(false)
+    expect(bookingsApi.listMine).toHaveBeenCalled()
+    expect(carsApi.list).toHaveBeenCalled()
   })
 })

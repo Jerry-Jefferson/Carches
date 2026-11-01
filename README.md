@@ -93,7 +93,7 @@ Other scripts:
 |----------------------|---------------------------------|
 | `npm run build`      | Production build into `dist/`   |
 | `npm run preview`    | Serve the production build      |
-| `npm test`           | Run unit and component tests once (Vitest) |
+| `npm test`           | Run unit and component tests once (Vitest, `src/**` only) |
 | `npm run test:watch` | Run unit tests in watch mode    |
 | `npm run lint`       | Check code with ESLint          |
 | `npm run lint:fix`   | Fix ESLint issues automatically |
@@ -104,9 +104,9 @@ Other scripts:
 
 ### Using the app
 
-- Visitors can only open `/auth` (sign in / register); every other page redirects there and comes back after signing in.
+- Visitors can only open `/auth` (sign in / register); every other page redirects there and comes back after signing in. With "Remember me" the session survives a browser restart; it is kept through a backend restart or an offline start too, and dropped only when the server rejects the token.
 - Users: **Fleet** (`/fleet` — filters, map, quick booking), **car page** (`/cars/:id` — book now or schedule up to 7 days ahead), **My Trips** (`/trips`), **My Profile** (`/profile`). Users can't finish or cancel trips; the app points them to support.
-- Admins also get the **admin console** (`/admin`): KPIs, the fleet (add / edit / remove cars, maintenance actions), trips and bookings (create, edit, complete, delete) and users (view, edit, delete), plus CSV export. Sign in with the account created by `migrate:admin`.
+- Admins also get the **admin console** (`/admin`): KPIs, the fleet (add / edit / remove cars, maintenance actions), trips and bookings (create, edit, complete, delete) and users (view, edit, delete), plus CSV export. Sections and rows are deep-linked (`/admin?tab=trips&trip=…`, `&date=2026-10-29` for the statistics day). Sign in with the account created by `migrate:admin`.
 
 ### End-to-end checks (Playwright)
 
@@ -117,11 +117,19 @@ npx playwright install chromium   # once
 npm run test:e2e
 ```
 
-- **Layout** (`e2e/layout.spec.js`): every screen at 375, 1024 and 1440 px — no serious accessibility violations (axe, WCAG 2.1 AA), one `h1`, no sideways page scrolling. Full-page screenshots are attached to the report.
-- **Journeys** (`e2e/journeys.spec.js`): guest redirect, sign up → book → My Trips → admin completes the trip → car free again, admin adds / edits / removes a car, keyboard focus.
+- **Layout** (`e2e/layout.spec.js`): every screen, Not Found included, at 375, 1024 and 1440 px — no serious accessibility violations (axe, WCAG 2.1 AA), one `h1`, no sideways page scrolling. Full-page screenshots are attached to the report. A few violations inside Ant Design's own select and table markup are reported but not failed; `LIBRARY_ISSUES` in `e2e/support.js` lists them attribute by attribute.
+- **Journeys** (`e2e/journeys.spec.js`): guest redirect, sign up → book → My Trips → admin completes the trip → car free again, admin adds / edits / removes a car, keyboard focus. The booking journey uses a car it creates itself, so it never depends on a free seeded car.
 - **Endpoints** (`e2e/api-coverage.spec.js`): all 23 API endpoints with the access rules and backend behaviours the frontend relies on.
 
 The admin login comes from `E2E_ADMIN_EMAIL` / `E2E_ADMIN_PASSWORD`, or from `ADMIN_EMAIL` / `ADMIN_PASSWORD` in `backend/.env`. Every run creates its own `e2e.*@carshes.test` user and test car and removes them at the end. The endpoint check also runs the two maintenance actions, which change matching cars in the database — re-seed to get the sample data back.
+
+## Project documents
+
+| File | What it is |
+|------|------------|
+| `CLAUDE.md` | Project memory for Claude Code: stack, architecture, conventions, known gotchas |
+| `implementation-plan.md` | Frontend roadmap (all phases done) and the backend gaps the UI works around |
+| `.claude/skills/` | Recipes for Vue components, Vuex modules, Docker and Swagger, used by Claude Code |
 
 ## Claude Code: MongoDB MCP
 
@@ -155,12 +163,19 @@ Use the `MONGO_INITDB_ROOT_USERNAME` / `MONGO_INITDB_ROOT_PASSWORD` values from 
 │   │   ├── layouts/         # auth, app and admin page chrome
 │   │   ├── router/          # routes and access guards
 │   │   ├── store/           # Vuex modules (auth, cars, carDetails, bookings, geo, admin/*)
-│   │   ├── styles/          # Tailwind entry and design tokens
-│   │   ├── utils/           # formatting, derived values, filters, CSV, geo helpers
+│   │   ├── constants/       # brand name, city, support contacts, footer links
+│   │   ├── styles/          # Tailwind entry and design tokens (+ contrast tests)
+│   │   ├── theme/           # Ant Design theme from the tokens, status tone classes
+│   │   ├── utils/           # formatting, derived values, filters, schedule, CSV, clipboard, geo helpers
 │   │   └── views/           # one per route
 │   ├── e2e/                 # Playwright checks against the running stack
+│   ├── public/              # favicons and the web app manifest
 │   ├── playwright.config.js
 │   ├── vite.config.js
 │   └── package.json
+├── .claude/skills/          # Claude Code recipes (vue-component, vuex-module, docker-workflow, swagger-update)
+├── .mcp.json                # read-only MongoDB MCP server
+├── CLAUDE.md
+├── implementation-plan.md
 └── README.md
 ```

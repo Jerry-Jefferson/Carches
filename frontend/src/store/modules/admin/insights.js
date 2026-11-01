@@ -37,6 +37,11 @@ export default {
     isToday: (state) => state.date === dayKey(state.now),
   },
   mutations: {
+    // On sign-out: the next admin starts on today
+    RESET(state) {
+      state.now = Date.now()
+      state.date = dayKey(state.now)
+    },
     SET_DATE(state, date) {
       state.date = date
     },
@@ -48,8 +53,12 @@ export default {
     setDate({ commit }, date) {
       commit('SET_DATE', date || dayKey(Date.now()))
     },
-    tick({ commit }) {
-      commit('TICK', Date.now())
+    // While "today" is selected, the date follows the clock past midnight
+    tick({ state, commit }) {
+      const wasToday = state.date === dayKey(state.now)
+      const now = Date.now()
+      commit('TICK', now)
+      if (wasToday) commit('SET_DATE', dayKey(now))
     },
   },
 }

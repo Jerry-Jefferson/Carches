@@ -3,6 +3,7 @@
 
 import { BOOKING_STATUS, CAR_STATUS, bookingStatus, tripDistance } from './derive'
 import { carName, dayKey } from './format'
+import { DEPOT_POINT, toLatLng } from './geo'
 
 export const ALL = 'all'
 export const ROLE = Object.freeze({ USER: 'user', ADMIN: 'admin' })
@@ -100,20 +101,57 @@ export const userStats = (users, now = Date.now()) => ({
 
 // ── Maintenance previews (Q11, Q12) ─────────────────────────────────────────────
 
+// Previews count only the cars the update would change, so they match its modifiedCount
+
 export const serviceCandidates = (cars) =>
   cars.filter(
     (car) =>
-      (car.productionInfo?.year ?? Infinity) < SERVICE_YEAR_BEFORE ||
-      (car.mileage ?? 0) > SERVICE_MILEAGE_OVER,
+      car.status !== CAR_STATUS.IN_SERVICE &&
+      ((car.productionInfo?.year ?? Infinity) < SERVICE_YEAR_BEFORE ||
+        (car.mileage ?? 0) > SERVICE_MILEAGE_OVER),
   )
+
+const isAtDepot = (car) => {
+  const point = toLatLng(car.location)
+  return point?.lat === DEPOT_POINT.lat && point?.lng === DEPOT_POINT.lng
+}
 
 export const relocationCandidates = (cars, trips) => {
   const counts = bookingCountsByCar(trips)
   const busy = [CAR_STATUS.IN_USE, CAR_STATUS.RESERVED]
   return cars.filter(
-    (car) => (counts[car._id] ?? 0) > RELOCATE_BOOKINGS_OVER && !busy.includes(car.status),
+    (car) =>
+      (counts[car._id] ?? 0) > RELOCATE_BOOKINGS_OVER &&
+      !busy.includes(car.status) &&
+      !isAtDepot(car),
   )
 }
+
+// ── Reserved cars & card authorisation (E15) ────────────────────────────────────
+
+// E15 returns one row per booking × credit card of each reserved car, past bookers and
+// extra cards included (backend gap). Keeps one row per car and driver and, when the
+// loaded trips name the driver of the car's open booking, only that driver's row.
+export const currentReservedRows = (rows, { cars = [], trips = [] } = {}) => {
+  const carIdByVin = new Map(cars.map((car) => [car.vin, car._id]))
+  const openDriverByCar = new Map()
+  for (const trip of trips) {
+    const licence = trip.endDate ? null : trip.userId?.licenseNumber
+    if (licence) openDriverByCar.set(refId(trip.carId), licence)
+  }
+
+  const seen = new Set()
+  return rows.filter((row) => {
+    const openDriver = openDriverByCar.get(carIdByVin.get(row.vin))
+    if (openDriver && row.userLicenseNumber !== openDriver) return false
+    const key = reservedRowKey(row)
+    if (seen.has(key)) return false
+    seen.add(key)
+    return true
+  })
+}
+
+export const reservedRowKey = (row) => `${row.vin}|${row.userLicenseNumber ?? ''}`
 
 // ── Table filters ───────────────────────────────────────────────────────────────
 

@@ -9,13 +9,8 @@ import { refId } from '@/utils/admin'
 import { formatCoords, formatDateTime } from '@/utils/format'
 import { toGeoJsonPoint, toLatLng } from '@/utils/geo'
 import notify from '@/utils/notify'
-import {
-  SCHEDULE_STEP_MINUTES,
-  SCHEDULE_VALUE_FORMAT,
-  fromPickerValue,
-  toPickerValue,
-} from '@/utils/schedule'
-import { completeTripSchema } from './bookingSchema'
+import { SCHEDULE_STEP_MINUTES, SCHEDULE_VALUE_FORMAT, toPickerValue } from '@/utils/schedule'
+import { completeEndDate, completeTripSchema, defaultEndTime } from './bookingSchema'
 import { tripCar } from './tripText'
 
 /**
@@ -39,6 +34,8 @@ export default {
       isRetrying: false,
       moveCar: false,
       location: null,
+      // "Now" for the default end, taken when the modal opens
+      openedAt: Date.now(),
       valueFormat: SCHEDULE_VALUE_FORMAT,
       showTime: { format: 'HH:mm', minuteStep: SCHEDULE_STEP_MINUTES },
     }
@@ -56,7 +53,7 @@ export default {
     },
     initialValues() {
       return {
-        endDate: toPickerValue(new Date()),
+        endDate: toPickerValue(defaultEndTime(this.trip, this.openedAt)),
         finishFuelLevel: this.car?.fuelLevel ?? this.trip?.startFuelLevel ?? null,
         finishMileage: this.car?.mileage ?? this.trip?.startMileage ?? null,
       }
@@ -75,6 +72,11 @@ export default {
       return `${this.trip?._id}-${this.open}`
     },
   },
+  watch: {
+    open(isOpen) {
+      if (isOpen) this.openedAt = Date.now()
+    },
+  },
   methods: {
     ...mapActions('admin/trips', ['completeTrip', 'retryCarUpdate']),
     reset() {
@@ -89,19 +91,13 @@ export default {
     onPick(point) {
       this.location = point
     },
-    // A trip that started at 15:53:40 and ends "now" at 15:53 (minute precision) ends at its start
-    endDateOf(value) {
-      const end = fromPickerValue(value).getTime()
-      const start = new Date(this.trip.startDate).getTime()
-      return new Date(Math.max(end, start)).toISOString()
-    },
     async onSubmit(values) {
       this.formError = ''
       this.isSubmitting = true
       try {
         await this.completeTrip({
           trip: this.trip,
-          endDate: this.endDateOf(values.endDate),
+          endDate: completeEndDate(values.endDate, this.trip),
           finishFuelLevel: values.finishFuelLevel,
           finishMileage: values.finishMileage,
           location: this.moveCar && this.location ? toGeoJsonPoint(this.location) : null,

@@ -4,7 +4,7 @@ import { ConfigProvider } from 'ant-design-vue'
 import AdminLayout from '@/layouts/AdminLayout.vue'
 import AppLayout from '@/layouts/AppLayout.vue'
 import AuthLayout from '@/layouts/AuthLayout.vue'
-import { buildAntdTheme } from '@/theme/antd'
+import { buildAntdTheme } from '@/styles/theme/antd'
 
 const LAYOUTS = { auth: AuthLayout, app: AppLayout, admin: AdminLayout }
 

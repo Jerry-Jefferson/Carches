@@ -76,7 +76,12 @@ Rules:
 - The store is **strict in dev**: state may only change inside mutations. Never mutate objects you got from state (copy them first) and never assign state in actions.
 - Never send a user ID for "my" data — `/users/me` and `/bookings/my` take it from the token. For `POST /bookings`, the backend overrides `userId` for non-admins.
 - Per-user data must be cleared on sign-out: add a `RESET` mutation and commit it from the `resetOnSignOut` plugin in `src/store/index.js` (it listens for `auth/CLEAR_SESSION`). A request still in flight at sign-out must not refill the state afterwards: note `rootState.auth?.token` before the await and drop the result if it changed (see `bookings/fetchMine`).
+- A reload after a change that already succeeded (re-fetching the list after a create) must not be thrown: the caller would show a failure and the user would repeat the change. Catch it and let the reloaded module keep its own `error` (see `admin/fleet/reloadCars`).
 - Data for "the current page" (one car, one booking) must ignore out-of-order responses: record the requested id and a request counter in state (via a mutation) and commit only if they still match after the await (see `carDetails/fetchCar`).
+- Lists refreshed on a timer (`fetchMine`, `admin/*/fetchTrips|fetchUsers`) must not let an older response overwrite a newer one: number the calls and commit only if no newer call has committed yet (see `admin/trips/fetchTrips`).
+- A forced reload (`{ force: true }`) after a change must not reuse a request that was already in flight: it may predate the change (see `cars/fetchCars`).
+- Rules the backend does not enforce (an admin can't delete themselves) belong in the action, not only in the component that hides the button.
+- "Now" sent to the backend (a booking that starts now) comes from `serverNow()` in `@/api/http`, not the browser clock.
 - Short caches (`loadedAt` + `CACHE_MS`, with a `{ force }` option) avoid repeat calls when several views need the same list — see `cars.js`.
 - Pure logic (filters, sorting, KPIs) belongs in `src/utils/*.js` with its own tests; getters just call it.
 

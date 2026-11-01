@@ -31,7 +31,8 @@ export default {
             id: car._id,
             ...point,
             tone: carStatusMeta(car.status).tone,
-            label: `${carName(car)}, ${car.registrationNumber}`,
+            // Status in words too: the marker colour alone is not enough
+            label: `${carName(car)}, ${car.registrationNumber}, ${carStatusMeta(car.status).label}`,
           },
         ]
       })

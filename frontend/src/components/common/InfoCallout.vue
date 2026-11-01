@@ -1,5 +1,5 @@
 <script>
-import { toneClasses } from '@/theme/tones'
+import { toneClasses } from '@/styles/theme/tones'
 
 // Icon + optional title + text, e.g. "To finish this trip, contact support"
 export default {

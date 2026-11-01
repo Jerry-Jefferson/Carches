@@ -10,10 +10,12 @@ import auth from '@/store/modules/auth'
 import cars from '@/store/modules/cars'
 import geo from '@/store/modules/geo'
 import notify from '@/utils/notify'
+import { fromPickerValue } from '@/utils/schedule'
 import AdminTripsSection from '../AdminTripsSection.vue'
 import BookingFormModal from '../BookingFormModal.vue'
 import CompleteTripModal from '../CompleteTripModal.vue'
 import DeleteTripModal from '../DeleteTripModal.vue'
+import TripDetailsDrawer from '../TripDetailsDrawer.vue'
 
 vi.mock('@/api/bookings', () => ({
   list: vi.fn(),
@@ -220,6 +222,19 @@ describe('admin trips', () => {
       expect(wrapper.emitted('update:open')).toEqual([[false]])
     })
 
+    it('opens an upcoming booking with a valid end: its start (L12)', async () => {
+      vi.mocked(bookingsApi.update).mockResolvedValue({ ...UPCOMING, endDate: UPCOMING.startDate })
+      vi.mocked(carsApi.update).mockResolvedValue({ ...FREE_CAR })
+      ;({ wrapper } = await mountWith(CompleteTripModal, { open: true, trip: UPCOMING }))
+
+      submitForm()
+
+      await vi.waitFor(() => expect(bookingsApi.update).toHaveBeenCalled())
+      expect(bodyText()).not.toContain('End must be after the start')
+      const [, changes] = vi.mocked(bookingsApi.update).mock.calls[0]
+      expect(changes.endDate).toBe(UPCOMING.startDate)
+    })
+
     it('rejects a finish mileage below the start mileage', async () => {
       ;({ wrapper } = await mountWith(CompleteTripModal, {
         open: true,
@@ -260,6 +275,24 @@ describe('admin trips', () => {
       )
       await vi.waitFor(() => expect(notify.success).toHaveBeenCalledWith('Booking created'))
       expect(wrapper.emitted('saved')).toEqual([[{ _id: 'new' }]])
+    })
+
+    it('starts a new booking at the time the modal is opened, not first opened (M12)', async () => {
+      vi.useFakeTimers({ toFake: ['Date'] })
+      try {
+        vi.setSystemTime(new Date('2026-10-30T07:00:00Z'))
+        ;({ wrapper } = await mountWith(BookingFormModal, { open: true, trip: null }))
+        await wrapper.setProps({ open: false })
+
+        vi.setSystemTime(new Date('2026-10-30T09:00:00Z'))
+        await wrapper.setProps({ open: true })
+        await flushPromises()
+
+        const start = fromPickerValue(wrapper.vm.initialValues.startDate)
+        expect(start.toISOString()).toBe('2026-10-30T09:00:00.000Z')
+      } finally {
+        vi.useRealTimers()
+      }
     })
 
     it('labels the user and car selects (M5)', async () => {
@@ -321,15 +354,47 @@ describe('admin trips', () => {
       expect(store.getters['cars/byId']('car1').status).toBe('free')
     })
 
-    it('leaves the car alone for a completed booking', async () => {
+    it('leaves the car alone for a completed booking, without offering to free it (L8)', async () => {
       vi.mocked(bookingsApi.remove).mockResolvedValue()
       ;({ wrapper } = await mountWith(DeleteTripModal, { open: true, trip: COMPLETED }))
 
-      expect(document.body.querySelector('input[type="checkbox"]').checked).toBe(false)
+      expect(document.body.querySelector('input[type="checkbox"]')).toBeNull()
       bodyButton('Delete').click()
 
       await vi.waitFor(() => expect(wrapper.emitted('done')).toHaveLength(1))
       expect(carsApi.update).not.toHaveBeenCalled()
+    })
+  })
+
+  it('does not offer to free a car that another open booking holds (L8)', async () => {
+    const store = makeStore()
+    const later = { ...UPCOMING, _id: 'dddddd444444', carId: ACTIVE.carId }
+    store.commit('admin/trips/SET_ITEMS', [later, UPCOMING, ACTIVE, COMPLETED])
+    wrapper = mount(DeleteTripModal, {
+      props: { open: true, trip: ACTIVE },
+      global: { plugins: [store, await makeRouter()] },
+      attachTo: document.body,
+    })
+    await flushPromises()
+
+    expect(document.body.querySelector('input[type="checkbox"]')).toBeNull()
+  })
+
+  describe('TripDetailsDrawer', () => {
+    it('shows only the latest booking when an earlier load answers last (L29)', async () => {
+      const pending = {}
+      vi.mocked(bookingsApi.getById).mockImplementation(
+        (id) => new Promise((resolve) => (pending[id] = resolve)),
+      )
+      ;({ wrapper } = await mountWith(TripDetailsDrawer, { open: true, tripId: ACTIVE._id }))
+      await wrapper.setProps({ tripId: COMPLETED._id })
+
+      pending[COMPLETED._id](COMPLETED)
+      await flushPromises()
+      pending[ACTIVE._id](ACTIVE)
+      await flushPromises()
+
+      expect(wrapper.vm.trip._id).toBe(COMPLETED._id)
     })
   })
 })

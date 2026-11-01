@@ -38,7 +38,7 @@
 
     /* Borders, inputs, focus rings */
     --border: 47 29% 65%; /* Based on #A69658 with lower saturation */
-    --input: 47 29% 75%;
+    --input: 47 29% 46%; /* Control outlines: ≥ 3:1 on surface, card and popover (WCAG 1.4.11) */
     --ring: 45 93% 74%; /* #FADF7F */
 
     /* Input and table surfaces */
@@ -78,6 +78,7 @@
     --primary-foreground: 353 14% 15%;
 
     --secondary: 47 29% 50%; /* #A69658 */
+    --secondary-hover: 47 29% 58%; /* lighter on hover in the dark theme */
     --secondary-foreground: 48 60% 98%;
 
     --muted: 353 10% 25%;
@@ -88,13 +89,13 @@
     --accent-foreground: 353 14% 15%;
 
     --border: 353 10% 30%;
-    --input: 353 10% 30%;
+    --input: 353 10% 48%;
     --ring: 45 93% 74%;
 
     --surface: 353 14% 14%;
     --surface-foreground: 48 76% 92%;
 
-    --destructive: 0 75% 70%;
+    --destructive: 0 75% 76%; /* soft pills on card stay ≥ 4.5 : 1 */
     --destructive-foreground: 353 14% 12%;
     --success: 140 45% 60%;
     --success-foreground: 353 14% 12%;

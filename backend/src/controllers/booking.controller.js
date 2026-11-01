@@ -45,6 +45,14 @@ const update = catchAsync(async (req, res) => {
   });
 });
 
+const finish = catchAsync(async (req, res) => {
+  const finishedBooking = await bookingService.finish(req.params.id, req.user._id);
+  res.status(200).json({
+    message: "Trip successfully finished",
+    data: finishedBooking,
+  });
+});
+
 const deleteById = catchAsync(async (req, res) => {
   await bookingService.deleteById(req.params.id);
   res.sendStatus(204);
@@ -56,5 +64,6 @@ module.exports = {
   getById,
   create,
   update,
+  finish,
   deleteById,
 };

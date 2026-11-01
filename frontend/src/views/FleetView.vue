@@ -58,8 +58,9 @@ export default {
     showError() {
       return Boolean(this.error) && this.items.length === 0
     },
+    // Also after a failed background refresh: the cars already loaded are still filtered
     isEmpty() {
-      return !this.isLoading && !this.error && this.sorted.length === 0
+      return !this.isLoading && !this.showError && this.sorted.length === 0
     },
   },
   watch: {

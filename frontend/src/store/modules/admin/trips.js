@@ -10,8 +10,27 @@ export const CAR_UPDATE_FAILED = 'car_update_failed'
 const carUpdateFailed = (err, { vin, changes, booking = null }) =>
   Object.assign(err, { code: CAR_UPDATE_FAILED, vin, changes, booking })
 
+// PUT /cars/:vin answers 404 for a car that has been deleted (soft delete): there is
+// nothing left to update, and a retry would fail the same way
+const isCarGone = (err) => err?.statusCode === 404
+
+// Follow-up car update of a saved booking change
+const updateCarAfter = async (dispatch, { vin, changes, booking = null }) => {
+  try {
+    await dispatch('admin/fleet/updateCar', { vin, changes }, { root: true })
+  } catch (err) {
+    if (isCarGone(err)) return
+    throw carUpdateFailed(err, { vin, changes, booking })
+  }
+}
+
 // The populated car of a booking has the VIN that PUT /cars/:vin needs
 const vinOf = (trip) => (trip?.carId && typeof trip.carId === 'object' ? trip.carId.vin : null)
+
+// Counts the fetchTrips calls
+let tripsSeq = 0
+// The newest call whose response has been committed
+let tripsCommitted = 0
 
 // Trips & bookings (E19–E23)
 export default {
@@ -50,6 +69,7 @@ export default {
   mutations: {
     RESET(state) {
       state.items = []
+      state.filters = { ...DEFAULT_TRIP_FILTERS }
       state.error = null
       state.loadedAt = null
     },
@@ -81,10 +101,12 @@ export default {
   },
   actions: {
     // E19, newest start first
-    async fetchTrips({ commit, rootState }) {
+    async fetchTrips({ state, commit, rootState }) {
       // A response that arrives after sign-out is dropped (the next user must not see it)
       const token = rootState.auth?.token
       const isSameSession = () => rootState.auth?.token === token
+      // An overlapping refresh can answer out of order: never replace newer data
+      const seq = ++tripsSeq
       commit('SET_LOADING', true)
       commit('SET_ERROR', null)
       try {
@@ -92,13 +114,15 @@ export default {
           (a, b) => new Date(b.startDate) - new Date(a.startDate),
         )
         if (!isSameSession()) return []
+        if (seq < tripsCommitted) return state.items
+        tripsCommitted = seq
         commit('SET_ITEMS', trips)
         return trips
       } catch (err) {
-        if (isSameSession()) commit('SET_ERROR', getErrorMessage(err))
+        if (isSameSession() && seq > tripsCommitted) commit('SET_ERROR', getErrorMessage(err))
         throw err
       } finally {
-        commit('SET_LOADING', false)
+        if (seq === tripsSeq) commit('SET_LOADING', false)
       }
     },
 
@@ -123,10 +147,12 @@ export default {
       return dispatch('cars/fetchCars', { force: true }, { root: true }).catch(() => {})
     },
 
-    // E21 with `userId`. The response is not populated, so the list is reloaded.
+    // E21 with `userId`. The response is not populated, so the list is reloaded. The
+    // booking is saved at this point: a failed reload is kept in `error` for the list, not
+    // thrown, or the form would show a failure and invite a duplicate booking.
     async createTrip({ dispatch }, booking) {
       const created = await dispatch('mutate', () => bookingsApi.create(booking))
-      await Promise.all([dispatch('fetchTrips'), dispatch('refreshCars')])
+      await Promise.all([dispatch('fetchTrips').catch(() => {}), dispatch('refreshCars')])
       return created
     },
 
@@ -153,16 +179,17 @@ export default {
 
       const changes = { fuelLevel: finishFuelLevel, mileage: finishMileage }
       if (location) changes.location = location
-      try {
-        await dispatch('admin/fleet/updateCar', { vin, changes }, { root: true })
-      } catch (err) {
-        throw carUpdateFailed(err, { vin, changes, booking })
-      }
+      await updateCarAfter(dispatch, { vin, changes, booking })
       return booking
     },
 
-    retryCarUpdate({ dispatch }, { vin, changes }) {
-      return dispatch('admin/fleet/updateCar', { vin, changes }, { root: true })
+    // A car deleted meanwhile counts as done (404, see isCarGone)
+    async retryCarUpdate({ dispatch }, { vin, changes }) {
+      try {
+        await dispatch('admin/fleet/updateCar', { vin, changes }, { root: true })
+      } catch (err) {
+        if (!isCarGone(err)) throw err
+      }
     },
 
     // E23, then optionally E12 to free the car: deleting keeps the car's status (Q8)
@@ -172,12 +199,7 @@ export default {
 
       const vin = vinOf(trip)
       if (!freeCar || !vin) return
-      const changes = { status: CAR_STATUS.FREE }
-      try {
-        await dispatch('admin/fleet/updateCar', { vin, changes }, { root: true })
-      } catch (err) {
-        throw carUpdateFailed(err, { vin, changes })
-      }
+      await updateCarAfter(dispatch, { vin, changes: { status: CAR_STATUS.FREE } })
     },
 
     setFilters({ state, commit }, partial) {

@@ -1,17 +1,17 @@
 <script>
-import { CustomerServiceOutlined } from '@ant-design/icons-vue'
+import { CheckCircleOutlined } from '@ant-design/icons-vue'
+import { mapActions, mapState } from 'vuex'
 
-import InfoCallout from '@/components/common/InfoCallout.vue'
 import StatusTag from '@/components/common/StatusTag.vue'
-import { SITE } from '@/constants/site'
 import { BOOKING_STATUS, tripDuration } from '@/utils/derive'
 import { formatDateTime, formatDuration, formatKm, formatPercent } from '@/utils/format'
+import notify from '@/utils/notify'
 import { tripCarName, tripCarRoute } from './tripDisplay'
 
-// The trip in progress, with a live duration. Users can't finish trips themselves (Q6).
+// The trip in progress, with a live duration. Users can finish trips themselves.
 export default {
   name: 'ActiveTripCard',
-  components: { InfoCallout, StatusTag },
+  components: { StatusTag },
   props: {
     // { booking, carId, car, plate }
     trip: { type: Object, required: true },
@@ -19,14 +19,16 @@ export default {
     now: { type: Number, required: true },
     fleetLoaded: { type: Boolean, default: true },
   },
+  emits: ['finished'],
   data() {
     return {
       status: BOOKING_STATUS.ACTIVE,
-      support: SITE.support,
-      supportIcon: CustomerServiceOutlined,
+      finishIcon: CheckCircleOutlined,
+      error: '',
     }
   },
   computed: {
+    ...mapState('bookings', ['isSubmitting']),
     name() {
       return tripCarName(this.trip, this.fleetLoaded)
     },
@@ -41,6 +43,19 @@ export default {
         { label: 'Fuel at start', value: formatPercent(booking.startFuelLevel) },
         { label: 'Mileage at start', value: formatKm(booking.startMileage) },
       ]
+    },
+  },
+  methods: {
+    ...mapActions('bookings', ['finishTrip']),
+    async handleFinish() {
+      this.error = ''
+      try {
+        await this.finishTrip({ bookingId: this.trip.booking._id })
+        notify.success('Trip finished!')
+        this.$emit('finished')
+      } catch (err) {
+        this.error = err?.response?.data?.message || err.message || 'Could not finish the trip'
+      }
     },
   },
 }
@@ -72,10 +87,19 @@ export default {
       </div>
     </dl>
 
-    <InfoCallout :icon="supportIcon" title="To finish this trip, contact support">
-      Call <a :href="support.phoneHref">{{ support.phone }}</a> or write to
-      <a :href="`mailto:${support.email}`">{{ support.email }}</a
-      >.
-    </InfoCallout>
+    <a-alert v-if="error" type="error" show-icon :message="error" />
+
+    <a-button
+      id="finish-trip-btn"
+      type="primary"
+      size="large"
+      block
+      :loading="isSubmitting"
+      :disabled="isSubmitting"
+      @click="handleFinish"
+    >
+      <component :is="finishIcon" aria-hidden="true" />
+      Finish Trip
+    </a-button>
   </section>
 </template>

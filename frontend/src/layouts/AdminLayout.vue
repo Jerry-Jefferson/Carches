@@ -31,7 +31,8 @@ export default {
       </div>
     </aside>
 
-    <a-drawer v-model:open="isDrawerOpen" placement="left" :width="280" :closable="false">
+    <!-- Titled like the app's "Menu" drawer, with a close button for keyboard users -->
+    <a-drawer v-model:open="isDrawerOpen" placement="left" :width="280" title="Admin navigation">
       <div class="flex h-full flex-col gap-6" @click="isDrawerOpen = false">
         <BrandWordmark :to="{ name: 'admin' }" size="sm" admin />
         <AdminSidebar />

@@ -95,6 +95,34 @@ export const removeCar = (request, adminToken, vin) =>
       )
     : null
 
+// A free car of the run's own, so journeys never depend on (or wait for) seeded free cars.
+// New and low-mileage, so the E16 maintenance check never sends it to service. Remove it
+// with removeCar(request, adminToken, car.vin).
+export const createTestCar = async (request, adminToken) => {
+  const vin = uniqueVin()
+  const { status, body } = await call(request, 'POST', '/cars', {
+    token: adminToken,
+    data: {
+      productionInfo: { brand: 'Smoketest', model: 'Journey', year: new Date().getFullYear() },
+      vin,
+      registrationNumber: `E2E ${vin.slice(-4)}-7`,
+      status: 'free',
+      fuelLevel: 80,
+      mileage: 100,
+      location: { type: 'Point', coordinates: [27.5615, 53.9023] },
+    },
+  })
+  expect(status, body?.message).toBe(201)
+  return body.data
+}
+
+// The newest booking of a user, for clean-up when a run failed before it noted the id
+export const latestBookingId = async (request, token) => {
+  if (!token) return null
+  const { body } = await call(request, 'GET', '/bookings/my', { token }).catch(() => ({}))
+  return body?.data?.[0]?._id ?? null
+}
+
 export const shortId = (id) => `#${String(id).slice(-6).toUpperCase()}` // utils/format.js
 
 // Puts the token where the app looks for it ("Remember me"), before any page script runs
@@ -105,13 +133,35 @@ export const useToken = async (page, token) => {
   )
 }
 
+// The attributes an axe check complains about (its `data`), e.g. ['aria-expanded']
+const failedAttributes = (node) =>
+  [...node.any, ...node.all, ...node.none].flatMap((check) =>
+    Array.isArray(check.data) ? check.data : [],
+  )
+
+// A closed select's combobox input points at its listbox (`rc_select_N_list`), which is
+// rendered only when the select opens
+const POINTS_AT_CLOSED_LIST = /^aria-(owns|controls|activedescendant)="rc_select_\d+_list(_\d+)?"$/
+
 // Violations inside Ant Design Vue markup that the app can't change (ant-design-vue 4.2):
-// the closed select's combobox ARIA, labelled sorter icons and the unlabelled page-size
-// select of table pagination. Still attached to the report, but not failed.
+// the closed select's combobox ARIA (no aria-expanded, references to the unrendered
+// listbox), labelled sorter icons and the unlabelled page-size select of table pagination.
+// Each entry names the exact attributes, so a select the app labels or wires wrongly still
+// fails. Still attached to the report, but not failed.
 const LIBRARY_ISSUES = [
-  { rules: ['aria-required-attr', 'aria-valid-attr-value'], target: /ant-select|rc_select_/ },
+  {
+    rules: ['aria-required-attr'],
+    target: /^#rc_select_\d+$/,
+    attributes: (attrs) => attrs.length > 0 && attrs.every((attr) => attr === 'aria-expanded'),
+  },
+  {
+    rules: ['aria-valid-attr-value'],
+    target: /^#rc_select_\d+$/,
+    attributes: (attrs) =>
+      attrs.length > 0 && attrs.every((attr) => POINTS_AT_CLOSED_LIST.test(attr)),
+  },
   { rules: ['aria-prohibited-attr'], target: /ant-table-column-sorter/ },
-  { rules: ['label'], target: /rc_select_/, inside: '.ant-pagination-options' },
+  { rules: ['label'], target: /^#rc_select_\d+$/, inside: '.ant-pagination-options' },
 ]
 
 const isLibraryIssue = (rule, node) =>
@@ -119,6 +169,7 @@ const isLibraryIssue = (rule, node) =>
     (issue) =>
       issue.rules.includes(rule) &&
       issue.target.test(node.target.join(' ')) &&
+      (!issue.attributes || issue.attributes(failedAttributes(node))) &&
       (!issue.inside || node.inPagination),
   )
 

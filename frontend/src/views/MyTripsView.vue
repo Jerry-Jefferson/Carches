@@ -14,7 +14,7 @@ const TICK_MS = 60000
 
 /**
  * The user's bookings (E18), joined with the fleet (E9) for brand and model (Q5).
- * Read-only: users can't finish or cancel trips (Q6). Durations tick every minute.
+ * Users can finish their active trips. Durations tick every minute.
  */
 export default {
   name: 'MyTripsView',
@@ -150,6 +150,7 @@ export default {
         :trip="activeTrip"
         :now="now"
         :fleet-loaded="fleetLoaded"
+        @finished="load(true)"
       />
 
       <EmptyState

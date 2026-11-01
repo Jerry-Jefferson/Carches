@@ -16,6 +16,9 @@ export const PAGE_SIZE = 12
 
 // Shared by concurrent callers (fleet page + quick-book modal refresh)
 let fetchPromise = null
+// A forced fetch while one is in flight: that request may predate the change the caller
+// just made, so one more request runs after it (shared by every forced caller meanwhile)
+let queuedPromise = null
 
 export default {
   namespaced: true,
@@ -98,9 +101,18 @@ export default {
   },
   actions: {
     // E9. Reuses the list for CACHE_MS unless `force` is set.
-    fetchCars({ state, commit }, { force = false } = {}) {
+    fetchCars({ state, commit, dispatch }, { force = false } = {}) {
       const isFresh = state.loadedAt && Date.now() - state.loadedAt < CACHE_MS
       if (!force && isFresh && !state.error) return Promise.resolve(state.items)
+      if (fetchPromise && force) {
+        queuedPromise ??= fetchPromise
+          .catch(() => {})
+          .then(() => {
+            queuedPromise = null
+            return dispatch('fetchCars', { force: true })
+          })
+        return queuedPromise
+      }
       if (fetchPromise) return fetchPromise
 
       commit('SET_LOADING', true)
