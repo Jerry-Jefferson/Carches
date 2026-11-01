@@ -7,7 +7,7 @@ import { copyText } from '@/utils/clipboard'
 import { BOOKING_STATUS, bookingStatus } from '@/utils/derive'
 import { formatDate, shortId } from '@/utils/format'
 import notify from '@/utils/notify'
-import { toneClasses } from '@/theme/tones'
+import { toneClasses } from '@/styles/theme/tones'
 
 const EMPTY_COUNTS = Object.freeze({ total: 0, completed: 0 })
 const time = (value) => new Date(value ?? 0).getTime()

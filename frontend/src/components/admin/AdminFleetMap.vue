@@ -7,7 +7,7 @@ import { carStatusCounts } from '@/utils/admin'
 import { CAR_STATUS, carStatusMeta } from '@/utils/derive'
 import { carName, formatPercent } from '@/utils/format'
 import { toLatLng } from '@/utils/geo'
-import { toneClasses } from '@/theme/tones'
+import { toneClasses } from '@/styles/theme/tones'
 
 // Every car of the fleet on a map, coloured by status. showCar(id) is used by the table
 // and the side widgets.

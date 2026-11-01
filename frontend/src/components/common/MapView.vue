@@ -1,6 +1,6 @@
 <script>
 import { DEFAULT_CENTER } from '@/utils/geo'
-import { toneClasses } from '@/theme/tones'
+import { toneClasses } from '@/styles/theme/tones'
 
 const TILE_URL = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png'
 const TILE_ATTRIBUTION =

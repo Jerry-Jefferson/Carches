@@ -1,5 +1,5 @@
 <script>
-import { toneClasses } from '@/theme/tones'
+import { toneClasses } from '@/styles/theme/tones'
 
 // Horizontal bar split by share, e.g. cars by status. Segments: [{ key, label, value, tone }]
 export default {

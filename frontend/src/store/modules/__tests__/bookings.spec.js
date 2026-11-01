@@ -10,7 +10,7 @@ import bookings, { BOOKING_BLOCK } from '../bookings'
 import cars from '../cars'
 import geo from '../geo'
 
-vi.mock('@/api/bookings', () => ({ listMine: vi.fn(), create: vi.fn() }))
+vi.mock('@/api/bookings', () => ({ listMine: vi.fn(), create: vi.fn(), finish: vi.fn() }))
 vi.mock('@/api/cars', () => ({ list: vi.fn(), getById: vi.fn() }))
 
 const HOUR = 3600000
@@ -30,6 +30,7 @@ describe('bookings module', () => {
   beforeEach(() => {
     vi.mocked(bookingsApi.listMine).mockReset()
     vi.mocked(bookingsApi.create).mockReset()
+    vi.mocked(bookingsApi.finish).mockReset()
     vi.mocked(carsApi.getById).mockReset()
     vi.mocked(carsApi.list).mockReset()
     vi.mocked(carsApi.list).mockResolvedValue([])
@@ -234,5 +235,21 @@ describe('bookings module', () => {
     expect(store.state.bookings.mine).toEqual([])
     expect(store.state.bookings.loadedAt).toBeNull()
     expect(store.state.bookings.isLoading).toBe(false)
+  })
+
+  it('finishTrip finishes the trip and refreshes bookings and fleet', async () => {
+    const finished = { ...ACTIVE, endDate: new Date().toISOString(), finishMileage: 18500, finishFuelLevel: 75 }
+    vi.mocked(bookingsApi.finish).mockResolvedValue(finished)
+    vi.mocked(bookingsApi.listMine).mockResolvedValue([finished])
+    vi.mocked(carsApi.list).mockResolvedValue([FREE_CAR])
+    const store = makeStore()
+
+    const result = await store.dispatch('bookings/finishTrip', { bookingId: 'b2' })
+
+    expect(bookingsApi.finish).toHaveBeenCalledWith('b2')
+    expect(result).toEqual(finished)
+    expect(store.state.bookings.isSubmitting).toBe(false)
+    expect(bookingsApi.listMine).toHaveBeenCalled()
+    expect(carsApi.list).toHaveBeenCalled()
   })
 })

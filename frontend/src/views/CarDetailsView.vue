@@ -23,7 +23,7 @@ import { CAR_STATUS, carStatusMeta, fuelTone } from '@/utils/derive'
 import { filtersToQuery } from '@/utils/fleetFilters'
 import { carName, formatCoords, formatDistance, formatKm, formatPercent } from '@/utils/format'
 import { mapUrl, toLatLng, walkingMinutes } from '@/utils/geo'
-import { toneClasses } from '@/theme/tones'
+import { toneClasses } from '@/styles/theme/tones'
 import notify from '@/utils/notify'
 
 export const POLL_MS = 30000

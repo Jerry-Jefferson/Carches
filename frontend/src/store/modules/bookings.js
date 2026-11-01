@@ -154,5 +154,25 @@ export default {
         commit('SET_SUBMITTING', false)
       }
     },
+
+    // User finishes their own active trip. The backend generates end values.
+    async finishTrip({ commit, dispatch }, { bookingId }) {
+      commit('SET_SUBMITTING', true)
+      commit('SET_ERROR', null)
+      try {
+        const finished = await bookingsApi.finish(bookingId)
+        // Refresh bookings and cars so status changes are reflected everywhere
+        await Promise.allSettled([
+          dispatch('fetchMine', { force: true }),
+          dispatch('cars/fetchCars', { force: true }, { root: true }),
+        ])
+        return finished
+      } catch (err) {
+        commit('SET_ERROR', getErrorMessage(err))
+        throw err
+      } finally {
+        commit('SET_SUBMITTING', false)
+      }
+    },
   },
 }

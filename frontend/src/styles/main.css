@@ -105,11 +105,13 @@
   --animate-status-pulse: status-pulse 2s ease-in-out infinite;
 
   @keyframes status-pulse {
+
     0%,
     100% {
       opacity: 1;
       transform: scale(1);
     }
+
     50% {
       opacity: 0.45;
       transform: scale(1.35);
@@ -118,6 +120,7 @@
 }
 
 @layer base {
+
   html,
   body {
     background-color: hsl(var(--background));
@@ -127,6 +130,7 @@
 
   /* Turns off animations, hover lifts and smooth scrolling for users who ask for less motion */
   @media (prefers-reduced-motion: reduce) {
+
     *,
     ::before,
     ::after {
@@ -140,5 +144,10 @@
   ::selection {
     background-color: hsl(var(--primary));
     color: hsl(var(--primary-foreground));
+  }
+
+  /* High contrast light text for Tooltips (including slider tooltips) against dark background */
+  .ant-tooltip .ant-tooltip-inner {
+    color: #ffffff;
   }
 }

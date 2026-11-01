@@ -6,6 +6,9 @@ export const listMine = () => http.get('/bookings/my').then(unwrap)
 // E21 — for non-admins the backend replaces `userId` with the caller
 export const create = (booking) => http.post('/bookings', booking).then(unwrap)
 
+// User finishes their own trip — server generates end values
+export const finish = (id) => http.post(`/bookings/${id}/finish`).then(unwrap)
+
 // E19, E20, E22, E23 (admin)
 export const list = () => http.get('/bookings').then(unwrap)
 

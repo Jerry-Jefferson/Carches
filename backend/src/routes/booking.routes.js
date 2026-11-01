@@ -8,6 +8,7 @@ router.get("/my", requireUser, bookingController.getMy);
 router.get("/", requireAdmin, bookingController.getAll);
 router.get("/:id", requireAdmin, bookingController.getById);
 router.post("/", requireUser, bookingController.create);
+router.post("/:id/finish", requireUser, bookingController.finish);
 router.put("/:id", requireAdmin, bookingController.update);
 router.delete("/:id", requireAdmin, bookingController.deleteById);
 

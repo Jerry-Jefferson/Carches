@@ -63,4 +63,9 @@ describe('buildAntdTheme', () => {
     root.classList.add('dark')
     expect(buildAntdTheme(root).algorithm).toBe(antdTheme.darkAlgorithm)
   })
+
+  it('sets Tooltip text to a light color for high contrast on dark background', () => {
+    const { components } = buildAntdTheme(root)
+    expect(components?.Tooltip?.colorTextLightSolid).toBe('#ffffff')
+  })
 })

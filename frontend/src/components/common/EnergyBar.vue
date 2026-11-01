@@ -1,7 +1,7 @@
 <script>
 import { fuelTone } from '@/utils/derive'
 import { formatPercent } from '@/utils/format'
-import { toneClasses } from '@/theme/tones'
+import { toneClasses } from '@/styles/theme/tones'
 
 // Fuel level 0–100 %: red below 25 %, amber below 40 %
 export default {

@@ -70,5 +70,10 @@ export const buildAntdTheme = (root = document.documentElement) => {
   return {
     algorithm: isDark ? antdTheme.darkAlgorithm : antdTheme.defaultAlgorithm,
     token,
+    components: {
+      Tooltip: {
+        colorTextLightSolid: '#ffffff',
+      },
+    },
   }
 }

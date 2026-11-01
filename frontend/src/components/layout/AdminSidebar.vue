@@ -1,6 +1,5 @@
 <script>
 import {
-  CarOutlined,
   DashboardOutlined,
   ScheduleOutlined,
   TeamOutlined,
@@ -16,7 +15,6 @@ export default {
     return {
       items: [
         { key: 'overview', label: 'Control console', icon: DashboardOutlined, tab: null },
-        { key: 'fleet', label: 'Car fleet', icon: CarOutlined, tab: ADMIN_TABS.FLEET },
         {
           key: 'trips',
           label: 'Bookings & requests',
@@ -42,6 +40,9 @@ export default {
       return { name: 'admin', query: item.tab ? { tab: item.tab } : {} }
     },
     isActive(item) {
+      if (item.key === 'overview') {
+        return !this.activeTab || this.activeTab === ADMIN_TABS.FLEET
+      }
       return item.tab === this.activeTab
     },
     onClick(item) {

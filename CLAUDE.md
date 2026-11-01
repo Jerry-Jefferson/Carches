@@ -177,10 +177,9 @@ Carshes/
         │   ├── clipboard.js           ← copyText(): Clipboard API, with an execCommand fallback for non-HTTPS origins
         │   ├── tokenStorage.js        ← JWT in localStorage ("Remember me") or sessionStorage
         │   └── notify.js              ← toasts / notifications (use instead of Ant Design's message directly)
-        ├── test/
-        │   └── setup.js               ← Vitest setup: matchMedia / ResizeObserver polyfills for Ant Design
         └── __tests__/
-            └── App.spec.js            ← further tests sit next to their code in `__tests__/` folders
+            └── App.spec.js
+            |__ setup.js            ← further tests sit next to their code in `__tests__/` folders
 ```
 
 ---

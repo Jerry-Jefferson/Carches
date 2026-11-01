@@ -160,7 +160,7 @@ Why this shape:
 
 ## 6. Test file
 
-Place next to the code in a `__tests__` folder: `src/components/__tests__/LoginForm.spec.js`. `src/test/setup.js` already polyfills `matchMedia` / `ResizeObserver` for Ant Design in jsdom.
+Place next to the code in a `__tests__` folder: `src/components/__tests__/LoginForm.spec.js`. `src/__test__/setup.js` already polyfills `matchMedia` / `ResizeObserver` for Ant Design in jsdom.
 
 ```js
 import { describe, it, expect, vi, afterEach } from 'vitest'

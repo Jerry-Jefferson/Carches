@@ -164,7 +164,7 @@ export default {
         <a-alert v-if="error" type="error" show-icon :message="error" />
 
         <InfoCallout :icon="noteIcon">
-          Your trip starts immediately. To finish it, contact support:
+          Your trip starts immediately. You can finish it at any time in My Trips, or contact support if you need assistance:
           <a :href="support.phoneHref">{{ support.phone }}</a>
         </InfoCallout>
       </div>

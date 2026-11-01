@@ -89,6 +89,9 @@ export default {
     busyReason(car) {
       return `${carStatusMeta(car.status).label} cars can't be removed. Complete or delete the booking first.`
     },
+    deleteTitle(car) {
+      return `Remove ${carName(car)} (${car.registrationNumber}) from the fleet?`
+    },
     async copyVin(vin) {
       try {
         await copyText(vin)
@@ -198,14 +201,15 @@ export default {
         </a-tooltip>
         <a-popconfirm
           v-else
-          :title="`Remove ${carName(record)} (${record.registrationNumber}) from the fleet?`"
+          :title="deleteTitle(record)"
           ok-text="Remove"
           ok-type="default"
-          :ok-button-props="{ danger: true, loading: isMutating }"
+          :ok-button-props="{ danger: true }"
           cancel-text="Cancel"
+          placement="topRight"
           @confirm="remove(record)"
         >
-          <a-button type="text" danger :aria-label="`Delete ${carName(record)}`">
+          <a-button type="text" size="small" danger :aria-label="`Delete ${carName(record)}`">
             <template #icon><DeleteOutlined /></template>
           </a-button>
         </a-popconfirm>

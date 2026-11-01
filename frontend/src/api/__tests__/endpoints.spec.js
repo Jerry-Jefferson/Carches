@@ -108,4 +108,9 @@ describe('API modules', () => {
     await carsApi.update('A B/C', {})
     expect(http.put).toHaveBeenCalledWith('/cars/A%20B%2FC', {})
   })
+
+  it('finish calls POST /bookings/:id/finish', async () => {
+    await bookingsApi.finish(ID)
+    expect(http.post).toHaveBeenCalledWith(`/bookings/${ID}/finish`)
+  })
 })
