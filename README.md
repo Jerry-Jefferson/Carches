@@ -157,17 +157,17 @@ Use the `MONGO_INITDB_ROOT_USERNAME` / `MONGO_INITDB_ROOT_PASSWORD` values from 
 │   ├── Dockerfile
 │   └── package.json
 ├── frontend/
-│   ├── src/
-│   │   ├── api/             # axios instance, session interceptors, one wrapper per resource
-│   │   ├── components/      # admin, auth, booking, cars, common, layout, profile, trips
-│   │   ├── layouts/         # auth, app and admin page chrome
-│   │   ├── router/          # routes and access guards
-│   │   ├── store/           # Vuex modules (auth, cars, carDetails, bookings, geo, admin/*)
-│   │   ├── constants/       # brand name, city, support contacts, footer links
-│   │   ├── styles/          # Tailwind entry and design tokens (+ contrast tests)
-│   │   ├── theme/           # Ant Design theme from the tokens, status tone classes
-│   │   ├── utils/           # formatting, derived values, filters, schedule, CSV, clipboard, geo helpers
-│   │   └── views/           # one per route
+│   ├── src/                 # feature-based: app → features → shared
+│   │   ├── main.js          # entry: session interceptors, router, store
+│   │   ├── app/             # shell: App.vue, router + guards, root store, session wiring, layouts, 404
+│   │   ├── features/        # one folder per domain, each with views/, components/, store/, utils/
+│   │   │   ├── auth/        # sign in / sign up, session store, token storage
+│   │   │   ├── cars/        # fleet list and filters, car page
+│   │   │   ├── bookings/    # booking panel, scheduled starts, my trips
+│   │   │   ├── profile/     # my profile
+│   │   │   └── admin/       # admin console: fleet, trips, users, insights, CSV export
+│   │   └── shared/          # used across features: API wrappers + axios instance, common components,
+│   │                        # geo store, site constants, styles + design tokens, Ant Design theme, utils
 │   ├── e2e/                 # Playwright checks against the running stack
 │   ├── public/              # favicons and the web app manifest
 │   ├── playwright.config.js

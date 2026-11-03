@@ -8,7 +8,7 @@ import AxeBuilder from '@axe-core/playwright'
 import { expect } from '@playwright/test'
 
 export const API = '/api/v2'
-const TOKEN_KEY = 'carshes.token' // utils/tokenStorage.js
+const TOKEN_KEY = 'carshes.token' // src/features/auth/utils/tokenStorage.js
 
 // Admin credentials: E2E_ADMIN_EMAIL / E2E_ADMIN_PASSWORD, or the values the admin
 // migration used (backend/.env). Never hard-coded.
@@ -123,7 +123,7 @@ export const latestBookingId = async (request, token) => {
   return body?.data?.[0]?._id ?? null
 }
 
-export const shortId = (id) => `#${String(id).slice(-6).toUpperCase()}` // utils/format.js
+export const shortId = (id) => `#${String(id).slice(-6).toUpperCase()}` // src/shared/utils/format.js
 
 // Puts the token where the app looks for it ("Remember me"), before any page script runs
 export const useToken = async (page, token) => {

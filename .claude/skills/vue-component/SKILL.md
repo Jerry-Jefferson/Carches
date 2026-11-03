@@ -11,12 +11,17 @@ Work inside `frontend/`. Read `CLAUDE.md` §8.2–8.3 if anything below is uncle
 
 | Kind | Folder | Example |
 |------|--------|---------|
-| Routed page | `src/views/` | `CarListView.vue` |
-| Reusable piece | `src/components/` (group by feature in subfolders when it grows) | `CarCard.vue`, `auth/LoginForm.vue` |
+| Routed page | `src/features/<feature>/views/` | `features/cars/views/CarListView.vue` |
+| Piece used by one feature | `src/features/<feature>/components/` (subfolders when it grows, e.g. `bookings/components/trips/`) | `features/auth/components/LoginForm.vue` |
+| Piece used by several features, no domain logic | `src/shared/components/` | `StatusTag.vue` |
+| App chrome (header, sidebar, layouts) | `src/app/layouts/` and `src/app/layouts/components/` | `AppHeader.vue` |
+
+- `shared/` never imports from `features/` or `app/`. Import across folders with `@/` (`@/shared/components/StatusTag.vue`), relative paths only inside a folder and its `__tests__`. Never create `src/components/` — `unplugin-vue-components` scans it and would turn tags into static imports (CLAUDE.md gotcha #17); own components are always imported explicitly.
 
 - PascalCase, **multi-word** names (`vue/multi-word-component-names` is an error).
-- A new view also needs a lazy route in `src/router/index.js`:
-  `{ path: '/cars', name: 'cars', component: () => import('@/views/CarListView.vue') }` — add it **before** the catch-all `/:pathMatch(.*)*`.
+- A new view also needs a name in `ROUTE_NAMES` (`src/shared/constants/routes.js`, e.g. `CAR_LIST: 'car-list'`) and a lazy route in `src/app/router/index.js`:
+  `{ path: '/cars', name: ROUTE_NAMES.CAR_LIST, component: () => import('@/features/cars/views/CarListView.vue') }` — add it **before** the catch-all `/:pathMatch(.*)*`.
+- Navigate by name from `ROUTE_NAMES`, never with a string or a path. In a template, go through a computed (`:to="fleetRoute"` with `fleetRoute() { return { name: ROUTE_NAMES.FLEET } }`) — templates can't read imports.
 
 ## 2. Options API skeleton
 
@@ -62,18 +67,18 @@ export default {
 Rules:
 - Option order: `name, components, props, emits, data, computed, watch, lifecycle hooks, methods`.
 - Always declare `emits`; props use the object syntax with `type` (and `required` / `default`).
-- Store, router, HTTP: `mapState` / `mapGetters` / `mapActions` (see the `vuex-module` skill), `this.$router`, `this.$route`. Never call `axios` or `@/api/*` from a component — go through a Vuex action (it calls the `src/api/*.js` wrappers).
+- Store, router, HTTP: `mapState` / `mapGetters` / `mapActions` (see the `vuex-module` skill), `this.$router`, `this.$route`. Never call `axios` or `@/shared/api/*` from a component — go through a Vuex action (it calls the `src/shared/api/*.js` wrappers).
 - Comments and UI text in English.
 
 ## 3. Styling with the design system
 
-- Colors **only** from tokens: `bg-background`, `text-foreground`, `bg-card`, `text-card-foreground`, `bg-popover`, `bg-primary`, `hover:bg-primary-hover`, `text-primary-foreground`, `bg-secondary`, `hover:bg-secondary-hover`, `text-secondary-foreground`, `bg-muted`, `text-muted-foreground`, `text-link` (accent text and links — not `text-secondary`/`text-secondary-hover`, which fail contrast as text), `bg-accent`, `text-accent-foreground`, `bg-surface`, `border-border`, `border-input`, `ring-ring`; status colours `destructive`, `success`, `warning`, `info` (+ `-foreground`, soft backgrounds via `bg-success/15`). Status labels/tones come from `@/utils/derive` (`carStatusMeta`, `bookingStatusMeta`, `fuelTone`); display values from `@/utils/format`.
+- Colors **only** from tokens: `bg-background`, `text-foreground`, `bg-card`, `text-card-foreground`, `bg-popover`, `bg-primary`, `hover:bg-primary-hover`, `text-primary-foreground`, `bg-secondary`, `hover:bg-secondary-hover`, `text-secondary-foreground`, `bg-muted`, `text-muted-foreground`, `text-link` (accent text and links — not `text-secondary`/`text-secondary-hover`, which fail contrast as text), `bg-accent`, `text-accent-foreground`, `bg-surface`, `border-border`, `border-input`, `ring-ring`; status colours `destructive`, `success`, `warning`, `info` (+ `-foreground`, soft backgrounds via `bg-success/15`). Status labels/tones come from `@/shared/utils/derive` (`carStatusMeta`, `bookingStatusMeta`, `fuelTone`); display values from `@/shared/utils/format`.
 - Typography and shape from the theme: `text-headline-sm`, `text-body-md`, `text-label-sm uppercase`, …; `rounded-control` / `rounded-card` / `rounded-dialog`; `shadow-card` / `shadow-popover`.
 - Never `text-gray-500`, `bg-blue-600`, hex or `rgb()` values. Opacity works: `bg-primary/50`.
 - Dark mode: tokens switch automatically with `.dark` on `<html>`; use `dark:` only for layout differences, not colors.
 - Tailwind for layout/spacing (`flex`, `gap-4`, `p-6`, `grid`), Ant Design for controls.
 - Utilities are `!important` and Preflight is off — don't add `!` prefixes or global resets.
-- Need a new color? Add the token in `src/styles/design-system.css` (`:root` **and** `.dark`), map it in `@theme inline` in `src/styles/main.css`, and in `TOKEN_MAP` in `src/theme/antd.js` if Ant Design should use it.
+- Need a new color? Add the token in `src/shared/styles/design-system.css` (`:root` **and** `.dark`), map it in `@theme inline` in `src/shared/styles/main.css`, and in `TOKEN_MAP` in `src/shared/theme/antd.js` if Ant Design should use it.
 
 ## 4. Ant Design Vue
 
@@ -81,14 +86,14 @@ Rules:
 - Icons from `@ant-design/icons-vue` are auto-imported too (`resolveIcons: true`): write `<CarOutlined />` in the template with no import or `components` entry.
 - Ant Design colors come from the design tokens via `ConfigProvider` in `App.vue` — don't pass `color` props or override `.ant-*` classes for color.
 - `v-model` on Ant Design inputs is `v-model:value`, not `v-model`.
-- Danger actions are never solid: Ant Design writes text on solid fills with `colorTextLightSolid` = the dark `primary-foreground`, which is unreadable on red. Use `<a-button danger>` (no `type="primary"`), and `ok-type="default"` on an `a-popconfirm` / `a-modal` whose `ok-button-props` has `danger: true`. `src/theme/__tests__/dangerButtons.spec.js` enforces this.
+- Danger actions are never solid: Ant Design writes text on solid fills with `colorTextLightSolid` = the dark `primary-foreground`, which is unreadable on red. Use `<a-button danger>` (no `type="primary"`), and `ok-type="default"` on an `a-popconfirm` / `a-modal` whose `ok-button-props` has `danger: true`. `src/shared/theme/__tests__/dangerButtons.spec.js` enforces this.
 - `a-select` drops `aria-label`. Name it with `html-for="x"` on the `a-form-item` plus `id="x"` on the select, or wrap it in a `<label>` (visible or `sr-only`).
 - Async results in components (a check run when a modal opens, a debounced route update) must still apply when they land: keep a request counter or re-check the route / props before using them.
 - A failed load is never shown as an empty state ("No alerts", "Nothing here"): render the stored error with a Retry action instead.
 - Defaults such as "now" belong to the moment a modal opens, not to a cached computed: refresh them in an `open` watcher.
 - `aria-label` on a plain `<span>` / `<div>` is ignored by screen readers. Make the visible text clear on its own, or pair an `aria-hidden="true"` visual (`1 / 2`) with `sr-only` text (`1 completed of 2 trips`).
 - A component rendered twice on one page (inline + in a drawer) must not use fixed `id`s: build them from a module-level counter in `data()`.
-- Copy to the clipboard with `copyText()` from `@/utils/clipboard` (`navigator.clipboard` is missing on non-HTTPS origins).
+- Copy to the clipboard with `copyText()` from `@/shared/utils/clipboard` (`navigator.clipboard` is missing on non-HTTPS origins).
 - Every view state has one `h1`, loading and error states included; `a-result` renders its `title` as a `div`, so put the `h1` in its `#title` slot.
 
 ## 5. Forms: VeeValidate + Zod 3
@@ -156,11 +161,12 @@ Why this shape:
 - Bind inputs with `:value` + `@update:value="handleChange"` + `@blur="handleBlur"`; `v-bind="field"` does not match Ant Design's event names.
 - `onSubmit` only runs when the schema passes; it receives the parsed values.
 - Mirror the backend rules (password 8+ chars and ≤ 72 bytes on sign up; `licenseNumber` 6–20 chars; names 2–50 chars).
-- A rule across fields ("passwords match") in a Zod 3 `.refine` on the whole object runs only once every field has the right type, so it shows up last. Put it on a small object of just those fields and combine with `z.intersection(form, rule)` (see `registerSchema`).
+- A rule across fields ("passwords match") in a Zod 3 `.refine` on the whole object runs only once every field has the right type, so it shows up last. Put it on a small object of just those fields and combine with `z.intersection(form, rule)` (see `registerSchema` in `features/auth/schemas.js`).
+- A schema shared by a form and its tests, or longer than a few rules, goes in its own file outside `components/`: `src/features/<feature>/schemas.js` when the feature has one schema file, `src/features/<feature>/schemas/<name>Schema.js` when it has several.
 
 ## 6. Test file
 
-Place next to the code in a `__tests__` folder: `src/components/__tests__/LoginForm.spec.js`. `src/__test__/setup.js` already polyfills `matchMedia` / `ResizeObserver` for Ant Design in jsdom.
+Place next to the code in a `__tests__` folder: `src/features/auth/components/__tests__/LoginForm.spec.js`. `src/__tests__/setup.js` already polyfills `matchMedia` / `ResizeObserver` for Ant Design in jsdom.
 
 ```js
 import { describe, it, expect, vi, afterEach } from 'vitest'
@@ -200,7 +206,7 @@ describe('LoginForm', () => {
 Testing notes:
 - No need to install Ant Design in tests: Vitest uses `vite.config.js`, so `<a-*>` components and icons are auto-imported there too.
 - VeeValidate validates asynchronously — use `vi.waitFor(...)`, not a single `flushPromises()`.
-- Components using the store or router: pass `createStore({ modules: { … } })` / a `createRouter({ history: createMemoryHistory(), routes })` in `global.plugins`, and mock the `@/api/<resource>` wrappers with `vi.mock`. Lazy components registered under another name (`LazyFleetMap`) are mocked with `__esModule: true`; stub `MapView` (Leaflet) with `global.stubs`.
+- Components using the store or router: pass `createStore({ modules: { … } })` / a `createRouter({ history: createMemoryHistory(), routes })` in `global.plugins`, and mock the `@/shared/api/<resource>` wrappers with `vi.mock`. Lazy components registered under another name (`LazyFleetMap`) are mocked with `__esModule: true`; stub `MapView` (Leaflet) with `global.stubs`.
 - `beforeEach` / `afterEach` callbacks must not **return** a function (`() => mock.mockReset()` returns the mock, and Vitest runs it as teardown). Use braces.
 
 ## 7. Finish

@@ -3,14 +3,14 @@ import '@fontsource/plus-jakarta-sans/400.css'
 import '@fontsource/plus-jakarta-sans/500.css'
 import '@fontsource/plus-jakarta-sans/600.css'
 import '@fontsource/plus-jakarta-sans/700.css'
-import './styles/main.css'
+import './shared/styles/main.css'
 
-import App from './App.vue'
-import http from './api/http'
-import { installSession } from './api/session'
-import router from './router'
-import store from './store'
-import notify from './utils/notify'
+import App from './app/App.vue'
+import http from './shared/api/http'
+import { installSession } from './app/session'
+import router from './app/router'
+import store from './app/store'
+import notify from './shared/utils/notify'
 
 installSession(http, { store, router, notify })
 
