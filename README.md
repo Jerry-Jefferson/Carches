@@ -104,7 +104,7 @@ Other scripts:
 
 ### Using the app
 
-- Visitors can only open `/auth` (sign in / register); every other page redirects there and comes back after signing in. With "Remember me" the session survives a browser restart; it is kept through a backend restart or an offline start too, and dropped only when the server rejects the token.
+- Visitors can only open `/auth` (sign in / sign up); every other page redirects there and comes back after signing in. With "Remember me" the session survives a browser restart; it is kept through a backend restart or an offline start too, and dropped only when the server rejects the token.
 - Users: **Fleet** (`/fleet` — filters, map, quick booking), **car page** (`/cars/:id` — book now or schedule up to 7 days ahead), **My Trips** (`/trips`), **My Profile** (`/profile`). Users can't finish or cancel trips; the app points them to support.
 - Admins also get the **admin console** (`/admin`): KPIs, the fleet (add / edit / remove cars, maintenance actions), trips and bookings (create, edit, complete, delete) and users (view, edit, delete), plus CSV export. Sections and rows are deep-linked (`/admin?tab=trips&trip=…`, `&date=2026-10-29` for the statistics day). Sign in with the account created by `migrate:admin`.
 

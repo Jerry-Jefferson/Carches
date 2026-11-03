@@ -4,7 +4,7 @@ const catchAsync = require("../utils/catchAsync");
 const signUp = catchAsync(async (req, res) => {
   const { user, token } = await authService.signUp(req.body);
   res.status(201).json({
-    message: "User successfully registered",
+    message: "User successfully signed up",
     data: { user, token },
   });
 });

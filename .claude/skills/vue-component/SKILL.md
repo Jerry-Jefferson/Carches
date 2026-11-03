@@ -161,7 +161,7 @@ Why this shape:
 - Bind inputs with `:value` + `@update:value="handleChange"` + `@blur="handleBlur"`; `v-bind="field"` does not match Ant Design's event names.
 - `onSubmit` only runs when the schema passes; it receives the parsed values.
 - Mirror the backend rules (password 8+ chars and ≤ 72 bytes on sign up; `licenseNumber` 6–20 chars; names 2–50 chars).
-- A rule across fields ("passwords match") in a Zod 3 `.refine` on the whole object runs only once every field has the right type, so it shows up last. Put it on a small object of just those fields and combine with `z.intersection(form, rule)` (see `registerSchema` in `features/auth/schemas.js`).
+- A rule across fields ("passwords match") in a Zod 3 `.refine` on the whole object runs only once every field has the right type, so it shows up last. Put it on a small object of just those fields and combine with `z.intersection(form, rule)` (see `signUpSchema` in `features/auth/schemas.js`).
 - A schema shared by a form and its tests, or longer than a few rules, goes in its own file outside `components/`: `src/features/<feature>/schemas.js` when the feature has one schema file, `src/features/<feature>/schemas/<name>Schema.js` when it has several.
 
 ## 6. Test file

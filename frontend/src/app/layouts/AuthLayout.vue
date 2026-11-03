@@ -1,5 +1,5 @@
 <script>
-// Centred column for the sign-in / register card; no header or footer
+// Centred column for the sign-in / sign-up card; no header or footer
 export default {
   name: 'AuthLayout',
 }

@@ -54,7 +54,7 @@ const matchingPasswords = z
     path: ['confirmPassword'],
   })
 
-export const registerSchema = z.intersection(
+export const signUpSchema = z.intersection(
   z.object({
     firstName: personName('First name'),
     lastName: personName('Last name'),

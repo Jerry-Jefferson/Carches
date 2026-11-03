@@ -46,7 +46,7 @@ test('auth', async ({ page }, testInfo) => {
 
   await page.goto('/auth?mode=signup')
   await expect(page.getByLabel('Confirm password')).toBeVisible()
-  await check(page, testInfo, 'auth-register')
+  await check(page, testInfo, 'auth-signup')
 })
 
 test.describe('signed in as a user', () => {

@@ -3,10 +3,10 @@ import { LoginOutlined, UserAddOutlined } from '@ant-design/icons-vue'
 
 const TABS = [
   { value: 'signin', label: 'Sign In', icon: LoginOutlined },
-  { value: 'signup', label: 'Register', icon: UserAddOutlined },
+  { value: 'signup', label: 'Sign Up', icon: UserAddOutlined },
 ]
 
-// "Sign In" / "Register" switch. Tab ids are `auth-tab-<value>`; the panel that follows
+// "Sign In" / "Sign Up" switch. Tab ids are `auth-tab-<value>`; the panel that follows
 // should use `auth-panel` with aria-labelledby pointing at the active tab.
 export default {
   name: 'AuthTabs',
@@ -47,7 +47,7 @@ export default {
   <div
     class="mb-6 grid grid-cols-2 gap-1 rounded-full bg-muted p-1"
     role="tablist"
-    aria-label="Sign in or register"
+    aria-label="Sign in or sign up"
     @keydown="onKeydown"
   >
     <button

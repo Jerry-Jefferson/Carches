@@ -5,14 +5,14 @@ import { Field as VeeField, Form as VeeForm } from 'vee-validate'
 import { mapActions, mapState } from 'vuex'
 
 import InfoCallout from '@/shared/components/InfoCallout.vue'
-import { mapAuthError, registerSchema } from '@/features/auth/schemas'
+import { mapAuthError, signUpSchema } from '@/features/auth/schemas'
 
-const schema = toTypedSchema(registerSchema)
+const schema = toTypedSchema(signUpSchema)
 
 // E1. Creates the account through the auth store (the API signs the user in) and
 // emits `success` with the new user. Only the backend fields are sent — not confirmPassword.
 export default {
-  name: 'RegisterForm',
+  name: 'SignUpForm',
   components: { VeeForm, VeeField, InfoCallout },
   props: {
     // Initial e-mail, kept when switching between the auth tabs

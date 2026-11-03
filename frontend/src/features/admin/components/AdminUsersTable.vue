@@ -48,8 +48,8 @@ export default {
         { key: 'licence', title: 'Licence number', dataIndex: 'licenseNumber' },
         { key: 'role', title: 'Role', width: 130 },
         {
-          key: 'registered',
-          title: 'Registered',
+          key: 'signedUp',
+          title: 'Signed up',
           sorter: (a, b) => time(a.createdAt) - time(b.createdAt),
           width: 140,
         },
@@ -194,9 +194,7 @@ export default {
         {{ isAdmin(record) ? 'Admin' : 'User' }}
       </span>
 
-      <template v-else-if="column.key === 'registered'">{{
-        formatDate(record.createdAt)
-      }}</template>
+      <template v-else-if="column.key === 'signedUp'">{{ formatDate(record.createdAt) }}</template>
 
       <span v-else-if="column.key === 'trips'">
         <span aria-hidden="true">

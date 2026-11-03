@@ -53,7 +53,7 @@ describe('AuthView', () => {
     wrapper?.unmount()
   })
 
-  it('opens the sign-in tab by default and register with ?mode=signup', async () => {
+  it('opens the sign-in tab by default and sign-up with ?mode=signup', async () => {
     await setup()
     expect(tab('signin').attributes('aria-selected')).toBe('true')
     expect(wrapper.find('input[autocomplete="current-password"]').exists()).toBe(true)
@@ -116,7 +116,7 @@ describe('AuthView', () => {
     },
   )
 
-  it('welcomes new users after registering', async () => {
+  it('welcomes new users after signing up', async () => {
     vi.mocked(authApi.signUp).mockResolvedValue({ user: USER, token: 'jwt' })
     await setup('/auth?mode=signup')
     for (const [autocomplete, value] of Object.entries({

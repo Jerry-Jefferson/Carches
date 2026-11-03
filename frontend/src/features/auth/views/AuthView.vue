@@ -1,7 +1,7 @@
 <script>
 import AuthCard from '@/features/auth/components/AuthCard.vue'
 import AuthTabs from '@/features/auth/components/AuthTabs.vue'
-import RegisterForm from '@/features/auth/components/RegisterForm.vue'
+import SignUpForm from '@/features/auth/components/SignUpForm.vue'
 import SignInForm from '@/features/auth/components/SignInForm.vue'
 import { SITE } from '@/shared/constants/site'
 import { safeRedirect } from '@/app/router/guards'
@@ -11,7 +11,7 @@ import { ROUTE_NAMES } from '@/shared/constants/routes'
 // /auth?mode=signin|signup&redirect=/path — the only page guests can open
 export default {
   name: 'AuthView',
-  components: { AuthCard, AuthTabs, SignInForm, RegisterForm },
+  components: { AuthCard, AuthTabs, SignInForm, SignUpForm },
   data() {
     return {
       // Shared by both forms so switching tabs keeps what was typed
@@ -52,7 +52,7 @@ export default {
         @update:email="email = $event"
         @success="onSuccess"
       />
-      <RegisterForm
+      <SignUpForm
         v-else
         key="signup"
         :email="email"

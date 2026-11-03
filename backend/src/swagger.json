@@ -33,7 +33,7 @@
     "/auth/signup": {
       "post": {
         "summary": "Sign up",
-        "description": "Registers a new user (the only way to create users). The password is hashed with bcrypt before being stored. Returns the created user and a JWT.",
+        "description": "Signs up a new user (the only way to create users). The password is hashed with bcrypt before being stored. Returns the created user and a JWT.",
         "tags": ["Auth"],
         "security": [],
         "requestBody": {
@@ -48,14 +48,14 @@
         },
         "responses": {
           "201": {
-            "description": "User registered",
+            "description": "User signed up",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/AuthResponse"
                 },
                 "example": {
-                  "message": "User successfully registered",
+                  "message": "User successfully signed up",
                   "data": {
                     "user": {
                       "_id": "66c5b2f4e1a2b3c4d5e6f7a8",
@@ -114,7 +114,7 @@
             }
           },
           "409": {
-            "description": "Email or license number already registered",
+            "description": "Email or license number already in use",
             "content": {
               "application/json": {
                 "schema": {

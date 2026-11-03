@@ -148,7 +148,7 @@ Carshes/
         │   ├── auth/
         │   │   ├── schemas.js         ← Zod rules for sign in / sign up + mapAuthError (a feature with one schema file keeps it at its root)
         │   │   ├── views/             ← AuthView
-        │   │   ├── components/        ← AuthCard, AuthTabs, SignInForm, RegisterForm
+        │   │   ├── components/        ← AuthCard, AuthTabs, SignInForm, SignUpForm
         │   │   ├── store/auth.js      ← session: signIn, signUp, logout, bootstrap (GET /users/me; drops the stored token only on 401 / 403 / 404)
         │   │   └── utils/tokenStorage.js ← JWT in localStorage ("Remember me") or sessionStorage
         │   ├── cars/                  ← fleet list + car page
@@ -219,7 +219,7 @@ Request → Express router (/api/v2)
 
 - **Layered architecture**: routes → controllers → services → models.
 - **Error handling**: controllers wrapped with `catchAsync`; errors bubble up to the centralised `errorHandler` middleware.
-- **Auth flow**: register/login → JWT issued → token sent in `Authorization: Bearer <token>` header → `authenticate` middleware verifies → `requireRole` checks role.
+- **Auth flow**: sign up / sign in → JWT issued → token sent in `Authorization: Bearer <token>` header → `authenticate` middleware verifies → `requireRole` checks role.
 - **Token revocation**: revoked JWTs stored in `revokedToken` model.
 - **Roles**: `user` and `admin`, with a hierarchy (`ROLE_LEVELS` in `constants/user.js`) — `requireUser` lets both through, `requireAdmin` only admins. Role is read from `req.user`, which `authenticate` loads from the database, so role changes apply immediately.
 - **Users are created only via `POST /auth/signup`** (always role `user`). Admins come from the `migrate:admin` migration or a manual DB update. There is no `POST /users`.
@@ -433,7 +433,7 @@ export default {
 5. **Implementation plan**: `implementation-plan.md` (repo root) is the frontend roadmap — all 7 phases are done (foundations, platform, auth, fleet, car details / trips / profile, admin console, quality and release). Backend gaps the UI deliberately leaves out are listed in its §17.
 6. **Store modules**: `auth`, `cars`, `carDetails`, `bookings`, `geo` and the nested `admin` module (`admin/fleet`, `admin/users`, `admin/trips`, `admin/insights`). Each lives in its feature's `store/` folder (`geo` in `shared/store/`) and is registered under the same namespace in `app/store/index.js`. The admin console's car list is the root `cars` module (`features/cars/store/cars.js`). Add new modules with the `vuex-module` skill.
 7. **Dev server proxy**: In development, the Vite dev server proxies `/api` to the backend. This means API calls just use relative paths (`/api/v2/...`) — no CORS setup needed in dev.
-8. **Zod must stay on v3**: VeeValidate 4 does not validate Zod 4 schemas (invalid values pass). Keep `zod@^3` with `@vee-validate/zod`. A Zod 3 `.refine` on a whole object runs only once every field has the right type, so cross-field rules ("passwords match") go in a small object combined with `z.intersection` (see `registerSchema`).
+8. **Zod must stay on v3**: VeeValidate 4 does not validate Zod 4 schemas (invalid values pass). Keep `zod@^3` with `@vee-validate/zod`. A Zod 3 `.refine` on a whole object runs only once every field has the right type, so cross-field rules ("passwords match") go in a small object combined with `z.intersection` (see `signUpSchema`).
 9. **Tokens need a `jti`**: every JWT carries a unique ID used for logout/revocation; tokens without one are rejected.
 10. **Ant Design dark mode shifts primary**: Ant Design's dark algorithm slightly darkens `colorPrimary`, so primary buttons are a bit darker than `#FADF7F` in dark mode.
 11. **Windows host**: the project lives on Windows (`D:\Carshes`). `node_modules` must be installed on the machine that runs the code — never copy `node_modules` from Linux (platform-specific binaries for Vite/Rolldown, Tailwind and Lightning CSS).

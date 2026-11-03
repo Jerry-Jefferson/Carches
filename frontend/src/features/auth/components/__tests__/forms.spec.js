@@ -4,7 +4,7 @@ import { createStore } from 'vuex'
 
 import * as authApi from '@/shared/api/auth'
 import auth from '@/features/auth/store/auth'
-import RegisterForm from '../RegisterForm.vue'
+import SignUpForm from '../SignUpForm.vue'
 import SignInForm from '../SignInForm.vue'
 
 vi.mock('@/shared/api/auth', () => ({ signIn: vi.fn(), signUp: vi.fn(), logout: vi.fn() }))
@@ -94,7 +94,7 @@ describe('auth forms', () => {
     })
   })
 
-  describe('RegisterForm', () => {
+  describe('SignUpForm', () => {
     const fill = async ({ password, confirmPassword, ...overrides } = {}) => {
       const values = {
         'given-name': 'Vera',
@@ -112,7 +112,7 @@ describe('auth forms', () => {
     }
 
     it('requires matching passwords', async () => {
-      mountForm(RegisterForm)
+      mountForm(SignUpForm)
       await fill({ confirmPassword: 'different1' })
       await submit()
 
@@ -121,7 +121,7 @@ describe('auth forms', () => {
     })
 
     it('upper-cases the licence number on blur', async () => {
-      mountForm(RegisterForm)
+      mountForm(SignUpForm)
       const licence = input('input[autocomplete="off"]')
       await licence.setValue(' mp1234567 ')
       await licence.trigger('blur')
@@ -131,7 +131,7 @@ describe('auth forms', () => {
 
     it('sends only the backend fields and emits success', async () => {
       vi.mocked(authApi.signUp).mockResolvedValue({ user: USER, token: 'jwt' })
-      mountForm(RegisterForm)
+      mountForm(SignUpForm)
       await fill()
       await submit()
 
@@ -151,7 +151,7 @@ describe('auth forms', () => {
       ['A user with this license number already exists', 'input[autocomplete="off"]'],
     ])('shows "%s" on its field', async (message, selector) => {
       vi.mocked(authApi.signUp).mockRejectedValue(apiError(message, 409))
-      mountForm(RegisterForm)
+      mountForm(SignUpForm)
       await fill()
       await submit()
 
@@ -166,7 +166,7 @@ describe('auth forms', () => {
       vi.mocked(authApi.signUp).mockRejectedValue(
         apiError('Network error. Check your connection.', null),
       )
-      mountForm(RegisterForm)
+      mountForm(SignUpForm)
       await fill()
       await submit()
 

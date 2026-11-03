@@ -112,7 +112,7 @@ export default {
           <a-descriptions-item label="E-mail">{{ user.email }}</a-descriptions-item>
           <a-descriptions-item label="Licence number">{{ user.licenseNumber }}</a-descriptions-item>
           <a-descriptions-item label="Role">{{ isAdmin ? 'Admin' : 'User' }}</a-descriptions-item>
-          <a-descriptions-item label="Registered">{{
+          <a-descriptions-item label="Signed up">{{
             formatDate(user.createdAt)
           }}</a-descriptions-item>
           <a-descriptions-item label="Updated">{{

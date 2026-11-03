@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 
 import { NETWORK_ERROR_MESSAGE } from '@/shared/api/http'
-import { mapAuthError, registerSchema, signInSchema } from '../schemas'
+import { mapAuthError, signUpSchema, signInSchema } from '../schemas'
 
 const VALID_PROFILE = {
   firstName: 'Vera',
@@ -36,9 +36,9 @@ describe('signInSchema', () => {
   })
 })
 
-describe('registerSchema', () => {
+describe('signUpSchema', () => {
   it('trims and upper-cases the licence number', () => {
-    expect(registerSchema.parse(VALID_PROFILE).licenseNumber).toBe('MP1234567')
+    expect(signUpSchema.parse(VALID_PROFILE).licenseNumber).toBe('MP1234567')
   })
 
   it.each([
@@ -62,11 +62,11 @@ describe('registerSchema', () => {
     ],
     [{ confirmPassword: 'different1' }, 'confirmPassword', 'Passwords do not match'],
   ])('rejects %j', (override, field, message) => {
-    expect(errorsOf(registerSchema, { ...VALID_PROFILE, ...override })[field]).toContain(message)
+    expect(errorsOf(signUpSchema, { ...VALID_PROFILE, ...override })[field]).toContain(message)
   })
   it('reports mismatching passwords while other fields are still invalid (L20)', () => {
     // An untouched field is undefined: a type error, which stops a whole-form refine
-    const errors = errorsOf(registerSchema, {
+    const errors = errorsOf(signUpSchema, {
       ...VALID_PROFILE,
       firstName: undefined,
       confirmPassword: 'different1',
@@ -76,7 +76,7 @@ describe('registerSchema', () => {
   })
 
   it('reports a missing password once, with its own message', () => {
-    const { password } = errorsOf(registerSchema, { ...VALID_PROFILE, password: undefined })
+    const { password } = errorsOf(signUpSchema, { ...VALID_PROFILE, password: undefined })
     expect(password[0]).toBe('Password is required')
   })
 })

@@ -115,7 +115,7 @@ Severity scale: **High** = wrong behaviour users will hit or an AA failure on a 
 | L12 | "Complete" on an **Upcoming** booking opens with a validation error, because the default end (now) is before the start | `components/admin/CompleteTripModal.vue` |
 | L13 | A `?user=` focus on a row past page 1 is highlighted but not visible (uncontrolled pagination), and the `<tr>` highlight may be hidden behind cell backgrounds | `components/admin/AdminUsersTable.vue` |
 | L14 | No `<h1>` on Not Found or on the car page's 404 / error / skeleton states (`a-result` titles are `div`s); `layout.spec.js:96` exempts Not Found instead of fixing it | `views/NotFoundView.vue:8`, `views/CarDetailsView.vue` |
-| L15 | Ant icons inside labelled buttons and inputs are announced ("Sign In arrow-right"); add `aria-hidden="true"` as `BookingPanel` already does | `SignInForm.vue`, `RegisterForm.vue`, `UserMenu.vue`, `MyProfileView.vue`, `FleetHeader.vue`, `FleetFilters.vue` |
+| L15 | Ant icons inside labelled buttons and inputs are announced ("Sign In arrow-right"); add `aria-hidden="true"` as `BookingPanel` already does | `SignInForm.vue`, `SignUpForm.vue`, `UserMenu.vue`, `MyProfileView.vue`, `FleetHeader.vue`, `FleetFilters.vue` |
 | L16 | `id="fleet-min-fuel"` is duplicated once the mobile filter drawer has been opened, so the slider label points at the hidden copy | `components/cars/FleetFilterControls.vue:74, 85` |
 | L17 | `aria-label` on plain `<span>`s is ignored (count pills); use `sr-only` text | `PillGroup.vue`, `LowFuelAlerts.vue`, `AdminUsersTable.vue` |
 | L18 | The mobile admin `a-drawer` has no title or `aria-label` | `layouts/AdminLayout.vue:34` |

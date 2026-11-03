@@ -36,7 +36,7 @@ export const userColumns = (tripCounts = {}) => [
   { title: 'E-mail', value: 'email' },
   { title: 'Licence number', value: 'licenseNumber' },
   { title: 'Role', value: 'role' },
-  { title: 'Registered', value: (user) => iso(user.createdAt) },
+  { title: 'Signed up', value: (user) => iso(user.createdAt) },
   { title: 'Trips', value: (user) => tripCounts[user._id]?.total ?? 0 },
   { title: 'Completed trips', value: (user) => tripCounts[user._id]?.completed ?? 0 },
 ]
