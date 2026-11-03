@@ -1,15 +1,15 @@
 ---
 name: vuex-module
-description: How to scaffold a new namespaced Vuex 4 module in the Carshes frontend with actions that call the API wrappers in src/api/*.js (built on the shared axios instance in @/api/http.js), register it in the store, use it from Options API components via mapState/mapGetters/mapActions, and test it. Use when adding app state or API calls to the frontend.
+description: How to scaffold a new namespaced Vuex 4 module in the Carshes frontend with actions that call the API wrappers in src/shared/api/*.js (built on the shared axios instance in @/shared/api/http.js), register it in the store, use it from Options API components via mapState/mapGetters/mapActions, and test it. Use when adding app state or API calls to the frontend.
 ---
 
 # Adding a Vuex 4 module (Carshes frontend)
 
-Work inside `frontend/`. One module per backend resource or feature: `auth`, `cars`, `carDetails`, `bookings`, `geo`, and the nested `admin/*` modules. Look at `src/store/modules/cars.js` and `bookings.js` for complete examples.
+Work inside `frontend/`. One module per backend resource or feature: `auth`, `cars`, `carDetails`, `bookings`, `geo`, and the nested `admin/*` modules. A module lives in its feature's `store/` folder (`src/features/<feature>/store/<name>.js`); one used by several features with no domain logic goes to `src/shared/store/` (like `geo`). Look at `src/features/cars/store/cars.js` and `src/features/bookings/store/bookings.js` for complete examples.
 
 ## 1. Add the API call to a wrapper
 
-Components and stores never build requests themselves. Each endpoint has a thin wrapper in `src/api/<resource>.js` (`auth`, `users`, `cars`, `bookings`) on the shared axios instance:
+Components and stores never build requests themselves. Each endpoint has a thin wrapper in `src/shared/api/<resource>.js` (`auth`, `users`, `cars`, `bookings`) on the shared axios instance:
 
 ```js
 import http, { unwrap } from './http'
@@ -20,16 +20,16 @@ export const getById = (id) => http.get(`/cars/${id}`).then(unwrap)
 
 - `unwrap` turns the backend envelope `{ message, data }` into `data`.
 - Paths are relative to the axios base URL (`VITE_API_URL`, default `/api/v2`); never hardcode `/api/v2` and never import `axios` directly.
-- The Bearer token and the 401 → `/auth?redirect=…` handling are added by the interceptors in `src/api/session.js`; don't pass headers yourself. A request that must not trigger the redirect passes `{ skipAuthRedirect: true }` as axios config.
+- The Bearer token and the 401 → `/auth?redirect=…` handling are added by the interceptors in `src/app/session.js`; don't pass headers yourself. A request that must not trigger the redirect passes `{ skipAuthRedirect: true }` as axios config.
 - Failed requests are normalised in `http.js`: `err.message` is the backend message (or "Network error. Check your connection.") and `err.statusCode` the HTTP status. Read it with `getErrorMessage(err)`.
 
 ## 2. Create the module
 
-`src/store/modules/<name>.js` — namespaced, `state` as a function, mutations in `UPPER_SNAKE_CASE`, API calls only in actions:
+`src/features/<feature>/store/<name>.js` — namespaced, `state` as a function, mutations in `UPPER_SNAKE_CASE`, API calls only in actions:
 
 ```js
-import * as carsApi from '@/api/cars'
-import { getErrorMessage } from '@/api/http'
+import * as carsApi from '@/shared/api/cars'
+import { getErrorMessage } from '@/shared/api/http'
 
 export default {
   namespaced: true,
@@ -75,23 +75,23 @@ Rules:
 - Re-throw after storing the error so the calling component can react (show a message, stay on the form).
 - The store is **strict in dev**: state may only change inside mutations. Never mutate objects you got from state (copy them first) and never assign state in actions.
 - Never send a user ID for "my" data — `/users/me` and `/bookings/my` take it from the token. For `POST /bookings`, the backend overrides `userId` for non-admins.
-- Per-user data must be cleared on sign-out: add a `RESET` mutation and commit it from the `resetOnSignOut` plugin in `src/store/index.js` (it listens for `auth/CLEAR_SESSION`). A request still in flight at sign-out must not refill the state afterwards: note `rootState.auth?.token` before the await and drop the result if it changed (see `bookings/fetchMine`).
+- Per-user data must be cleared on sign-out: add a `RESET` mutation and commit it from the `resetOnSignOut` plugin in `src/app/store/index.js` (it listens for `auth/CLEAR_SESSION`). A request still in flight at sign-out must not refill the state afterwards: note `rootState.auth?.token` before the await and drop the result if it changed (see `bookings/fetchMine`).
 - A reload after a change that already succeeded (re-fetching the list after a create) must not be thrown: the caller would show a failure and the user would repeat the change. Catch it and let the reloaded module keep its own `error` (see `admin/fleet/reloadCars`).
 - Data for "the current page" (one car, one booking) must ignore out-of-order responses: record the requested id and a request counter in state (via a mutation) and commit only if they still match after the await (see `carDetails/fetchCar`).
 - Lists refreshed on a timer (`fetchMine`, `admin/*/fetchTrips|fetchUsers`) must not let an older response overwrite a newer one: number the calls and commit only if no newer call has committed yet (see `admin/trips/fetchTrips`).
 - A forced reload (`{ force: true }`) after a change must not reuse a request that was already in flight: it may predate the change (see `cars/fetchCars`).
 - Rules the backend does not enforce (an admin can't delete themselves) belong in the action, not only in the component that hides the button.
-- "Now" sent to the backend (a booking that starts now) comes from `serverNow()` in `@/api/http`, not the browser clock.
+- "Now" sent to the backend (a booking that starts now) comes from `serverNow()` in `@/shared/api/http`, not the browser clock.
 - Short caches (`loadedAt` + `CACHE_MS`, with a `{ force }` option) avoid repeat calls when several views need the same list — see `cars.js`.
-- Pure logic (filters, sorting, KPIs) belongs in `src/utils/*.js` with its own tests; getters just call it.
+- Pure logic (filters, sorting, KPIs) belongs in the feature's `utils/` folder (`src/shared/utils/` when it is generic) with its own tests; getters just call it.
 
 ## 3. Register it
 
-`src/store/index.js`:
+`src/app/store/index.js` (import feature modules with the `@/` alias):
 
 ```js
 import { createStore } from 'vuex'
-import cars from './modules/cars'
+import cars from '@/features/cars/store/cars'
 
 export default createStore({
   strict: import.meta.env.DEV,
@@ -145,16 +145,16 @@ export default {
 
 ## 5. Test it
 
-`src/store/modules/__tests__/<name>.spec.js` — mock the API wrapper, use a real store:
+`src/features/<feature>/store/__tests__/<name>.spec.js` — mock the API wrapper, use a real store:
 
 ```js
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { createStore } from 'vuex'
 
-import * as carsApi from '@/api/cars'
+import * as carsApi from '@/shared/api/cars'
 import cars from '../cars'
 
-vi.mock('@/api/cars', () => ({ list: vi.fn(), getById: vi.fn() }))
+vi.mock('@/shared/api/cars', () => ({ list: vi.fn(), getById: vi.fn() }))
 
 const makeStore = () => createStore({ strict: true, modules: { cars } })
 

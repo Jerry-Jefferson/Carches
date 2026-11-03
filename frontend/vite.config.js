@@ -33,7 +33,7 @@ export default defineConfig(({ mode }) => {
     },
     test: {
       environment: 'jsdom',
-      setupFiles: ['./src/__test__/setup.js'],
+      setupFiles: ['./src/__tests__/setup.js'],
       globals: true,
       css: false,
       // The first test of a file pays for importing Ant Design; with every file in its

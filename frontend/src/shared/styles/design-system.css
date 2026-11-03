@@ -1,0 +1,109 @@
+/*
+ * Carshes design system tokens.
+ * Values are HSL channels ("H S% L%") so they can be used as hsl(var(--token))
+ * or with an alpha channel: hsl(var(--token) / 0.5).
+ * Exposed to Tailwind in main.css and to Ant Design Vue in src/shared/theme/antd.js.
+ */
+@layer base {
+  :root {
+    /* Background and base surface */
+    --background: 48 60% 98%; /* Very light warm background */
+    --foreground: 353 14% 42%; /* #795C5F - main text color for contrast */
+
+    /* Surfaces (cards, popovers) */
+    --card: 48 76% 92%; /* #F2E29F - light cream surface */
+    --card-foreground: 353 14% 42%; /* #795C5F */
+    --popover: 48 76% 95%;
+    --popover-foreground: 353 14% 42%;
+
+    /* Primary brand */
+    --primary: 45 93% 74%; /* #FADF7F - base primary color */
+    --primary-hover: 43 59% 64%; /* #D9B26F - hover state */
+    --primary-foreground: 353 14% 25%; /* Darkened #795C5F for readable text on primary */
+
+    /* Secondary */
+    --secondary: 47 29% 50%; /* #A69658 */
+    --secondary-hover: 47 29% 42%;
+    /* Accent text and links: a darker secondary that passes WCAG AA on every surface */
+    --link: 47 30% 32%;
+    --secondary-foreground: 48 60% 98%;
+
+    /* Muted */
+    --muted: 48 50% 88%;
+    --muted-foreground: 47 20% 34%;
+
+    /* Accent / highlighted states */
+    --accent: 43 59% 64%; /* #D9B26F */
+    --accent-foreground: 353 14% 25%;
+
+    /* Borders, inputs, focus rings */
+    --border: 47 29% 65%; /* Based on #A69658 with lower saturation */
+    --input: 47 29% 46%; /* Control outlines: ≥ 3:1 on surface, card and popover (WCAG 1.4.11) */
+    --ring: 45 93% 74%; /* #FADF7F */
+
+    /* Input and table surfaces */
+    --surface: 0 0% 100%;
+    --surface-foreground: 353 14% 42%;
+
+    /*
+     * Feedback and status colors. Each passes WCAG AA (4.5:1) as text on
+     * background, card and popover, and with its foreground on top of it
+     * (checked in src/shared/styles/__tests__/contrast.spec.js).
+     */
+    --destructive: 0 62% 42%;
+    --destructive-foreground: 48 60% 98%;
+    --success: 145 55% 26%;
+    --success-foreground: 48 60% 98%;
+    --warning: 30 85% 30%;
+    --warning-foreground: 48 60% 98%;
+    --info: 205 70% 32%;
+    --info-foreground: 48 60% 98%;
+
+    /* Base color of soft elevation shadows */
+    --shadow: 353 14% 25%;
+  }
+
+  .dark {
+    /* Dark theme based on the same palette */
+    --background: 353 14% 12%;
+    --foreground: 48 76% 92%; /* #F2E29F */
+
+    --card: 353 14% 18%; /* Dark variant of #795C5F */
+    --card-foreground: 48 76% 92%;
+    --popover: 353 14% 16%;
+    --popover-foreground: 48 76% 92%;
+
+    --primary: 45 93% 74%; /* #FADF7F */
+    --primary-hover: 48 76% 85%;
+    --primary-foreground: 353 14% 15%;
+
+    --secondary: 47 29% 50%; /* #A69658 */
+    --secondary-hover: 47 29% 58%; /* lighter on hover in the dark theme */
+    --secondary-foreground: 48 60% 98%;
+
+    --muted: 353 10% 25%;
+    --muted-foreground: 48 30% 75%;
+    --link: 45 60% 70%;
+
+    --accent: 43 59% 64%; /* #D9B26F */
+    --accent-foreground: 353 14% 15%;
+
+    --border: 353 10% 30%;
+    --input: 353 10% 48%;
+    --ring: 45 93% 74%;
+
+    --surface: 353 14% 14%;
+    --surface-foreground: 48 76% 92%;
+
+    --destructive: 0 75% 76%; /* soft pills on card stay ≥ 4.5 : 1 */
+    --destructive-foreground: 353 14% 12%;
+    --success: 140 45% 60%;
+    --success-foreground: 353 14% 12%;
+    --warning: 38 90% 62%;
+    --warning-foreground: 353 14% 12%;
+    --info: 205 75% 70%;
+    --info-foreground: 353 14% 12%;
+
+    --shadow: 0 0% 0%;
+  }
+}
