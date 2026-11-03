@@ -37,6 +37,12 @@ export default {
     loadedAt: null,
   }),
   getters: {
+    // Plain state fields, read by components through mapGetters
+    mine: (state) => state.mine,
+    isLoading: (state) => state.isLoading,
+    isSubmitting: (state) => state.isSubmitting,
+    error: (state) => state.error,
+
     activeTrips: byStatus(BOOKING_STATUS.ACTIVE),
     upcoming: byStatus(BOOKING_STATUS.UPCOMING),
     completed: byStatus(BOOKING_STATUS.COMPLETED),

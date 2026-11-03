@@ -1,5 +1,5 @@
 <script>
-import { mapActions, mapState } from 'vuex'
+import { mapActions, mapGetters } from 'vuex'
 
 import StatusTag from '@/shared/components/StatusTag.vue'
 import { bookingStatus, fuelUsed, tripDistance, tripDuration } from '@/shared/utils/derive'
@@ -32,8 +32,8 @@ export default {
     }
   },
   computed: {
-    ...mapState('cars', { cars: 'items' }),
-    ...mapState('admin/insights', ['now']),
+    ...mapGetters('cars', { cars: 'items' }),
+    ...mapGetters('admin/insights', ['now']),
     carsById() {
       return Object.fromEntries(this.cars.map((car) => [car._id, car]))
     },

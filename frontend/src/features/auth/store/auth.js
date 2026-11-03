@@ -23,6 +23,10 @@ export default {
     error: null,
   }),
   getters: {
+    // Plain state fields, read by components through mapGetters
+    user: (state) => state.user,
+    isSubmitting: (state) => state.isSubmitting,
+
     isAuthenticated: (state) => Boolean(state.token && state.user),
     isAdmin: (state) => state.user?.role === 'admin',
     fullName: (state) =>

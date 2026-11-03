@@ -1,7 +1,7 @@
 <script>
 import { toTypedSchema } from '@vee-validate/zod'
 import { Field as VeeField, Form as VeeForm } from 'vee-validate'
-import { mapActions, mapState } from 'vuex'
+import { mapActions, mapGetters } from 'vuex'
 
 import MapView from '@/shared/components/MapView.vue'
 import { CAR_UPDATE_FAILED } from '@/features/admin/store/trips'
@@ -49,7 +49,7 @@ export default {
     }
   },
   computed: {
-    ...mapState('cars', { cars: 'items' }),
+    ...mapGetters('cars', { cars: 'items' }),
     car() {
       return this.cars.find((car) => car._id === refId(this.trip?.carId)) ?? null
     },

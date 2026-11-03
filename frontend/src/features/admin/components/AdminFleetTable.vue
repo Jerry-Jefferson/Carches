@@ -1,5 +1,5 @@
 <script>
-import { mapActions, mapState } from 'vuex'
+import { mapActions, mapGetters } from 'vuex'
 
 import CarPlaceholder from '@/shared/components/CarPlaceholder.vue'
 import EnergyBar from '@/shared/components/EnergyBar.vue'
@@ -69,7 +69,7 @@ export default {
     }
   },
   computed: {
-    ...mapState('admin/fleet', ['isMutating']),
+    ...mapGetters('admin/fleet', ['isMutating']),
   },
   methods: {
     ...mapActions('admin/fleet', ['deleteCar']),

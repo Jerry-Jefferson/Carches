@@ -1,6 +1,6 @@
 <script>
 import { SafetyCertificateOutlined } from '@ant-design/icons-vue'
-import { mapActions, mapState } from 'vuex'
+import { mapActions, mapGetters } from 'vuex'
 
 import InfoCallout from '@/shared/components/InfoCallout.vue'
 import { SITE } from '@/shared/constants/site'
@@ -36,7 +36,7 @@ export default {
     }
   },
   computed: {
-    ...mapState('bookings', ['isSubmitting']),
+    ...mapGetters('bookings', ['isSubmitting']),
     shown() {
       // A fresh copy only ever replaces the car the modal was opened for
       return this.freshCar && this.freshCar._id === this.car?._id ? this.freshCar : this.car

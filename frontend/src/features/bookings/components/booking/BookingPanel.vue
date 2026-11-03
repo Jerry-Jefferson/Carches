@@ -1,6 +1,6 @@
 <script>
 import { SafetyCertificateOutlined } from '@ant-design/icons-vue'
-import { mapActions, mapGetters, mapState } from 'vuex'
+import { mapActions, mapGetters } from 'vuex'
 
 import InfoCallout from '@/shared/components/InfoCallout.vue'
 import StatusTag from '@/shared/components/StatusTag.vue'
@@ -40,8 +40,8 @@ export default {
     }
   },
   computed: {
-    ...mapState('bookings', ['isSubmitting']),
-    ...mapState('bookings', { isLoadingBookings: 'isLoading' }),
+    ...mapGetters('bookings', ['isSubmitting']),
+    ...mapGetters('bookings', { isLoadingBookings: 'isLoading' }),
     ...mapGetters('bookings', ['openBooking']),
     isScheduled() {
       return this.mode === START_MODE.SCHEDULE

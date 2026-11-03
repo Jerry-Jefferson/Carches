@@ -44,6 +44,12 @@ export default {
     loadedAt: null,
   }),
   getters: {
+    // Plain state fields, read by components through mapGetters
+    items: (state) => state.items,
+    filters: (state) => state.filters,
+    isLoading: (state) => state.isLoading,
+    error: (state) => state.error,
+
     byId: (state) => (id) => state.items.find((trip) => trip._id === id) ?? null,
     // { [carId]: bookings, newest first }
     tripsByCar: (state) => {

@@ -21,6 +21,12 @@ export default {
     loadedAt: null,
   }),
   getters: {
+    // Plain state fields, read by components through mapGetters
+    items: (state) => state.items,
+    filters: (state) => state.filters,
+    isLoading: (state) => state.isLoading,
+    isMutating: (state) => state.isMutating,
+
     byId: (state) => (id) => state.items.find((user) => user._id === id) ?? null,
     filteredUsers: (state) => filterUsers(state.items, state.filters),
     // { [userId]: { total, completed } }

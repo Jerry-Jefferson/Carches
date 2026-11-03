@@ -1,5 +1,5 @@
 <script>
-import { mapActions, mapState } from 'vuex'
+import { mapActions, mapGetters } from 'vuex'
 
 import { LOW_FUEL_THRESHOLD } from '@/shared/utils/derive'
 import { carName, formatCoords, formatPercent } from '@/shared/utils/format'
@@ -13,8 +13,8 @@ export default {
     return { isRefreshing: false, threshold: LOW_FUEL_THRESHOLD }
   },
   computed: {
-    ...mapState('admin/fleet', { lowFuel: 'lowFuel', error: 'lowFuelError' }),
-    ...mapState('admin/fleet', ['isLoadingWidgets']),
+    ...mapGetters('admin/fleet', { lowFuel: 'lowFuel', error: 'lowFuelError' }),
+    ...mapGetters('admin/fleet', ['isLoadingWidgets']),
   },
   methods: {
     ...mapActions('admin/fleet', ['fetchLowFuel']),

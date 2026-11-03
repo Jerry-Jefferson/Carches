@@ -1,6 +1,6 @@
 ---
 name: vuex-module
-description: How to scaffold a new namespaced Vuex 4 module in the Carshes frontend with actions that call the API wrappers in src/shared/api/*.js (built on the shared axios instance in @/shared/api/http.js), register it in the store, use it from Options API components via mapState/mapGetters/mapActions, and test it. Use when adding app state or API calls to the frontend.
+description: How to scaffold a new namespaced Vuex 4 module in the Carshes frontend with actions that call the API wrappers in src/shared/api/*.js (built on the shared axios instance in @/shared/api/http.js), register it in the store, use it from Options API components via mapGetters/mapActions, and test it. Use when adding app state or API calls to the frontend.
 ---
 
 # Adding a Vuex 4 module (Carshes frontend)
@@ -39,6 +39,11 @@ export default {
     error: null,
   }),
   getters: {
+    // Plain state fields, read by components through mapGetters
+    items: (state) => state.items,
+    isLoading: (state) => state.isLoading,
+    error: (state) => state.error,
+
     freeCars: (state) => state.items.filter((car) => car.status === 'free'),
   },
   mutations: {
@@ -108,13 +113,12 @@ Nested modules (like `admin`) are a namespaced module with `modules: { … }`; t
 
 ```vue
 <script>
-import { mapState, mapGetters, mapActions } from 'vuex'
+import { mapActions, mapGetters } from 'vuex'
 
 export default {
   name: 'CarListView',
   computed: {
-    ...mapState('cars', ['items', 'isLoading', 'error']),
-    ...mapGetters('cars', ['freeCars']),
+    ...mapGetters('cars', ['items', 'isLoading', 'error', 'freeCars']),
   },
   created() {
     this.loadCars()
@@ -140,7 +144,8 @@ export default {
 </template>
 ```
 
-- `mapState` / `mapGetters` go in `computed`, `mapActions` / `mapMutations` in `methods`, always with the module namespace as the first argument.
+- `mapGetters` goes in `computed`, `mapActions` / `mapMutations` in `methods`, always with the module namespace as the first argument.
+- **No `mapState`** (ESLint `no-restricted-imports`): every state field a component reads gets a plain getter of the same name (`items: (state) => state.items`), mapped with `mapGetters`.
 - For form-bound fields from the store, use a computed with `get` / `set` that commits a mutation — never `v-model` straight onto store state (strict mode will throw).
 
 ## 5. Test it

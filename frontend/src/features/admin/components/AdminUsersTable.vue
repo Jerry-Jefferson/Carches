@@ -1,5 +1,5 @@
 <script>
-import { mapActions, mapGetters, mapState } from 'vuex'
+import { mapActions, mapGetters } from 'vuex'
 
 import InitialsAvatar from '@/shared/components/InitialsAvatar.vue'
 import { ROLE, fullName } from '@/features/admin/utils/admin'
@@ -34,7 +34,7 @@ export default {
     }
   },
   computed: {
-    ...mapState('auth', { currentUser: 'user' }),
+    ...mapGetters('auth', { currentUser: 'user' }),
     ...mapGetters('admin/users', ['tripCounts']),
     ...mapGetters('admin/trips', ['tripsByUser']),
     columns() {

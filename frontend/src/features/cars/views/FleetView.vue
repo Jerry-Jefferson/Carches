@@ -1,6 +1,6 @@
 <script>
 import { defineAsyncComponent } from 'vue'
-import { mapActions, mapGetters, mapState } from 'vuex'
+import { mapActions, mapGetters } from 'vuex'
 
 import CarGrid from '@/features/cars/components/CarGrid.vue'
 import FleetFilters from '@/features/cars/components/FleetFilters.vue'
@@ -36,8 +36,8 @@ export default {
     }
   },
   computed: {
-    ...mapState('cars', ['items', 'isLoading', 'error', 'filters']),
-    ...mapState('geo', { geoStatus: 'status', userLocation: 'coords' }),
+    ...mapGetters('cars', ['items', 'isLoading', 'error', 'filters']),
+    ...mapGetters('geo', { geoStatus: 'status', userLocation: 'coords' }),
     ...mapGetters('cars', [
       'visible',
       'sorted',

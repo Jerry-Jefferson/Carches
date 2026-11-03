@@ -18,6 +18,10 @@ export default {
     now: Date.now(),
   }),
   getters: {
+    // Plain state fields, read by components through mapGetters
+    date: (state) => state.date,
+    now: (state) => state.now,
+
     kpis: (state, getters, rootState) => {
       const cars = rootState.cars.items
       const trips = rootState.admin.trips.items

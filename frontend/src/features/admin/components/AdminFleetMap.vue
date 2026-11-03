@@ -1,5 +1,5 @@
 <script>
-import { mapState } from 'vuex'
+import { mapGetters } from 'vuex'
 
 import MapView from '@/shared/components/MapView.vue'
 import StatusTag from '@/shared/components/StatusTag.vue'
@@ -16,7 +16,7 @@ export default {
   components: { MapView, StatusTag },
   emits: ['edit'],
   computed: {
-    ...mapState('cars', { cars: 'items' }),
+    ...mapGetters('cars', { cars: 'items' }),
     carsById() {
       return Object.fromEntries(this.cars.map((car) => [car._id, car]))
     },

@@ -1,6 +1,6 @@
 <script>
 import { CarOutlined } from '@ant-design/icons-vue'
-import { mapActions, mapGetters, mapState } from 'vuex'
+import { mapActions, mapGetters } from 'vuex'
 
 import EmptyState from '@/shared/components/EmptyState.vue'
 import ErrorState from '@/shared/components/ErrorState.vue'
@@ -28,8 +28,8 @@ export default {
     }
   },
   computed: {
-    ...mapState('bookings', ['mine', 'isLoading', 'error']),
-    ...mapState('cars', { carsLoadedAt: 'loadedAt', carsError: 'error' }),
+    ...mapGetters('bookings', ['mine', 'isLoading', 'error']),
+    ...mapGetters('cars', { carsLoadedAt: 'loadedAt', carsError: 'error' }),
     ...mapGetters('bookings', ['trips']),
     // Without the fleet list, a missing car can't be told apart from a removed one
     fleetLoaded() {

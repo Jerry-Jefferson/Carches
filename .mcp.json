@@ -7,6 +7,20 @@
         "MDB_MCP_CONNECTION_STRING": "${MDB_MCP_CONNECTION_STRING}",
         "MDB_MCP_TELEMETRY": "disabled"
       }
+    },
+    "playwright": {
+      "command": "cmd",
+      "args": [
+        "/c",
+        "npx",
+        "-y",
+        "@playwright/mcp@0.0.84",
+        "--isolated",
+        "--viewport-size",
+        "1440x900",
+        "--output-dir",
+        ".playwright-mcp"
+      ]
     }
   }
 }

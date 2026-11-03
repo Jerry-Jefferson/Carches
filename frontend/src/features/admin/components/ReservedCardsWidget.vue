@@ -1,5 +1,5 @@
 <script>
-import { mapActions, mapGetters, mapState } from 'vuex'
+import { mapActions, mapGetters } from 'vuex'
 
 import { reservedRowKey } from '@/features/admin/utils/admin'
 import { formatCoords } from '@/shared/utils/format'
@@ -19,10 +19,10 @@ export default {
     }
   },
   computed: {
-    ...mapState('admin/fleet', ['reservedAuthorized', 'isLoadingWidgets']),
-    ...mapState('admin/fleet', { error: 'reservedError' }),
+    ...mapGetters('admin/fleet', ['reservedAuthorized', 'isLoadingWidgets']),
+    ...mapGetters('admin/fleet', { error: 'reservedError' }),
     ...mapGetters('admin/fleet', { rows: 'reservedRows' }),
-    ...mapState('cars', { cars: 'items' }),
+    ...mapGetters('cars', { cars: 'items' }),
     // E15 rows have no car id, only the VIN
     carsByVin() {
       return new Map(this.cars.map((car) => [car.vin, car]))

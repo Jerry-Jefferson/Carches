@@ -1,6 +1,6 @@
 <script>
 import { CheckCircleOutlined } from '@ant-design/icons-vue'
-import { mapActions, mapState } from 'vuex'
+import { mapActions, mapGetters } from 'vuex'
 
 import StatusTag from '@/shared/components/StatusTag.vue'
 import { BOOKING_STATUS, tripDuration } from '@/shared/utils/derive'
@@ -28,7 +28,7 @@ export default {
     }
   },
   computed: {
-    ...mapState('bookings', ['isSubmitting']),
+    ...mapGetters('bookings', ['isSubmitting']),
     name() {
       return tripCarName(this.trip, this.fleetLoaded)
     },

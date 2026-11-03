@@ -1,6 +1,6 @@
 <script>
 import { CustomerServiceOutlined } from '@ant-design/icons-vue'
-import { mapActions, mapGetters, mapState } from 'vuex'
+import { mapActions, mapGetters } from 'vuex'
 
 import InfoCallout from '@/shared/components/InfoCallout.vue'
 import ProfileCard from '@/features/profile/components/ProfileCard.vue'
@@ -19,7 +19,7 @@ export default {
     }
   },
   computed: {
-    ...mapState('auth', ['user']),
+    ...mapGetters('auth', ['user']),
     ...mapGetters('auth', ['isAdmin']),
     adminRoute() {
       return { name: ROUTE_NAMES.ADMIN }

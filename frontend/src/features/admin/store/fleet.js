@@ -25,6 +25,15 @@ export default {
     isMutating: false,
   }),
   getters: {
+    // Plain state fields, read by components through mapGetters
+    filters: (state) => state.filters,
+    lowFuel: (state) => state.lowFuel,
+    reservedAuthorized: (state) => state.reservedAuthorized,
+    isLoadingWidgets: (state) => state.isLoadingWidgets,
+    lowFuelError: (state) => state.lowFuelError,
+    reservedError: (state) => state.reservedError,
+    isMutating: (state) => state.isMutating,
+
     filteredCars: (state, getters, rootState) =>
       filterAdminCars(rootState.cars.items, state.filters),
     // Status pill counts respect every other filter

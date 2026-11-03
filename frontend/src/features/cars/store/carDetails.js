@@ -17,6 +17,12 @@ export default {
     requestSeq: 0,
   }),
   getters: {
+    // Plain state fields, read by components through mapGetters
+    car: (state) => state.car,
+    isLoading: (state) => state.isLoading,
+    error: (state) => state.error,
+    notFound: (state) => state.notFound,
+
     // Metres from the user, or null without location
     distance: (state, getters, rootState) => {
       const coords = rootState.geo?.coords

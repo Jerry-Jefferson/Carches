@@ -1,7 +1,7 @@
 <script>
 import { toTypedSchema } from '@vee-validate/zod'
 import { Field as VeeField, Form as VeeForm } from 'vee-validate'
-import { mapActions, mapState } from 'vuex'
+import { mapActions, mapGetters } from 'vuex'
 
 import { mapAuthError, signInSchema } from '@/features/auth/schemas'
 
@@ -25,7 +25,7 @@ export default {
     }
   },
   computed: {
-    ...mapState('auth', ['isSubmitting']),
+    ...mapGetters('auth', ['isSubmitting']),
   },
   methods: {
     ...mapActions('auth', ['signIn']),

@@ -1,5 +1,5 @@
 <script>
-import { mapActions, mapGetters, mapState } from 'vuex'
+import { mapActions, mapGetters } from 'vuex'
 
 import PillGroup from '@/shared/components/PillGroup.vue'
 import { ALL } from '@/features/admin/utils/admin'
@@ -47,8 +47,8 @@ export default {
     }
   },
   computed: {
-    ...mapState('cars', { cars: 'items', isLoadingCars: 'isLoading' }),
-    ...mapState('admin/fleet', ['filters']),
+    ...mapGetters('cars', { cars: 'items', isLoadingCars: 'isLoading' }),
+    ...mapGetters('admin/fleet', ['filters']),
     ...mapGetters('admin/fleet', ['filteredCars', 'statusCounts', 'brands']),
     statusOptions() {
       const total = Object.values(this.statusCounts).reduce((sum, count) => sum + count, 0)

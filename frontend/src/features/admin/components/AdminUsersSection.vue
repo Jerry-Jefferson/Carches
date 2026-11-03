@@ -1,5 +1,5 @@
 <script>
-import { mapActions, mapGetters, mapState } from 'vuex'
+import { mapActions, mapGetters } from 'vuex'
 
 import PillGroup from '@/shared/components/PillGroup.vue'
 import { ALL, DEFAULT_USER_FILTERS, ROLE, filterUsers } from '@/features/admin/utils/admin'
@@ -24,7 +24,7 @@ export default {
     }
   },
   computed: {
-    ...mapState('admin/users', ['items', 'filters', 'isLoading']),
+    ...mapGetters('admin/users', ['items', 'filters', 'isLoading']),
     ...mapGetters('admin/users', ['filteredUsers']),
     // Role pill counts respect the search
     roleCounts() {

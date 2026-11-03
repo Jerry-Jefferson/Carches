@@ -1,7 +1,7 @@
 <script>
 import { toTypedSchema } from '@vee-validate/zod'
 import { Field as VeeField, Form as VeeForm } from 'vee-validate'
-import { mapActions, mapState } from 'vuex'
+import { mapActions, mapGetters } from 'vuex'
 
 import notify from '@/shared/utils/notify'
 import { mapUserError, userSchema } from '@/features/admin/schemas/userSchema'
@@ -33,7 +33,7 @@ export default {
     }
   },
   computed: {
-    ...mapState('admin/users', ['isMutating']),
+    ...mapGetters('admin/users', ['isMutating']),
     initialValues() {
       const user = this.user ?? {}
       return {

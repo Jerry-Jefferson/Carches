@@ -131,7 +131,9 @@ The admin login comes from `E2E_ADMIN_EMAIL` / `E2E_ADMIN_PASSWORD`, or from `AD
 | `implementation-plan.md` | Frontend roadmap (all phases done) and the backend gaps the UI works around |
 | `.claude/skills/` | Recipes for Vue components, Vuex modules, Docker and Swagger, used by Claude Code |
 
-## Claude Code: MongoDB MCP
+## Claude Code: MCP servers
+
+### MongoDB
 
 `.mcp.json` registers a read-only [MongoDB MCP server](https://github.com/mongodb-js/mongodb-mcp-server) so Claude Code can query the local database. Before starting Claude Code, set the connection string (MongoDB must be running):
 
@@ -145,7 +147,11 @@ $env:MDB_MCP_CONNECTION_STRING = "mongodb://<user>:<password>@localhost:27018/ca
 export MDB_MCP_CONNECTION_STRING="mongodb://<user>:<password>@localhost:27018/carshes?authSource=admin"
 ```
 
-Use the `MONGO_INITDB_ROOT_USERNAME` / `MONGO_INITDB_ROOT_PASSWORD` values from `backend/.env`. On macOS or Linux, change `"command": "cmd"` in `.mcp.json` to `"npx"` and drop the `"/c"` argument.
+Use the `MONGO_INITDB_ROOT_USERNAME` / `MONGO_INITDB_ROOT_PASSWORD` values from `backend/.env`. On macOS or Linux, change `"command": "cmd"` in `.mcp.json` to `"npx"` and drop the `"/c"` argument (same for the Playwright server).
+
+### Playwright
+
+`.mcp.json` also registers the [Playwright MCP server](https://github.com/microsoft/playwright-mcp), which lets Claude Code open the running app in a browser, click through it and take screenshots. It needs no setup beyond an installed Google Chrome (or add `"--browser", "msedge"` to its args). It starts with a fresh in-memory profile at 1440 × 900 and saves screenshots to `.playwright-mcp/` (git-ignored).
 
 ## Project structure
 

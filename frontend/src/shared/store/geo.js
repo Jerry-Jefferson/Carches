@@ -38,6 +38,10 @@ export default {
     status: 'idle',
   }),
   getters: {
+    // Plain state fields, read by components through mapGetters
+    coords: (state) => state.coords,
+    status: (state) => state.status,
+
     hasLocation: (state) => Boolean(state.coords),
     // Where distances and maps start from: the user, or Minsk centre as a fallback
     origin: (state) => state.coords ?? DEFAULT_CENTER,

@@ -1,5 +1,5 @@
 <script>
-import { mapActions, mapGetters, mapState } from 'vuex'
+import { mapActions, mapGetters } from 'vuex'
 
 import InitialsAvatar from '@/shared/components/InitialsAvatar.vue'
 import { ROUTE_NAMES } from '@/shared/constants/routes'
@@ -13,7 +13,7 @@ export default {
     }
   },
   computed: {
-    ...mapState('auth', ['user']),
+    ...mapGetters('auth', ['user']),
     ...mapGetters('auth', ['fullName']),
   },
   methods: {

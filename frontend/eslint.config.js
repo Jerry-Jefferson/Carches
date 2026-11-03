@@ -33,6 +33,24 @@ export default [
     },
   },
   {
+    files: ['src/**/*.{js,vue}'],
+    rules: {
+      // Project rule: store state is read through getters (mapGetters), never mapState
+      'no-restricted-imports': [
+        'error',
+        {
+          paths: [
+            {
+              name: 'vuex',
+              importNames: ['mapState'],
+              message: 'Add a getter to the module and use mapGetters instead.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
     files: ['vite.config.js', 'eslint.config.js', 'playwright.config.js', 'e2e/**/*.js'],
     languageOptions: {
       globals: {

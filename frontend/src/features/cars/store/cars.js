@@ -31,6 +31,13 @@ export default {
     loadedAt: null,
   }),
   getters: {
+    // Plain state fields, read by components through mapGetters
+    items: (state) => state.items,
+    isLoading: (state) => state.isLoading,
+    error: (state) => state.error,
+    filters: (state) => state.filters,
+    loadedAt: (state) => state.loadedAt,
+
     byId: (state) => (id) => state.items.find((car) => car._id === id) ?? null,
 
     // { [carId]: metres } — empty without the user's location

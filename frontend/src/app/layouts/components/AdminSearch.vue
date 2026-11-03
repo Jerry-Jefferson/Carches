@@ -1,5 +1,5 @@
 <script>
-import { mapState } from 'vuex'
+import { mapGetters } from 'vuex'
 
 import { ADMIN_TABS, fullName, searchConsole } from '@/features/admin/utils/admin'
 import { carName } from '@/shared/utils/format'
@@ -13,8 +13,8 @@ export default {
     return { query: '' }
   },
   computed: {
-    ...mapState('cars', { cars: 'items' }),
-    ...mapState('admin/users', { users: 'items' }),
+    ...mapGetters('cars', { cars: 'items' }),
+    ...mapGetters('admin/users', { users: 'items' }),
     options() {
       const results = searchConsole(this.query, { cars: this.cars, users: this.users })
       const groups = [

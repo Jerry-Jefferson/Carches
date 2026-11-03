@@ -1,5 +1,5 @@
 <script>
-import { mapActions, mapGetters, mapState } from 'vuex'
+import { mapActions, mapGetters } from 'vuex'
 
 import InitialsAvatar from '@/shared/components/InitialsAvatar.vue'
 import StatusTag from '@/shared/components/StatusTag.vue'
@@ -24,7 +24,7 @@ export default {
     }
   },
   computed: {
-    ...mapState('admin/insights', ['now']),
+    ...mapGetters('admin/insights', ['now']),
     ...mapGetters('admin/users', ['byId']),
     ...mapGetters('admin/trips', ['tripsByUser']),
     ...mapGetters('cars', { carById: 'byId' }),

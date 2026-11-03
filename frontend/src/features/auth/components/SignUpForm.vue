@@ -2,7 +2,7 @@
 import { SafetyCertificateOutlined } from '@ant-design/icons-vue'
 import { toTypedSchema } from '@vee-validate/zod'
 import { Field as VeeField, Form as VeeForm } from 'vee-validate'
-import { mapActions, mapState } from 'vuex'
+import { mapActions, mapGetters } from 'vuex'
 
 import InfoCallout from '@/shared/components/InfoCallout.vue'
 import { mapAuthError, signUpSchema } from '@/features/auth/schemas'
@@ -28,7 +28,7 @@ export default {
     }
   },
   computed: {
-    ...mapState('auth', ['isSubmitting']),
+    ...mapGetters('auth', ['isSubmitting']),
   },
   methods: {
     ...mapActions('auth', ['signUp']),

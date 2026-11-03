@@ -1,7 +1,7 @@
 <script>
 import { toTypedSchema } from '@vee-validate/zod'
 import { Field as VeeField, Form as VeeForm } from 'vee-validate'
-import { mapActions, mapState } from 'vuex'
+import { mapActions, mapGetters } from 'vuex'
 
 import { fullName } from '@/features/admin/utils/admin'
 import { CAR_STATUS } from '@/shared/utils/derive'
@@ -48,8 +48,8 @@ export default {
     }
   },
   computed: {
-    ...mapState('cars', { cars: 'items' }),
-    ...mapState('admin/users', { users: 'items' }),
+    ...mapGetters('cars', { cars: 'items' }),
+    ...mapGetters('admin/users', { users: 'items' }),
     isEdit() {
       return Boolean(this.trip)
     },

@@ -5,7 +5,7 @@ import {
   TeamOutlined,
   ThunderboltOutlined,
 } from '@ant-design/icons-vue'
-import { mapActions, mapGetters, mapState } from 'vuex'
+import { mapActions, mapGetters } from 'vuex'
 
 import AdminFleetSection from '@/features/admin/components/AdminFleetSection.vue'
 import AdminSparkline from '@/features/admin/components/AdminSparkline.vue'
@@ -71,10 +71,10 @@ export default {
     }
   },
   computed: {
-    ...mapState('cars', { cars: 'items', carsLoadedAt: 'loadedAt' }),
-    ...mapState('admin/trips', { trips: 'items', tripFilters: 'filters' }),
-    ...mapState('admin/users', { users: 'items' }),
-    ...mapState('admin/insights', ['date', 'now']),
+    ...mapGetters('cars', { cars: 'items', carsLoadedAt: 'loadedAt' }),
+    ...mapGetters('admin/trips', { trips: 'items', tripFilters: 'filters' }),
+    ...mapGetters('admin/users', { users: 'items' }),
+    ...mapGetters('admin/insights', ['date', 'now']),
     ...mapGetters('admin/insights', ['kpis', 'sparkline', 'isToday']),
     ...mapGetters('admin/fleet', ['filteredCars']),
     ...mapGetters('admin/users', ['filteredUsers', 'tripCounts']),

@@ -67,7 +67,7 @@ export default {
 Rules:
 - Option order: `name, components, props, emits, data, computed, watch, lifecycle hooks, methods`.
 - Always declare `emits`; props use the object syntax with `type` (and `required` / `default`).
-- Store, router, HTTP: `mapState` / `mapGetters` / `mapActions` (see the `vuex-module` skill), `this.$router`, `this.$route`. Never call `axios` or `@/shared/api/*` from a component — go through a Vuex action (it calls the `src/shared/api/*.js` wrappers).
+- Store, router, HTTP: `mapGetters` / `mapActions` (see the `vuex-module` skill; no `mapState`), `this.$router`, `this.$route`. Never call `axios` or `@/shared/api/*` from a component — go through a Vuex action (it calls the `src/shared/api/*.js` wrappers).
 - Comments and UI text in English.
 
 ## 3. Styling with the design system

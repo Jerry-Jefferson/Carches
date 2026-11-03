@@ -1,6 +1,6 @@
 <script>
 import { NodeIndexOutlined, ToolOutlined } from '@ant-design/icons-vue'
-import { mapActions, mapGetters, mapState } from 'vuex'
+import { mapActions, mapGetters } from 'vuex'
 
 import StatusTag from '@/shared/components/StatusTag.vue'
 import {
@@ -26,7 +26,7 @@ export default {
     }
   },
   computed: {
-    ...mapState('admin/fleet', ['isMutating']),
+    ...mapGetters('admin/fleet', ['isMutating']),
     ...mapGetters('admin/fleet', ['previewServiceCandidates', 'previewRelocationCandidates']),
     actions() {
       return [

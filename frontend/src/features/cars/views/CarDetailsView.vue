@@ -6,7 +6,7 @@ import {
   IdcardOutlined,
   AimOutlined,
 } from '@ant-design/icons-vue'
-import { mapActions, mapGetters, mapState } from 'vuex'
+import { mapActions, mapGetters } from 'vuex'
 
 import BookingConfirmedModal from '@/features/bookings/components/booking/BookingConfirmedModal.vue'
 import BookingPanel from '@/features/bookings/components/booking/BookingPanel.vue'
@@ -63,9 +63,9 @@ export default {
     }
   },
   computed: {
-    ...mapState('carDetails', ['car', 'isLoading', 'error', 'notFound']),
-    ...mapState('cars', { fleetFilters: 'filters' }),
-    ...mapState('geo', { userLocation: 'coords' }),
+    ...mapGetters('carDetails', ['car', 'isLoading', 'error', 'notFound']),
+    ...mapGetters('cars', { fleetFilters: 'filters' }),
+    ...mapGetters('geo', { userLocation: 'coords' }),
     ...mapGetters('carDetails', ['distance']),
     // The store may still hold another car while the new one loads
     shown() {

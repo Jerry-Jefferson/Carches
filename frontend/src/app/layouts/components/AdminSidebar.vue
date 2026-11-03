@@ -1,6 +1,6 @@
 <script>
 import { DashboardOutlined, ScheduleOutlined, TeamOutlined } from '@ant-design/icons-vue'
-import { mapGetters, mapState } from 'vuex'
+import { mapGetters } from 'vuex'
 
 import { ADMIN_TABS } from '@/features/admin/utils/admin'
 import { ROUTE_NAMES } from '@/shared/constants/routes'
@@ -23,7 +23,7 @@ export default {
     }
   },
   computed: {
-    ...mapState('cars', { cars: 'items' }),
+    ...mapGetters('cars', { cars: 'items' }),
     ...mapGetters('cars', ['freeCount']),
     activeTab() {
       return this.$route.query.tab ?? null

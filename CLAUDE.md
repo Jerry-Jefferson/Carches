@@ -55,7 +55,7 @@ There is **no monorepo tooling** — each folder has its own `package.json`, `no
 ```
 Carshes/
 ├── CLAUDE.md                          ← this file
-├── .mcp.json                          ← MongoDB MCP server (read-only)
+├── .mcp.json                          ← MCP servers: MongoDB (read-only), Playwright (browser)
 ├── .claude/skills/                    ← project skills (see §11)
 ├── README.md
 ├── implementation-plan.md             ← frontend roadmap (all phases done; backend gaps in §17)
@@ -384,7 +384,7 @@ export default {
 
 - Component options order: `name`, `components`, `props`, `emits`, `data`, `computed`, `watch`, lifecycle hooks, `methods` (checked by `vue/order-in-components`, warning level).
 - Multi-word component names (`vue/multi-word-component-names`), e.g. `CarCard`, `BookingList`.
-- **Vuex**: access through `mapState`, `mapGetters`, `mapActions`, `mapMutations` in `computed` / `methods`; use namespaced modules in the feature's `store/` folder (`src/features/<name>/store/`, shared ones in `src/shared/store/`), registered in `src/app/store/index.js`.
+- **Vuex**: access through `mapGetters`, `mapActions`, `mapMutations` in `computed` / `methods` — **never `mapState`** (ESLint `no-restricted-imports`): each state field a component reads has a plain getter of the same name in its module (`items: (state) => state.items`); use namespaced modules in the feature's `store/` folder (`src/features/<name>/store/`, shared ones in `src/shared/store/`), registered in `src/app/store/index.js`.
 - **Router**: use `this.$router` / `this.$route`, with names from `ROUTE_NAMES` (`@/shared/constants/routes`). Templates can't see imports, so expose a route location as a computed (`fleetRoute() { return { name: ROUTE_NAMES.FLEET } }`) or a method for routes with params (`carRoute(id)`).
 - **Forms**: use VeeValidate's `<Form>` / `<Field>` / `<ErrorMessage>` components with `:validation-schema="toTypedSchema(zodSchema)"` (`toTypedSchema` from `@vee-validate/zod`) — not `useForm` / `useField`.
 - **HTTP**: import the shared instance from `@/shared/api/http.js`; do not create new axios instances or hardcode `/api/v2` URLs.
@@ -475,3 +475,11 @@ The patterns in `vue-component` and `vuex-module` were checked with real tests; 
 - The command uses `cmd /c npx …` because the project runs on native Windows. On macOS/Linux/WSL change it to `"command": "npx"` with the same args minus `"/c"`.
 - To allow writes temporarily, remove `--readOnly` locally — don't commit that.
 - Use it to inspect data (e.g. check soft-deleted users, revoked tokens, seeded cars) instead of writing ad-hoc scripts; make data changes through the API, migrations or the seeder.
+
+### Playwright MCP (`.mcp.json`)
+
+- Server: official `@playwright/mcp`, pinned to `0.0.84` (it is still 0.x, so bump it on purpose). Drives a real browser — navigate, click, type, accessibility snapshots, screenshots, console and network logs. Use it to check a UI change in the running app (`http://localhost:5173`, Docker stack up); the repeatable checks still belong in `frontend/e2e/` (Playwright Test).
+- Started with `--isolated` (browser profile kept in memory: every session starts signed out, no cookies or storage left behind), `--viewport-size 1440x900` (the desktop layout of the e2e run; resize in the session to check 375 / 1024 px), `--output-dir .playwright-mcp` (screenshots and traces; git-ignored).
+- Uses the installed Google Chrome (the server's default `chrome` channel). Without Chrome, add `"--browser", "msedge"` or run `npx playwright install chrome`.
+- Sign in with seeded accounts (`SEED_USER_PASSWORD`, default `Password123!`) or the admin from `backend/.env`. Never paste real credentials into the chat.
+- Same `cmd /c npx …` note as above for macOS/Linux/WSL.

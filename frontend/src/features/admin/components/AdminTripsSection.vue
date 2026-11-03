@@ -1,5 +1,5 @@
 <script>
-import { mapActions, mapState } from 'vuex'
+import { mapActions, mapGetters } from 'vuex'
 
 import ErrorState from '@/shared/components/ErrorState.vue'
 import PillGroup from '@/shared/components/PillGroup.vue'
@@ -45,9 +45,9 @@ export default {
     }
   },
   computed: {
-    ...mapState('admin/trips', ['items', 'filters', 'isLoading', 'error']),
-    ...mapState('admin/insights', ['now', 'date']),
-    ...mapState('cars', { cars: 'items' }),
+    ...mapGetters('admin/trips', ['items', 'filters', 'isLoading', 'error']),
+    ...mapGetters('admin/insights', ['now', 'date']),
+    ...mapGetters('cars', { cars: 'items' }),
     carsById() {
       return Object.fromEntries(this.cars.map((car) => [car._id, car]))
     },
