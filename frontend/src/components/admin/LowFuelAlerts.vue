@@ -1,8 +1,10 @@
 <script>
 import { mapActions, mapGetters } from 'vuex'
 
-import { LOW_FUEL_THRESHOLD } from '@/utils/derive'
-import { carName, formatCoords, formatPercent } from '@/utils/format'
+import { carName } from '@/utils/cars/carDisplay'
+import { LOW_FUEL_THRESHOLD } from '@/utils/cars/fuelLevel'
+import { formatPercent } from '@/utils/format/number'
+import { formatCoords } from '@/utils/geo/geoFormat'
 
 // "Fleet alerts": cars in a trip with less than 25 % fuel (E14). A failed load is shown
 // as an error, never as "no alerts".

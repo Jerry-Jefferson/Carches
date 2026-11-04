@@ -7,7 +7,7 @@ import ErrorState from '@/components/common/ErrorState.vue'
 import PillGroup from '@/components/common/PillGroup.vue'
 import ActiveTripCard from '@/components/bookings/ActiveTripCard.vue'
 import TripListItem from '@/components/bookings/TripListItem.vue'
-import { BOOKING_STATUS, bookingStatusMeta, bookingStatus } from '@/utils/derive'
+import { BOOKING_STATUS, bookingStatus, bookingStatusMeta } from '@/utils/bookings/bookingStatus'
 import { ROUTES } from '@/router/routes.constants'
 
 const ALL = 'all'

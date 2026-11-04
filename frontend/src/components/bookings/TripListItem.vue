@@ -1,9 +1,12 @@
 <script>
 import CarPlaceholder from '@/components/common/CarPlaceholder.vue'
 import StatusTag from '@/components/common/StatusTag.vue'
-import { BOOKING_STATUS, bookingStatus, fuelUsed, tripDistance, tripDuration } from '@/utils/derive'
-import { formatDateTime, formatDuration, formatKm, formatPercent } from '@/utils/format'
-import { tripCarName, tripCarRoute } from '@/utils/tripDisplay'
+import { ROUTES } from '@/router/routes.constants'
+import { BOOKING_STATUS, bookingStatus } from '@/utils/bookings/bookingStatus'
+import { tripCarName } from '@/utils/bookings/tripLabels'
+import { fuelUsed, tripDistance, tripDuration } from '@/utils/bookings/tripMetrics'
+import { formatDateTime, formatDuration } from '@/utils/format/dateTime'
+import { formatKm, formatPercent } from '@/utils/format/number'
 
 const EMPTY = '—'
 
@@ -28,7 +31,10 @@ export default {
       return tripCarName(this.trip, this.fleetLoaded)
     },
     carRoute() {
-      return tripCarRoute(this.trip)
+      // A removed car has no page
+      return this.trip.car
+        ? { name: ROUTES.CAR_DETAILS.NAME, params: { id: this.trip.carId } }
+        : null
     },
     period() {
       const start = formatDateTime(this.booking.startDate)

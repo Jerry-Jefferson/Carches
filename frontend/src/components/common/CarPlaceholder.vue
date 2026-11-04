@@ -1,5 +1,5 @@
 <script>
-import { carName } from '@/utils/format'
+import { carName } from '@/utils/cars/carDisplay'
 
 const SIZES = {
   thumb: { box: 'size-12 rounded-control', icon: 'text-2xl', initial: 'hidden' },

@@ -43,10 +43,14 @@ describe('auth module', () => {
         remember: true,
       })
 
-      expect(authApi.signIn).toHaveBeenCalledWith({ email: USER.email, password: 'secret123' })
+      expect(authApi.signIn).toHaveBeenCalledWith({
+        email: USER.email,
+        password: 'secret123',
+        remember: true,
+      })
       expect(store.getters['auth/isAuthenticated']).toBe(true)
       expect(store.state.auth.isSubmitting).toBe(false)
-      expect(loadToken()).toEqual({ token: 'jwt', remember: true })
+      expect(localStorage.getItem('carshes.token')).toBe('jwt')
     })
 
     it('stores the backend error and re-throws', async () => {
@@ -68,14 +72,15 @@ describe('auth module', () => {
     await store.dispatch('auth/signUp', { email: USER.email, password: 'secret123' })
 
     expect(store.state.auth.user).toEqual(USER)
-    expect(loadToken()).toEqual({ token: 'jwt', remember: false })
+    expect(sessionStorage.getItem('carshes.token')).toBe('jwt')
+    expect(localStorage.getItem('carshes.token')).toBeNull()
   })
 
   describe('logout', () => {
     it('clears the session', async () => {
       vi.mocked(authApi.logout).mockResolvedValue()
       const store = makeStore()
-      store.commit('auth/SET_SESSION', { user: USER, token: 'jwt', remember: true })
+      store.commit('auth/SET_SESSION', { user: USER, token: 'jwt' })
       saveToken('jwt', { remember: true })
 
       await store.dispatch('auth/logout')
@@ -87,7 +92,7 @@ describe('auth module', () => {
     it('clears the session even when the request fails', async () => {
       vi.mocked(authApi.logout).mockRejectedValue(apiError('Token has expired', 401))
       const store = makeStore()
-      store.commit('auth/SET_SESSION', { user: USER, token: 'jwt', remember: false })
+      store.commit('auth/SET_SESSION', { user: USER, token: 'jwt' })
 
       await expect(store.dispatch('auth/logout')).resolves.toBeUndefined()
       expect(store.state.auth.token).toBeNull()
@@ -115,7 +120,6 @@ describe('auth module', () => {
       expect(store.state.auth).toMatchObject({
         user: USER,
         token: 'jwt',
-        remember: true,
         status: 'ready',
       })
     })
@@ -135,6 +139,7 @@ describe('auth module', () => {
     it.each([
       ['offline', apiError('Network error. Check your connection.', null)],
       ['a server error', apiError('Internal server error', 500)],
+      ['a 403', apiError('No permission', 403)],
     ])('keeps the stored token when %s', async (label, error) => {
       saveToken('jwt', { remember: true })
       vi.mocked(usersApi.getMe).mockRejectedValue(error)
@@ -144,7 +149,7 @@ describe('auth module', () => {
 
       expect(store.getters['auth/isAuthenticated']).toBe(false)
       expect(store.state.auth.status).toBe('ready')
-      expect(loadToken()).toEqual({ token: 'jwt', remember: true })
+      expect(loadToken()).toBe('jwt')
     })
 
     it('runs once for concurrent and later calls', async () => {

@@ -3,9 +3,12 @@ import { mapActions, mapGetters } from 'vuex'
 
 import InitialsAvatar from '@/components/common/InitialsAvatar.vue'
 import StatusTag from '@/components/common/StatusTag.vue'
-import { ROLE, fullName, refId } from '@/utils/admin'
-import { bookingStatus } from '@/utils/derive'
-import { carName, formatDate, formatDateTime, shortId } from '@/utils/format'
+import { bookingStatus } from '@/utils/bookings/bookingStatus'
+import { carName } from '@/utils/cars/carDisplay'
+import { refId } from '@/utils/common/collections'
+import { shortId } from '@/utils/common/ids'
+import { formatDate, formatDateTime } from '@/utils/format/dateTime'
+import { ROLE, fullName } from '@/utils/users/userDisplay'
 import { ROUTES } from '@/router/routes.constants'
 
 // One user (E6) with their trips (from E19)

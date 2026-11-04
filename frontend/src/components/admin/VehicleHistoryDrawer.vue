@@ -2,9 +2,13 @@
 import { mapGetters } from 'vuex'
 
 import StatusTag from '@/components/common/StatusTag.vue'
-import { fullName } from '@/utils/admin'
-import { bookingStatus, tripDistance } from '@/utils/derive'
-import { carName, formatDateTime, formatKm, formatPercent, shortId } from '@/utils/format'
+import { bookingStatus } from '@/utils/bookings/bookingStatus'
+import { tripDistance } from '@/utils/bookings/tripMetrics'
+import { carName } from '@/utils/cars/carDisplay'
+import { shortId } from '@/utils/common/ids'
+import { formatDateTime } from '@/utils/format/dateTime'
+import { formatKm, formatPercent } from '@/utils/format/number'
+import { fullName } from '@/utils/users/userDisplay'
 
 // A car's bookings (E19, filtered on the client), newest first
 export default {

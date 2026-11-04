@@ -89,7 +89,7 @@ const TRIPS = [
 
 const makeStore = () => {
   const store = createStore({ strict: true, modules: { admin, auth, cars, geo } })
-  store.commit('auth/SET_SESSION', { user: ADMIN, token: 't', remember: false })
+  store.commit('auth/SET_SESSION', { user: ADMIN, token: 't' })
   store.commit('admin/users/SET_ITEMS', [ADMIN, HANNA])
   store.commit('admin/trips/SET_ITEMS', TRIPS)
   store.commit('cars/SET_ITEMS', [CAR])

@@ -8,7 +8,7 @@ import FleetHeader from '@/components/cars/FleetHeader.vue'
 import QuickBookModal from '@/components/cars/QuickBookModal.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import ErrorState from '@/components/common/ErrorState.vue'
-import { SORTS, filtersFromQuery, filtersToQuery } from '@/utils/fleetFilters'
+import { SORTS, filtersFromQuery, filtersToQuery } from '@/utils/cars/fleetCatalog'
 import { ROUTES } from '@/router/routes.constants'
 
 /**

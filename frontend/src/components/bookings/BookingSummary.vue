@@ -1,6 +1,7 @@
 <script>
-import { CAR_STATUS, carStatusMeta } from '@/utils/derive'
-import { formatDateTime, formatKm, formatPercent } from '@/utils/format'
+import { CAR_STATUS, carStatusMeta } from '@/utils/cars/carStatus'
+import { formatDateTime } from '@/utils/format/dateTime'
+import { formatKm, formatPercent } from '@/utils/format/number'
 
 // What the booking will record: start values from the car and the resulting status
 export default {

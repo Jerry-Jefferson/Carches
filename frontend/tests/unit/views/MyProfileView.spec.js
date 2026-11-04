@@ -23,7 +23,7 @@ const USER = {
 
 const setup = async (user = USER) => {
   const store = createStore({ strict: true, modules: { auth } })
-  store.commit('auth/SET_SESSION', { user, token: 't', remember: false })
+  store.commit('auth/SET_SESSION', { user, token: 't' })
   const Stub = { template: '<div />' }
   const router = createRouter({
     history: createMemoryHistory(),

@@ -1,13 +1,9 @@
 import * as carsApi from '@/services/cars'
 import { getErrorMessage } from '@/services/http'
-import {
-  DEFAULT_FLEET_FILTERS,
-  carStatusCounts,
-  currentReservedRows,
-  filterAdminCars,
-  relocationCandidates,
-  serviceCandidates,
-} from '@/utils/admin'
+import { DEFAULT_FLEET_FILTERS, filterAdminCars } from '@/utils/admin/consoleFilters'
+import { relocationCandidates, serviceCandidates } from '@/utils/admin/maintenanceRules'
+import { currentReservedRows } from '@/utils/admin/reservedCards'
+import { countCarsByStatus } from '@/utils/cars/carStatus'
 
 // Fleet management (E11–E17). The car list itself lives in the root `cars` module.
 export default {
@@ -38,7 +34,7 @@ export default {
       filterAdminCars(rootState.cars.items, state.filters),
     // Status pill counts respect every other filter
     statusCounts: (state, getters, rootState) =>
-      carStatusCounts(filterAdminCars(rootState.cars.items, state.filters, { ignore: 'status' })),
+      countCarsByStatus(filterAdminCars(rootState.cars.items, state.filters, { ignore: 'status' })),
     brands: (state, getters, rootState) =>
       [
         ...new Set(rootState.cars.items.map((car) => car.productionInfo?.brand).filter(Boolean)),

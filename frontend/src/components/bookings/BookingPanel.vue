@@ -5,14 +5,9 @@ import { mapActions, mapGetters } from 'vuex'
 import InfoCallout from '@/components/common/InfoCallout.vue'
 import StatusTag from '@/components/common/StatusTag.vue'
 import { BOOKING_BLOCK } from '@/store/modules/bookings'
-import { CAR_STATUS, carStatusMeta } from '@/utils/derive'
-import {
-  START_MODE,
-  defaultStart,
-  fromPickerValue,
-  scheduleError,
-  toPickerValue,
-} from '@/utils/schedule'
+import { START_MODE, defaultStart, scheduleError } from '@/utils/bookings/bookingSchedule'
+import { CAR_STATUS, carStatusMeta } from '@/utils/cars/carStatus'
+import { fromPickerValue, toPickerValue } from '@/utils/common/pickerValue'
 import { ROUTES } from '@/router/routes.constants'
 import BookingSummary from './BookingSummary.vue'
 import StartTimePicker from './StartTimePicker.vue'

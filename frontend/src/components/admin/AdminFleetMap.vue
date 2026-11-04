@@ -3,10 +3,10 @@ import { mapGetters } from 'vuex'
 
 import MapView from '@/components/common/MapView.vue'
 import StatusTag from '@/components/common/StatusTag.vue'
-import { carStatusCounts } from '@/utils/admin'
-import { CAR_STATUS, carStatusMeta } from '@/utils/derive'
-import { carName, formatPercent } from '@/utils/format'
-import { toLatLng } from '@/utils/geo'
+import { carName } from '@/utils/cars/carDisplay'
+import { CAR_STATUS, carStatusMeta, countCarsByStatus } from '@/utils/cars/carStatus'
+import { formatPercent } from '@/utils/format/number'
+import { toLatLng } from '@/utils/geo/coordinates'
 import { toneClasses } from '@/assets/styles/tones'
 
 // Every car of the fleet on a map, coloured by status. showCar(id) is used by the table
@@ -36,7 +36,7 @@ export default {
       })
     },
     legend() {
-      const counts = carStatusCounts(this.cars)
+      const counts = countCarsByStatus(this.cars)
       return Object.values(CAR_STATUS).map((status) => {
         const meta = carStatusMeta(status)
         return {

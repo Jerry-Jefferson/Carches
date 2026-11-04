@@ -1,6 +1,7 @@
 import { getErrorMessage } from '@/services/http'
 import * as usersApi from '@/services/users'
-import { DEFAULT_USER_FILTERS, filterUsers, tripCountsByUser } from '@/utils/admin'
+import { DEFAULT_USER_FILTERS, filterUsers } from '@/utils/admin/consoleFilters'
+import { tripCountsByUser } from '@/utils/admin/consoleStats'
 
 export const SELF_DELETE_MESSAGE = "You can't delete your own account."
 

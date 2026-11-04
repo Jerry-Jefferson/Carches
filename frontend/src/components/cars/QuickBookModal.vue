@@ -4,8 +4,9 @@ import { mapActions, mapGetters } from 'vuex'
 
 import InfoCallout from '@/components/common/InfoCallout.vue'
 import { BOOKING_BLOCK } from '@/store/modules/bookings'
-import { CAR_STATUS, carStatusMeta } from '@/utils/derive'
-import { carName, formatKm, formatPercent } from '@/utils/format'
+import { carName } from '@/utils/cars/carDisplay'
+import { CAR_STATUS, carStatusMeta } from '@/utils/cars/carStatus'
+import { formatKm, formatPercent } from '@/utils/format/number'
 import notify from '@/utils/notify'
 import { ROUTES } from '@/router/routes.constants'
 

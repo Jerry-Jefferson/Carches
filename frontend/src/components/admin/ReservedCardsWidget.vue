@@ -1,8 +1,8 @@
 <script>
 import { mapActions, mapGetters } from 'vuex'
 
-import { reservedRowKey } from '@/utils/admin'
-import { formatCoords } from '@/utils/format'
+import { reservedRowKey } from '@/utils/admin/reservedCards'
+import { formatCoords } from '@/utils/geo/geoFormat'
 
 // Reserved cars by whether the booker's credit card is authorised (E15). A failed load is
 // shown as an error, never as "no reserved cars".

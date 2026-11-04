@@ -1,9 +1,10 @@
 <script>
 import MapView from '@/components/common/MapView.vue'
 import StatusTag from '@/components/common/StatusTag.vue'
-import { CAR_STATUS, carStatusMeta } from '@/utils/derive'
-import { carName, formatPercent } from '@/utils/format'
-import { toLatLng } from '@/utils/geo'
+import { carName } from '@/utils/cars/carDisplay'
+import { CAR_STATUS, carStatusMeta } from '@/utils/cars/carStatus'
+import { formatPercent } from '@/utils/format/number'
+import { toLatLng } from '@/utils/geo/coordinates'
 import { ROUTES } from '@/router/routes.constants'
 
 const NEARBY_RADIUS_M = 1500

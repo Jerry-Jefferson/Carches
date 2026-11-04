@@ -1,27 +1,24 @@
 import { describe, it, expect } from 'vitest'
 
 import {
-  ALL,
   DEFAULT_FLEET_FILTERS,
   DEFAULT_TRIP_FILTERS,
   DEFAULT_USER_FILTERS,
-  currentReservedRows,
-  dayStats,
   filterAdminCars,
   filterTrips,
   filterUsers,
-  refId,
-  relocationCandidates,
   searchConsole,
-  serviceCandidates,
+} from '@/utils/admin/consoleFilters'
+import {
+  dayStats,
   tripCountsByUser,
   tripsStartedPerDay,
   userStats,
   utilisation,
-} from '@/utils/admin'
-import { FLEET_COLUMNS, csvFilename, tripColumns } from '@/utils/adminExport'
-import { toCsv } from '@/utils/csv'
-import { dayKey, formatRelative } from '@/utils/format'
+} from '@/utils/admin/consoleStats'
+import { relocationCandidates, serviceCandidates } from '@/utils/admin/maintenanceRules'
+import { currentReservedRows } from '@/utils/admin/reservedCards'
+import { ALL } from '@/utils/common/collections'
 
 const HOUR = 3600000
 const DAY = 24 * HOUR
@@ -54,13 +51,7 @@ const trip = (id, overrides = {}) => ({
   ...overrides,
 })
 
-describe('admin helpers', () => {
-  it('refId reads populated and bare references', () => {
-    expect(refId({ _id: 'x' })).toBe('x')
-    expect(refId('y')).toBe('y')
-    expect(refId(null)).toBeNull()
-  })
-
+describe('consoleStats', () => {
   it('utilisation counts in-trip cars among rentable ones', () => {
     // 1 in trip of 2 rentable (in service and unavailable excluded)
     expect(utilisation(CARS)).toBe(50)
@@ -109,7 +100,9 @@ describe('admin helpers', () => {
     const counts = tripCountsByUser([trip('1'), trip('2', { endDate: '2026-10-29T08:00:00Z' })])
     expect(counts).toEqual({ u1: { total: 2, completed: 1 } })
   })
+})
 
+describe('maintenanceRules', () => {
   it('previews the maintenance actions with the backend rules', () => {
     // c is already in service: the update would not change it (L9)
     expect(serviceCandidates(CARS).map((item) => item._id)).toEqual(['b'])
@@ -122,7 +115,9 @@ describe('admin helpers', () => {
     const atDepot = car('a', { location: { type: 'Point', coordinates: [27.5442615, 53.8882836] } })
     expect(relocationCandidates([atDepot], trips)).toEqual([])
   })
+})
 
+describe('consoleFilters', () => {
   it('filters the fleet by search, brand, status and year range', () => {
     const filter = (partial) =>
       filterAdminCars(CARS, { ...DEFAULT_FLEET_FILTERS, ...partial }).map((item) => item._id)
@@ -183,56 +178,31 @@ describe('admin helpers', () => {
     expect(results.cars.map((item) => item._id)).toEqual(['a'])
     expect(searchConsole('  ', { cars: CARS, users })).toEqual({ cars: [], users: [] })
   })
-
-  it('exports the fleet and trips as CSV', () => {
-    const csv = toCsv([CARS[0]], FLEET_COLUMNS)
-    expect(csv).toContain('Brand,Model,Year,Registration number,VIN,Status')
-    expect(csv).toContain('Toyota,Camry,2020,A AB-7,VINA,Available')
-
-    const tripCsv = toCsv([trip('1')], tripColumns({ carsById: { a: CARS[0] }, now: NOW }))
-    expect(tripCsv).toContain('1,Hanna Paulava,hanna@carshes.test,Toyota Camry,A AB-7,Active')
-    expect(csvFilename('fleet', '2026-10-29')).toBe('carshes-fleet-2026-10-29.csv')
-  })
-
-  describe('currentReservedRows (M13)', () => {
-    const row = (vin, licence) => ({ vin, userLicenseNumber: licence })
-    const cars = [{ _id: 'a', vin: 'VINA' }]
-
-    it('keeps only the driver of the open booking when the trips know it', () => {
-      const trips = [
-        { carId: 'a', endDate: '2026-10-01T10:00:00Z', userId: { licenseNumber: 'OLD111' } },
-        { carId: { _id: 'a' }, endDate: null, userId: { licenseNumber: 'NOW222' } },
-      ]
-      const rows = [row('VINA', 'OLD111'), row('VINA', 'NOW222'), row('VINA', 'NOW222')]
-
-      expect(currentReservedRows(rows, { cars, trips })).toEqual([row('VINA', 'NOW222')])
-    })
-
-    it('drops a car whose current driver is in the other card group', () => {
-      const trips = [{ carId: 'a', endDate: null, userId: { licenseNumber: 'NOW222' } }]
-
-      expect(currentReservedRows([row('VINA', 'OLD111')], { cars, trips })).toEqual([])
-    })
-
-    it('falls back to one row per car and driver without trip data', () => {
-      const rows = [row('VINA', 'OLD111'), row('VINA', 'OLD111'), row('VINB', 'X')]
-
-      expect(currentReservedRows(rows)).toEqual([row('VINA', 'OLD111'), row('VINB', 'X')])
-    })
-  })
 })
 
-describe('dayKey and formatRelative', () => {
-  it('dayKey uses the Minsk calendar day', () => {
-    expect(dayKey('2026-10-28T21:30:00Z')).toBe('2026-10-29')
-    expect(dayKey(null)).toBeNull()
+describe('currentReservedRows (M13)', () => {
+  const row = (vin, licence) => ({ vin, userLicenseNumber: licence })
+  const cars = [{ _id: 'a', vin: 'VINA' }]
+
+  it('keeps only the driver of the open booking when the trips know it', () => {
+    const trips = [
+      { carId: 'a', endDate: '2026-10-01T10:00:00Z', userId: { licenseNumber: 'OLD111' } },
+      { carId: { _id: 'a' }, endDate: null, userId: { licenseNumber: 'NOW222' } },
+    ]
+    const rows = [row('VINA', 'OLD111'), row('VINA', 'NOW222'), row('VINA', 'NOW222')]
+
+    expect(currentReservedRows(rows, { cars, trips })).toEqual([row('VINA', 'NOW222')])
   })
 
-  it('formatRelative prints the largest whole unit', () => {
-    expect(formatRelative(NOW - 30 * 1000, NOW)).toBe('just now')
-    expect(formatRelative(NOW - 5 * 60000, NOW)).toBe('5 minutes ago')
-    expect(formatRelative(NOW - DAY, NOW)).toBe('yesterday')
-    expect(formatRelative(NOW - 3 * DAY, NOW)).toBe('3 days ago')
-    expect(formatRelative(null, NOW)).toBe('—')
+  it('drops a car whose current driver is in the other card group', () => {
+    const trips = [{ carId: 'a', endDate: null, userId: { licenseNumber: 'NOW222' } }]
+
+    expect(currentReservedRows([row('VINA', 'OLD111')], { cars, trips })).toEqual([])
+  })
+
+  it('falls back to one row per car and driver without trip data', () => {
+    const rows = [row('VINA', 'OLD111'), row('VINA', 'OLD111'), row('VINB', 'X')]
+
+    expect(currentReservedRows(rows)).toEqual([row('VINA', 'OLD111'), row('VINB', 'X')])
   })
 })

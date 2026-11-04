@@ -6,20 +6,15 @@ import { z } from 'zod'
 
 import MapView from '@/components/common/MapView.vue'
 import { CAR_UPDATE_FAILED } from '@/store/modules/admin/trips'
-import { refId } from '@/utils/admin'
-import { formatCoords, formatDateTime } from '@/utils/format'
-import { toGeoJsonPoint, toLatLng } from '@/utils/geo'
+import { SCHEDULE_STEP_MINUTES } from '@/utils/bookings/bookingSchedule'
+import { completeEndDate, defaultEndTime, tripStartTime } from '@/utils/bookings/tripCompletion'
+import { tripCar } from '@/utils/bookings/tripLabels'
+import { refId } from '@/utils/common/collections'
+import { PICKER_VALUE_FORMAT, pickerTime, toPickerValue } from '@/utils/common/pickerValue'
+import { formatDateTime } from '@/utils/format/dateTime'
+import { toGeoJsonPoint, toLatLng } from '@/utils/geo/coordinates'
+import { formatCoords } from '@/utils/geo/geoFormat'
 import notify from '@/utils/notify'
-import {
-  SCHEDULE_STEP_MINUTES,
-  SCHEDULE_VALUE_FORMAT,
-  completeEndDate,
-  defaultEndTime,
-  pickerTime,
-  toPickerValue,
-  tripStartTime,
-} from '@/utils/schedule'
-import { tripCar } from '@/utils/tripText'
 
 // Fuel and mileage follow the booking model (fuel 0–100 %, mileage ≥ 0). The end and the
 // finish mileage are compared with the trip's start, so the schema is built per trip.
@@ -75,7 +70,7 @@ export default {
       location: null,
       // "Now" for the default end, taken when the modal opens
       openedAt: Date.now(),
-      valueFormat: SCHEDULE_VALUE_FORMAT,
+      valueFormat: PICKER_VALUE_FORMAT,
       showTime: { format: 'HH:mm', minuteStep: SCHEDULE_STEP_MINUTES },
     }
   },

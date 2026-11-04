@@ -1,6 +1,6 @@
 <script>
 import InitialsAvatar from '@/components/common/InitialsAvatar.vue'
-import { formatDate } from '@/utils/format'
+import { formatDate } from '@/utils/format/dateTime'
 
 // The signed-in user's details (E4). Read-only: there is no self-update endpoint (G5).
 export default {

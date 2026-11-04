@@ -1,5 +1,5 @@
 <script>
-import { SORTS, SORT_OPTIONS } from '@/utils/fleetFilters'
+import { SORTS, SORT_OPTIONS } from '@/utils/cars/fleetCatalog'
 
 // Fleet sort order. "Distance to you" needs the user's location.
 export default {

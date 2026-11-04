@@ -1,5 +1,6 @@
 <script>
-import { bookingStatusMeta, carStatusMeta } from '@/utils/derive'
+import { bookingStatusMeta } from '@/utils/bookings/bookingStatus'
+import { carStatusMeta } from '@/utils/cars/carStatus'
 import { toneClasses } from '@/assets/styles/tones'
 
 // Car or booking status as text + colour + icon (never colour alone)

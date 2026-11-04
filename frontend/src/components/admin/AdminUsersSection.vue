@@ -2,7 +2,9 @@
 import { mapActions, mapGetters } from 'vuex'
 
 import PillGroup from '@/components/common/PillGroup.vue'
-import { ALL, DEFAULT_USER_FILTERS, ROLE, filterUsers } from '@/utils/admin'
+import { DEFAULT_USER_FILTERS, filterUsers } from '@/utils/admin/consoleFilters'
+import { ALL } from '@/utils/common/collections'
+import { ROLE } from '@/utils/users/userDisplay'
 import AdminUsersTable from './AdminUsersTable.vue'
 import UserDetailsDrawer from './UserDetailsDrawer.vue'
 import UserFormModal from './UserFormModal.vue'

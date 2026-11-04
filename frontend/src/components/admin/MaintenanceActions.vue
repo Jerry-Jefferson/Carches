@@ -3,9 +3,16 @@ import { NodeIndexOutlined, ToolOutlined } from '@ant-design/icons-vue'
 import { mapActions, mapGetters } from 'vuex'
 
 import StatusTag from '@/components/common/StatusTag.vue'
-import { RELOCATE_BOOKINGS_OVER, SERVICE_MILEAGE_OVER, SERVICE_YEAR_BEFORE } from '@/utils/admin'
-import { carName, formatCoords, formatKm, formatNumber } from '@/utils/format'
-import { DEPOT_POINT, toGeoJsonPoint } from '@/utils/geo'
+import {
+  DEPOT_POINT,
+  RELOCATE_BOOKINGS_OVER,
+  SERVICE_MILEAGE_OVER,
+  SERVICE_YEAR_BEFORE,
+} from '@/utils/admin/maintenanceRules'
+import { carName } from '@/utils/cars/carDisplay'
+import { formatKm, formatNumber } from '@/utils/format/number'
+import { toGeoJsonPoint } from '@/utils/geo/coordinates'
+import { formatCoords } from '@/utils/geo/geoFormat'
 import notify from '@/utils/notify'
 
 const SERVICE = 'service'

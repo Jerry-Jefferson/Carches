@@ -4,21 +4,21 @@ import { Field as VeeField, Form as VeeForm } from 'vee-validate'
 import { mapActions, mapGetters } from 'vuex'
 import { z } from 'zod'
 
-import { fullName } from '@/utils/admin'
-import { CAR_STATUS } from '@/utils/derive'
-import { carName } from '@/utils/format'
-import notify from '@/utils/notify'
+import { SCHEDULE_STEP_MINUTES } from '@/utils/bookings/bookingSchedule'
+import { tripCar, tripClient } from '@/utils/bookings/tripLabels'
+import { carName } from '@/utils/cars/carDisplay'
+import { CAR_STATUS } from '@/utils/cars/carStatus'
 import {
-  SCHEDULE_STEP_MINUTES,
-  SCHEDULE_VALUE_FORMAT,
+  PICKER_VALUE_FORMAT,
   fromPickerValue,
   pickerTime,
   toPickerValue,
-} from '@/utils/schedule'
-import { tripCar, tripClient } from '@/utils/tripText'
+} from '@/utils/common/pickerValue'
+import { fullName } from '@/utils/users/userDisplay'
+import notify from '@/utils/notify'
 
 // Fuel and mileage follow the booking model (fuel 0–100 %, mileage ≥ 0); the date rules are
-// client-side checks. Dates are picker strings (SCHEDULE_VALUE_FORMAT, browser local time).
+// client-side checks. Dates are picker strings (PICKER_VALUE_FORMAT, browser local time).
 const req = (label) => ({
   required_error: `${label} is required`,
   invalid_type_error: `${label} is required`,
@@ -87,7 +87,7 @@ export default {
       isSubmitting: false,
       // "Now" for a new booking's start, taken each time the modal opens
       openedAt: Date.now(),
-      valueFormat: SCHEDULE_VALUE_FORMAT,
+      valueFormat: PICKER_VALUE_FORMAT,
       showTime: { format: 'HH:mm', minuteStep: SCHEDULE_STEP_MINUTES },
       hint: 'Setting an end date completes the trip and frees the car; a future start reserves it.',
     }

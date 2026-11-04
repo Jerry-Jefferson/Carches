@@ -1,10 +1,9 @@
 // Fleet catalogue filters: defaults, URL query ⇄ filters, and the client-side
 // filtering / sorting over GET /cars (the API has no search or filters, Q13).
 
-import { CAR_STATUS } from '@/utils/derive'
-import { carName } from '@/utils/format'
-
-export const ALL = 'all'
+import { carBrand, carName } from '@/utils/cars/carDisplay'
+import { CAR_STATUS } from '@/utils/cars/carStatus'
+import { ALL, matchesText } from '@/utils/common/collections'
 
 export const SORTS = Object.freeze({
   DISTANCE: 'distance',
@@ -80,14 +79,12 @@ export const countActiveFilters = (filters) =>
     Boolean(filters.sort),
   ].filter(Boolean).length
 
-export const carBrand = (car) => car?.productionInfo?.brand ?? ''
-
 const matchesSearch = (car, q) => {
   if (!q) return true
   const needle = q.toLowerCase()
-  return [carName(car), car.registrationNumber, car.productionInfo?.model]
-    .filter(Boolean)
-    .some((value) => value.toLowerCase().includes(needle))
+  return [carName(car), car.registrationNumber, car.productionInfo?.model].some((value) =>
+    matchesText(value, needle),
+  )
 }
 
 const matchesStatus = (car, { availableOnly, status }) => {
@@ -139,10 +136,4 @@ export const countByBrand = (cars) => {
     if (brand) counts[brand] = (counts[brand] ?? 0) + 1
   }
   return Object.fromEntries(Object.entries(counts).sort(([a], [b]) => a.localeCompare(b)))
-}
-
-export const countByStatus = (cars) => {
-  const counts = Object.fromEntries(STATUSES.map((status) => [status, 0]))
-  for (const car of cars) if (car.status in counts) counts[car.status] += 1
-  return counts
 }

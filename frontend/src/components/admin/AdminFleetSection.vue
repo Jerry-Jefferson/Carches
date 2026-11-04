@@ -2,8 +2,8 @@
 import { mapActions, mapGetters } from 'vuex'
 
 import PillGroup from '@/components/common/PillGroup.vue'
-import { ALL } from '@/utils/admin'
-import { CAR_STATUS, carStatusMeta } from '@/utils/derive'
+import { CAR_STATUS, carStatusMeta } from '@/utils/cars/carStatus'
+import { ALL } from '@/utils/common/collections'
 import { ROUTES } from '@/router/routes.constants'
 import AdminFleetMap from './AdminFleetMap.vue'
 import AdminFleetTable from './AdminFleetTable.vue'

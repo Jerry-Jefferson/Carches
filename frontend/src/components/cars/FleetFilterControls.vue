@@ -1,6 +1,6 @@
 <script>
-import { ALL } from '@/utils/fleetFilters'
-import { CAR_STATUS_META } from '@/utils/derive'
+import { CAR_STATUS_META } from '@/utils/cars/carStatus'
+import { ALL } from '@/utils/common/collections'
 
 // The controls are rendered twice (inline and in the mobile drawer): ids must differ
 let instanceCount = 0

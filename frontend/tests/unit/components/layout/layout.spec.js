@@ -17,7 +17,7 @@ const Stub = { template: '<div />' }
 
 const setup = async ({ user = USER, path = '/fleet' } = {}) => {
   const store = createStore({ strict: true, modules: { auth } })
-  if (user) store.commit('auth/SET_SESSION', { user, token: 'jwt', remember: false })
+  if (user) store.commit('auth/SET_SESSION', { user, token: 'jwt' })
   const router = createRouter({
     history: createMemoryHistory(),
     routes: ['auth', 'fleet', 'my-trips', 'my-profile', 'admin'].map((name) => ({

@@ -20,7 +20,7 @@ export const getById = (id) => http.get(`/cars/${id}`).then(unwrap)
 
 - `unwrap` turns the backend envelope `{ message, data }` into `data`.
 - Paths are relative to the axios base URL (`VITE_API_URL`, default `/api/v2`); never hardcode `/api/v2` and never import `axios` directly.
-- The Bearer token and the 401 → `/auth?redirect=…` handling are added by the interceptors in `src/services/session.js`; don't pass headers yourself. A request that must not trigger the redirect passes `{ skipAuthRedirect: true }` as axios config.
+- The Bearer token and the 401 → `/auth?redirect=…` handling are added by the interceptors in `src/services/interceptors.js`; don't pass headers yourself. A request that must not trigger the redirect passes `{ skipAuthRedirect: true }` as axios config.
 - Failed requests are normalised in `http.js`: `err.message` is the backend message (or "Network error. Check your connection.") and `err.statusCode` the HTTP status. Read it with `getErrorMessage(err)`.
 
 ## 2. Create the module

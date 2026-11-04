@@ -1,6 +1,6 @@
 import * as carsApi from '@/services/cars'
 import { getErrorMessage } from '@/services/http'
-import { distanceToCar } from '@/utils/geo'
+import { distanceToCar } from '@/utils/geo/coordinates'
 
 // 400 "Invalid car ID format" and 404 "Car not found" both mean "not in the fleet"
 const NOT_FOUND_CODES = [400, 404]
