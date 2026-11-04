@@ -1,7 +1,7 @@
 import * as authApi from '@/services/auth'
 import * as usersApi from '@/services/users'
 import { getErrorMessage } from '@/services/http'
-import { initials } from '@/utils/format'
+import { initials } from '@/utils/users/userDisplay'
 import { clearToken, loadToken, saveToken } from '@/services/tokenStorage'
 
 // One bootstrap per page load, shared by concurrent callers (guard + components)

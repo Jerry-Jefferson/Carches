@@ -1,7 +1,8 @@
 import * as bookingsApi from '@/services/bookings'
 import { getErrorMessage } from '@/services/http'
-import { CAR_STATUS } from '@/utils/derive'
-import { DEFAULT_TRIP_FILTERS, refId } from '@/utils/admin'
+import { DEFAULT_TRIP_FILTERS } from '@/utils/admin/consoleFilters'
+import { CAR_STATUS } from '@/utils/cars/carStatus'
+import { refId } from '@/utils/common/collections'
 
 export const CAR_UPDATE_FAILED = 'car_update_failed'
 

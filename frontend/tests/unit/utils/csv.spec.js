@@ -1,8 +1,38 @@
 import { describe, it, expect, vi, afterEach } from 'vitest'
 
-import { downloadCsv, toCsv } from '@/utils/csv'
+import { FLEET_COLUMNS, csvFilename, downloadCsv, toCsv, tripColumns } from '@/utils/csv'
 
 const BOM = '﻿'
+
+const HOUR = 3600000
+// 29 Oct 2026, 12:00 in Minsk (UTC+3)
+const NOW = Date.parse('2026-10-29T09:00:00Z')
+
+const car = (id, overrides = {}) => ({
+  _id: id,
+  productionInfo: { brand: 'Toyota', model: 'Camry', year: 2020 },
+  registrationNumber: `${id.toUpperCase()} AB-7`,
+  vin: `VIN${id.toUpperCase()}`,
+  status: 'free',
+  mileage: 10000,
+  ...overrides,
+})
+
+const CARS = [
+  car('a'),
+  car('b', { status: 'in_use', productionInfo: { brand: 'BMW', model: 'X5', year: 2015 } }),
+  car('c', { status: 'in_service', mileage: 120000 }),
+  car('d', { status: 'unavailable' }),
+]
+
+const trip = (id, overrides = {}) => ({
+  _id: id,
+  userId: { _id: 'u1', firstName: 'Hanna', lastName: 'Paulava', email: 'hanna@carshes.test' },
+  carId: { _id: 'a', registrationNumber: 'A AB-7', vin: 'VINA' },
+  startDate: new Date(NOW - 3 * HOUR).toISOString(),
+  endDate: null,
+  ...overrides,
+})
 
 describe('toCsv', () => {
   const columns = [
@@ -88,5 +118,17 @@ describe('downloadCsv', () => {
     expect(document.querySelector('a[download]')).toBeNull()
     vi.runAllTimers()
     expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:csv')
+  })
+})
+
+describe('console report columns', () => {
+  it('exports the fleet and trips as CSV', () => {
+    const csv = toCsv([CARS[0]], FLEET_COLUMNS)
+    expect(csv).toContain('Brand,Model,Year,Registration number,VIN,Status')
+    expect(csv).toContain('Toyota,Camry,2020,A AB-7,VINA,Available')
+
+    const tripCsv = toCsv([trip('1')], tripColumns({ carsById: { a: CARS[0] }, now: NOW }))
+    expect(tripCsv).toContain('1,Hanna Paulava,hanna@carshes.test,Toyota Camry,A AB-7,Active')
+    expect(csvFilename('fleet', '2026-10-29')).toBe('carshes-fleet-2026-10-29.csv')
   })
 })

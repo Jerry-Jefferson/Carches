@@ -1,7 +1,8 @@
 import * as bookingsApi from '@/services/bookings'
 import * as carsApi from '@/services/cars'
 import { getErrorMessage, serverNow } from '@/services/http'
-import { BOOKING_STATUS, CAR_STATUS, bookingStatus } from '@/utils/derive'
+import { BOOKING_STATUS, bookingStatus } from '@/utils/bookings/bookingStatus'
+import { CAR_STATUS } from '@/utils/cars/carStatus'
 
 export const CACHE_MS = 60000
 

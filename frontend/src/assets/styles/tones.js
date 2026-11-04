@@ -1,4 +1,4 @@
-// Class names per tone (see `tone` in src/utils/derive.js). Written out in full so
+// Class names per tone (see `tone` in src/utils/cars/carStatus.js, src/utils/bookings/bookingStatus.js). Written out in full so
 // Tailwind's source scan finds them — never build them like `bg-${tone}`.
 
 export const TONES = Object.freeze({

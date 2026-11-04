@@ -1,7 +1,8 @@
 <script>
 import StatusTag from '@/components/common/StatusTag.vue'
-import { CAR_STATUS } from '@/utils/derive'
-import { carName, formatDateTime } from '@/utils/format'
+import { carName } from '@/utils/cars/carDisplay'
+import { CAR_STATUS } from '@/utils/cars/carStatus'
+import { formatDateTime } from '@/utils/format/dateTime'
 import { ROUTES } from '@/router/routes.constants'
 
 // Shown after a booking from the car page: what was booked and where to go next

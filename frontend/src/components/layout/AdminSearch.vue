@@ -1,8 +1,9 @@
 <script>
 import { mapGetters } from 'vuex'
 
-import { fullName, searchConsole } from '@/utils/admin'
-import { carName } from '@/utils/format'
+import { searchConsole } from '@/utils/admin/consoleFilters'
+import { carName } from '@/utils/cars/carDisplay'
+import { fullName } from '@/utils/users/userDisplay'
 import { ROUTES, TAB_NAMES } from '@/router/routes.constants'
 
 // Top-bar search over the loaded cars and users (client-side). Picking a result opens

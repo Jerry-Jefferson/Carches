@@ -14,17 +14,24 @@ import AdminUsersSection from '@/components/admin/AdminUsersSection.vue'
 import KpiCard from '@/components/admin/KpiCard.vue'
 import StackedBar from '@/components/admin/StackedBar.vue'
 import PillGroup from '@/components/common/PillGroup.vue'
-import { filterTrips } from '@/utils/admin'
-import { FLEET_COLUMNS, csvFilename, tripColumns, userColumns } from '@/utils/adminExport'
-import { downloadCsv, toCsv } from '@/utils/csv'
-import { CAR_STATUS, CAR_STATUS_META } from '@/utils/derive'
-import { formatDate, formatKm, formatNumber } from '@/utils/format'
+import { filterTrips } from '@/utils/admin/consoleFilters'
+import { CAR_STATUS, CAR_STATUS_META } from '@/utils/cars/carStatus'
+import {
+  FLEET_COLUMNS,
+  csvFilename,
+  downloadCsv,
+  toCsv,
+  tripColumns,
+  userColumns,
+} from '@/utils/csv'
+import { formatDate } from '@/utils/format/dateTime'
+import { formatKm, formatNumber } from '@/utils/format/number'
 import notify from '@/utils/notify'
 import { ROUTES, TAB_NAMES } from '@/router/routes.constants'
 
 export const REFRESH_MS = 60000
 
-// ?date= holds a Minsk dayKey ("2026-10-29")
+// ?date= holds a minskDayKey ("2026-10-29")
 const isDayKey = (value) =>
   typeof value === 'string' &&
   /^\d{4}-\d{2}-\d{2}$/.test(value) &&

@@ -2,10 +2,11 @@
 import { mapActions, mapGetters } from 'vuex'
 
 import InitialsAvatar from '@/components/common/InitialsAvatar.vue'
-import { ROLE, fullName } from '@/utils/admin'
+import { BOOKING_STATUS, bookingStatus } from '@/utils/bookings/bookingStatus'
+import { shortId } from '@/utils/common/ids'
+import { formatDate } from '@/utils/format/dateTime'
+import { ROLE, fullName } from '@/utils/users/userDisplay'
 import { copyText } from '@/utils/clipboard'
-import { BOOKING_STATUS, bookingStatus } from '@/utils/derive'
-import { formatDate, shortId } from '@/utils/format'
 import notify from '@/utils/notify'
 import { toneClasses } from '@/assets/styles/tones'
 

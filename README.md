@@ -171,7 +171,7 @@ Use the `MONGO_INITDB_ROOT_USERNAME` / `MONGO_INITDB_ROOT_PASSWORD` values from 
 │   │   ├── store/           # Vuex: index.js + modules/ (auth, cars, carDetails, bookings, geo, admin/*)
 │   │   ├── services/        # axios instance, API wrappers, session wiring, token storage
 │   │   ├── router/          # route constants (ROUTES, TAB_NAMES), route table, guards
-│   │   ├── utils/           # pure helpers: formatters, derivations, filters, CSV, schedule
+│   │   ├── utils/           # pure helpers by domain: common, format, geo, cars, bookings, users, admin; CSV export
 │   │   └── assets/styles/   # global styles, design tokens, Ant Design theme, tone classes
 │   ├── tests/
 │   │   ├── unit/            # Vitest: unit and component specs, mirroring src/ (plus setup.js)

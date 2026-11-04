@@ -1,17 +1,24 @@
 import { describe, it, expect } from 'vitest'
 
+import { carName } from '@/utils/cars/carDisplay'
 import {
-  ALL,
+  CAR_STATUS,
+  CAR_STATUS_META,
+  carStatusMeta,
+  countCarsByStatus,
+} from '@/utils/cars/carStatus'
+import {
   DEFAULT_FILTERS,
   countActiveFilters,
   countByBrand,
-  countByStatus,
   effectiveSort,
   filterCars,
   filtersFromQuery,
   filtersToQuery,
   sortCars,
-} from '@/utils/fleetFilters'
+} from '@/utils/cars/fleetCatalog'
+import { fuelTone } from '@/utils/cars/fuelLevel'
+import { ALL } from '@/utils/common/collections'
 
 const car = (id, brand, model, overrides = {}) => ({
   _id: id,
@@ -152,12 +159,61 @@ describe('sortCars', () => {
 describe('counts', () => {
   it('counts brands alphabetically and every status', () => {
     expect(Object.keys(countByBrand(CARS))).toEqual(['Audi', 'BMW', 'Toyota'])
-    expect(countByStatus(CARS)).toEqual({
+    expect(countCarsByStatus(CARS)).toEqual({
       free: 2,
       reserved: 1,
       in_use: 1,
       unavailable: 0,
       in_service: 0,
     })
+  })
+})
+
+describe('car status metadata', () => {
+  it('covers every backend car status', () => {
+    expect(Object.keys(CAR_STATUS_META).sort()).toEqual(Object.values(CAR_STATUS).sort())
+  })
+
+  it.each([
+    ['free', 'Available', 'success'],
+    ['reserved', 'Reserved', 'warning'],
+    ['in_use', 'In trip', 'info'],
+    ['unavailable', 'Unavailable', 'muted'],
+    ['in_service', 'In service', 'destructive'],
+  ])('car status %s → %s (%s)', (status, label, tone) => {
+    expect(carStatusMeta(status)).toMatchObject({ label, tone })
+    expect(carStatusMeta(status).icon).toBeTruthy()
+  })
+
+  it('falls back for unknown statuses', () => {
+    expect(carStatusMeta('teleported')).toMatchObject({ label: 'Unknown', tone: 'muted' })
+  })
+})
+
+describe('fuelTone', () => {
+  it.each([
+    [0, 'destructive'],
+    [24, 'destructive'],
+    [25, 'warning'],
+    [39, 'warning'],
+    [40, 'success'],
+    [100, 'success'],
+  ])('%d %% → %s', (level, tone) => {
+    expect(fuelTone(level)).toBe(tone)
+  })
+})
+
+describe('carName', () => {
+  const car = { productionInfo: { brand: 'Toyota', model: 'Camry', year: 2023 } }
+
+  it('joins brand and model, optionally the year', () => {
+    expect(carName(car)).toBe('Toyota Camry')
+    expect(carName(car, { withYear: true })).toBe('Toyota Camry 2023')
+  })
+
+  it('handles unpopulated or missing production info', () => {
+    expect(carName({ productionInfo: '665f1c2e9b1e8a0012345678' })).toBe('Unknown car')
+    expect(carName({})).toBe('Unknown car')
+    expect(carName(null)).toBe('Unknown car')
   })
 })

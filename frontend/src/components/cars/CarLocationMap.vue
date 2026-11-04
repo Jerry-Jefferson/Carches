@@ -1,8 +1,10 @@
 <script>
 import MapView from '@/components/common/MapView.vue'
-import { carStatusMeta } from '@/utils/derive'
-import { carName, formatCoords } from '@/utils/format'
-import { directionsUrl, toLatLng } from '@/utils/geo'
+import { carName } from '@/utils/cars/carDisplay'
+import { carStatusMeta } from '@/utils/cars/carStatus'
+import { toLatLng } from '@/utils/geo/coordinates'
+import { formatCoords } from '@/utils/geo/geoFormat'
+import { directionsUrl } from '@/utils/geo/mapLinks'
 
 // "Location & Access": the car on a map, its coordinates and a directions link
 export default {

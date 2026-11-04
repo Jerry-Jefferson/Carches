@@ -1,5 +1,5 @@
 <script>
-import { initials } from '@/utils/format'
+import { initials } from '@/utils/users/userDisplay'
 
 // The backend has no avatars; shows the user's initials instead
 export default {

@@ -1,4 +1,4 @@
-import { DEFAULT_CENTER } from '@/utils/geo'
+import { DEFAULT_CENTER } from '@/utils/geo/coordinates'
 
 // Remembers the user's answer for this tab, so the prompt is not shown again
 // and a granted location is re-read silently after a reload.

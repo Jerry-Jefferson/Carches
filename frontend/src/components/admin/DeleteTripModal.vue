@@ -2,9 +2,10 @@
 import { mapActions, mapGetters } from 'vuex'
 
 import { CAR_UPDATE_FAILED } from '@/store/modules/admin/trips'
-import { refId } from '@/utils/admin'
-import { BOOKING_STATUS, bookingStatus } from '@/utils/derive'
-import { formatDateTime, shortId } from '@/utils/format'
+import { BOOKING_STATUS, bookingStatus } from '@/utils/bookings/bookingStatus'
+import { refId } from '@/utils/common/collections'
+import { shortId } from '@/utils/common/ids'
+import { formatDateTime } from '@/utils/format/dateTime'
 import notify from '@/utils/notify'
 
 /**

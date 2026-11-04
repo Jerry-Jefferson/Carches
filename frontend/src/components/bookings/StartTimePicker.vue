@@ -2,14 +2,14 @@
 import {
   SCHEDULE_MAX_DAYS,
   SCHEDULE_STEP_MINUTES,
-  SCHEDULE_VALUE_FORMAT,
   START_MODE,
   disabledTimeOf,
   isDayDisabled,
-} from '@/utils/schedule'
+} from '@/utils/bookings/bookingSchedule'
+import { PICKER_VALUE_FORMAT } from '@/utils/common/pickerValue'
 
 // "Now" or a scheduled start up to SCHEDULE_MAX_DAYS ahead.
-// v-model:mode is 'now' | 'schedule'; v-model:value is a SCHEDULE_VALUE_FORMAT string.
+// v-model:mode is 'now' | 'schedule'; v-model:value is a PICKER_VALUE_FORMAT string.
 export default {
   name: 'StartTimePicker',
   props: {
@@ -25,7 +25,7 @@ export default {
         { value: START_MODE.NOW, label: 'Now' },
         { value: START_MODE.SCHEDULE, label: 'Schedule' },
       ],
-      format: SCHEDULE_VALUE_FORMAT,
+      format: PICKER_VALUE_FORMAT,
       showTime: { format: 'HH:mm', minuteStep: SCHEDULE_STEP_MINUTES },
       hint: `Up to ${SCHEDULE_MAX_DAYS} days ahead. The car stays reserved for you until then.`,
     }

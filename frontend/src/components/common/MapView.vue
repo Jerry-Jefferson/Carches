@@ -1,5 +1,5 @@
 <script>
-import { DEFAULT_CENTER } from '@/utils/geo'
+import { DEFAULT_CENTER } from '@/utils/geo/coordinates'
 import { toneClasses } from '@/assets/styles/tones'
 
 const TILE_URL = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png'
@@ -24,7 +24,7 @@ const markerHtml = (tone, isUser) =>
 
 /**
  * Leaflet + OpenStreetMap map.
- * - markers: [{ id, lat, lng, tone?, label }] — tone colours the dot (utils/derive tones)
+ * - markers: [{ id, lat, lng, tone?, label }] — tone colours the dot (the `tone` of utils/cars/carStatus)
  * - userLocation: { lat, lng } shown as a blue dot
  * - `popup` scoped slot ({ marker }) is shown when a marker is clicked or openPopup(id) is called
  * - pickable: clicking the map emits `pick` with { lat, lng } (location pickers)

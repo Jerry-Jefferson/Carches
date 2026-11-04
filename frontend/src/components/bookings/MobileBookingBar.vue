@@ -1,7 +1,7 @@
 <script>
 import StatusTag from '@/components/common/StatusTag.vue'
-import { CAR_STATUS } from '@/utils/derive'
-import { carName } from '@/utils/format'
+import { carName } from '@/utils/cars/carDisplay'
+import { CAR_STATUS } from '@/utils/cars/carStatus'
 
 // Fixed bottom bar below `lg`, so "Book" stays in reach while scrolling the car page
 export default {

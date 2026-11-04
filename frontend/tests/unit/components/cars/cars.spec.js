@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { mount } from '@vue/test-utils'
 import { createRouter, createMemoryHistory } from 'vue-router'
 
-import { DEFAULT_FILTERS } from '@/utils/fleetFilters'
+import { DEFAULT_FILTERS } from '@/utils/cars/fleetCatalog'
 import CarCard from '@/components/cars/CarCard.vue'
 import FleetFilterControls from '@/components/cars/FleetFilterControls.vue'
 import FleetFilters from '@/components/cars/FleetFilters.vue'

@@ -1,6 +1,7 @@
 <script>
 import PillGroup from '@/components/common/PillGroup.vue'
-import { ALL, countActiveFilters } from '@/utils/fleetFilters'
+import { countActiveFilters } from '@/utils/cars/fleetCatalog'
+import { ALL } from '@/utils/common/collections'
 import FleetFilterControls from './FleetFilterControls.vue'
 import SortDropdown from './SortDropdown.vue'
 

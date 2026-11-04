@@ -100,7 +100,7 @@ Rules:
 - A component rendered twice on one page (inline + in a drawer) must not use fixed `id`s: build them from a module-level counter in `data()`.
 - Copy to the clipboard with `copyText()` from `@/utils/clipboard` (`navigator.clipboard` is missing on non-HTTPS origins).
 - Toasts and notifications go through `@/utils/notify`, not Ant Design's `message` / `notification` directly.
-- Dates, money, distances: the helpers in `@/utils/format` (they show Minsk time whatever the browser timezone) — never `toLocaleString()`. Coordinates from the API are GeoJSON `[lng, lat]`: convert with `toLatLng` / `toGeoJsonPoint` from `@/utils/geo`; maps use `components/common/MapView.vue`.
+- Dates, money, distances: the helpers in `@/utils/format/number`, `@/utils/format/dateTime` and `@/utils/geo/geoFormat` (they show Minsk time whatever the browser timezone) — never `toLocaleString()`. Coordinates from the API are GeoJSON `[lng, lat]`: convert with `toLatLng` / `toGeoJsonPoint` from `@/utils/geo/coordinates`; maps use `components/common/MapView.vue`.
 - Every view state has one `h1`, loading and error states included; `a-result` renders its `title` as a `div`, so put the `h1` in its `#title` slot.
 
 ## 5. Forms: VeeValidate + Zod 3

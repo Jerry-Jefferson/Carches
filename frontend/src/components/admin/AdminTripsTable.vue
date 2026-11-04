@@ -2,9 +2,10 @@
 import { mapGetters } from 'vuex'
 
 import StatusTag from '@/components/common/StatusTag.vue'
-import { BOOKING_STATUS, bookingStatus } from '@/utils/derive'
-import { formatDateTime, shortId } from '@/utils/format'
-import { distanceFuelText, durationText, tripCar, tripClient } from '@/utils/tripText'
+import { BOOKING_STATUS, bookingStatus } from '@/utils/bookings/bookingStatus'
+import { distanceFuelText, durationText, tripCar, tripClient } from '@/utils/bookings/tripLabels'
+import { shortId } from '@/utils/common/ids'
+import { formatDateTime } from '@/utils/format/dateTime'
 
 const PAGE_SIZES = ['5', '10', '20', '50']
 

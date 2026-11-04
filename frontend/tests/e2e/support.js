@@ -123,7 +123,7 @@ export const latestBookingId = async (request, token) => {
   return body?.data?.[0]?._id ?? null
 }
 
-export const shortId = (id) => `#${String(id).slice(-6).toUpperCase()}` // src/utils/format.js
+export const shortId = (id) => `#${String(id).slice(-6).toUpperCase()}` // src/utils/common/ids.js
 
 // Puts the token where the app looks for it ("Remember me"), before any page script runs
 export const useToken = async (page, token) => {

@@ -2,9 +2,12 @@
 import { mapActions, mapGetters } from 'vuex'
 
 import StatusTag from '@/components/common/StatusTag.vue'
-import { bookingStatus, fuelUsed, tripDistance, tripDuration } from '@/utils/derive'
-import { formatDateTime, formatDuration, formatKm, formatPercent, shortId } from '@/utils/format'
-import { tripCar, tripClient } from '@/utils/tripText'
+import { bookingStatus } from '@/utils/bookings/bookingStatus'
+import { tripCar, tripClient } from '@/utils/bookings/tripLabels'
+import { fuelUsed, tripDistance, tripDuration } from '@/utils/bookings/tripMetrics'
+import { shortId } from '@/utils/common/ids'
+import { formatDateTime, formatDuration } from '@/utils/format/dateTime'
+import { formatKm, formatPercent } from '@/utils/format/number'
 
 const EMPTY = '—'
 

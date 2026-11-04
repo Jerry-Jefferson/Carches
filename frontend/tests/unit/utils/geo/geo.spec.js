@@ -2,14 +2,14 @@ import { describe, it, expect } from 'vitest'
 
 import {
   DEFAULT_CENTER,
-  directionsUrl,
   distanceToCar,
   haversineDistance,
-  mapUrl,
   toGeoJsonPoint,
   toLatLng,
   walkingMinutes,
-} from '@/utils/geo'
+} from '@/utils/geo/coordinates'
+import { directionsUrl, mapUrl } from '@/utils/geo/mapLinks'
+import { formatCoords, formatDistance, formatWalk } from '@/utils/geo/geoFormat'
 
 describe('toLatLng', () => {
   it('reads GeoJSON [lng, lat] order', () => {
@@ -95,5 +95,47 @@ describe('external map links', () => {
       'https://www.openstreetmap.org/directions?engine=fossgis_osrm_foot&route=53.91%2C27.55%3B53.9%2C27.56',
     )
     expect(directionsUrl(car)).toContain('route=%3B53.9%2C27.56')
+  })
+})
+
+describe('distance formatters', () => {
+  it.each([
+    [0, '0 m'],
+    [284, '280 m'],
+    [994, '990 m'],
+    [995, '1.0 km'],
+    [1000, '1.0 km'],
+    [1490, '1.5 km'],
+    [12345, '12.3 km'],
+  ])('formatDistance(%d) → %s', (meters, expected) => {
+    expect(formatDistance(meters)).toBe(expected)
+  })
+
+  it.each([
+    [0, '≈ 1 min walk'],
+    [80, '≈ 1 min walk'],
+    [81, '≈ 2 min walk'],
+    [1200, '≈ 15 min walk'],
+  ])('formatWalk(%d) → %s', (meters, expected) => {
+    expect(formatWalk(meters)).toBe(expected)
+  })
+
+  it('returns a dash without a distance', () => {
+    expect(formatDistance(null)).toBe('—')
+    expect(formatWalk(undefined)).toBe('—')
+  })
+})
+
+describe('formatCoords', () => {
+  it('prints GeoJSON [lng, lat] as "lat, lng" with 5 decimals', () => {
+    expect(formatCoords({ type: 'Point', coordinates: [27.5615, 53.9023] })).toBe(
+      '53.90230, 27.56150',
+    )
+    expect(formatCoords([27.5443, 53.8883])).toBe('53.88830, 27.54430')
+  })
+
+  it('returns a dash for invalid input', () => {
+    expect(formatCoords(null)).toBe('—')
+    expect(formatCoords({ coordinates: ['a', 'b'] })).toBe('—')
   })
 })

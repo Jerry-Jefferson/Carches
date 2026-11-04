@@ -8,7 +8,7 @@ import * as carsApi from '@/services/cars'
 import bookings from '@/store/modules/bookings'
 import cars from '@/store/modules/cars'
 import geo from '@/store/modules/geo'
-import { toPickerValue } from '@/utils/schedule'
+import { toPickerValue } from '@/utils/common/pickerValue'
 import BookingConfirmedModal from '@/components/bookings/BookingConfirmedModal.vue'
 import BookingPanel from '@/components/bookings/BookingPanel.vue'
 

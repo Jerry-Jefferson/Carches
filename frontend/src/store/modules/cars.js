@@ -1,15 +1,14 @@
 import * as carsApi from '@/services/cars'
 import { getErrorMessage } from '@/services/http'
-import { CAR_STATUS } from '@/utils/derive'
+import { CAR_STATUS, countCarsByStatus } from '@/utils/cars/carStatus'
 import {
   DEFAULT_FILTERS,
   countByBrand,
-  countByStatus,
   effectiveSort,
   filterCars,
   sortCars,
-} from '@/utils/fleetFilters'
-import { distanceToCar } from '@/utils/geo'
+} from '@/utils/cars/fleetCatalog'
+import { distanceToCar } from '@/utils/geo/coordinates'
 
 export const CACHE_MS = 30000
 export const PAGE_SIZE = 12
@@ -63,7 +62,7 @@ export default {
       countByBrand(filterCars(state.items, state.filters, { ignore: 'brand' })),
 
     statusCounts: (state) =>
-      countByStatus(filterCars(state.items, state.filters, { ignore: 'status' })),
+      countCarsByStatus(filterCars(state.items, state.filters, { ignore: 'status' })),
 
     freeCars: (state) => state.items.filter((car) => car.status === CAR_STATUS.FREE),
 

@@ -3,10 +3,13 @@ import { CheckCircleOutlined } from '@ant-design/icons-vue'
 import { mapActions, mapGetters } from 'vuex'
 
 import StatusTag from '@/components/common/StatusTag.vue'
-import { BOOKING_STATUS, tripDuration } from '@/utils/derive'
-import { formatDateTime, formatDuration, formatKm, formatPercent } from '@/utils/format'
+import { ROUTES } from '@/router/routes.constants'
+import { BOOKING_STATUS } from '@/utils/bookings/bookingStatus'
+import { tripCarName } from '@/utils/bookings/tripLabels'
+import { tripDuration } from '@/utils/bookings/tripMetrics'
+import { formatDateTime, formatDuration } from '@/utils/format/dateTime'
+import { formatKm, formatPercent } from '@/utils/format/number'
 import notify from '@/utils/notify'
-import { tripCarName, tripCarRoute } from '@/utils/tripDisplay'
 
 // The trip in progress, with a live duration. Users can finish trips themselves.
 export default {
@@ -33,7 +36,10 @@ export default {
       return tripCarName(this.trip, this.fleetLoaded)
     },
     carRoute() {
-      return tripCarRoute(this.trip)
+      // A removed car has no page
+      return this.trip.car
+        ? { name: ROUTES.CAR_DETAILS.NAME, params: { id: this.trip.carId } }
+        : null
     },
     rows() {
       const { booking } = this.trip

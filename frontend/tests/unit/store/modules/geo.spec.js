@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { createStore } from 'vuex'
 
-import { DEFAULT_CENTER } from '@/utils/geo'
+import { DEFAULT_CENTER } from '@/utils/geo/coordinates'
 import geo from '@/store/modules/geo'
 
 const makeStore = () => createStore({ strict: true, modules: { geo } })

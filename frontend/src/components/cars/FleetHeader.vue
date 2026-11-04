@@ -1,6 +1,6 @@
 <script>
-import { formatDistance } from '@/utils/format'
-import { walkingMinutes } from '@/utils/geo'
+import { walkingMinutes } from '@/utils/geo/coordinates'
+import { formatDistance } from '@/utils/geo/geoFormat'
 import { ROUTES } from '@/router/routes.constants'
 
 // Fleet page header: location chip, available count, title, quick metrics, map toggle

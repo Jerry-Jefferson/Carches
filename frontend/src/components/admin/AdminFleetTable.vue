@@ -5,8 +5,11 @@ import CarPlaceholder from '@/components/common/CarPlaceholder.vue'
 import EnergyBar from '@/components/common/EnergyBar.vue'
 import StatusTag from '@/components/common/StatusTag.vue'
 import { copyText } from '@/utils/clipboard'
-import { CAR_STATUS, carStatusMeta } from '@/utils/derive'
-import { carName, formatCoords, formatKm, formatRelative } from '@/utils/format'
+import { carName } from '@/utils/cars/carDisplay'
+import { CAR_STATUS, carStatusMeta } from '@/utils/cars/carStatus'
+import { formatRelative } from '@/utils/format/dateTime'
+import { formatKm } from '@/utils/format/number'
+import { formatCoords } from '@/utils/geo/geoFormat'
 import notify from '@/utils/notify'
 
 // The backend would delete these too, but the open booking would point at a ghost car
