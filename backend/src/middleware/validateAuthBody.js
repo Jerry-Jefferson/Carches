@@ -36,7 +36,8 @@ const validateAuthBody =
     }
 
     if (!requireProfile) {
-      req.body = { email: normalizedEmail, password };
+      // Sign-in: `remember` asks for a longer-lived token
+      req.body = { email: normalizedEmail, password, remember: req.body.remember === true };
       return next();
     }
 

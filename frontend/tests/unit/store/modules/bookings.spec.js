@@ -146,7 +146,7 @@ describe('bookings module', () => {
       vi.mocked(bookingsApi.create).mockResolvedValue({ _id: 'new' })
       const store = makeStore()
       const admin = { _id: 'admin1', role: 'admin', firstName: 'Ada', lastName: 'Admin' }
-      store.commit('auth/SET_SESSION', { user: admin, token: 't1', remember: false })
+      store.commit('auth/SET_SESSION', { user: admin, token: 't1' })
 
       await store.dispatch('bookings/createBooking', { carId: 'car1' })
 
@@ -224,11 +224,11 @@ describe('bookings module', () => {
     let resolve
     vi.mocked(bookingsApi.listMine).mockReturnValueOnce(new Promise((r) => (resolve = r)))
     const store = makeStore()
-    store.commit('auth/SET_SESSION', { user: { _id: 'u1' }, token: 'token-a', remember: false })
+    store.commit('auth/SET_SESSION', { user: { _id: 'u1' }, token: 'token-a' })
     const pending = store.dispatch('bookings/fetchMine')
 
     store.commit('auth/CLEAR_SESSION')
-    store.commit('auth/SET_SESSION', { user: { _id: 'u2' }, token: 'token-b', remember: false })
+    store.commit('auth/SET_SESSION', { user: { _id: 'u2' }, token: 'token-b' })
     resolve([ACTIVE])
 
     await expect(pending).resolves.toEqual([])

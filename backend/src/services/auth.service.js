@@ -5,16 +5,26 @@ const jwt = require("jsonwebtoken");
 const User = require("../models/user.model");
 const RevokedToken = require("../models/revokedToken.model");
 const AppError = require("../utils/AppError");
-const { jwtSecret, jwtExpiresIn, jwtAlgorithm, saltRounds } = require("../config/auth");
+const {
+  jwtSecret,
+  jwtExpiresIn,
+  jwtRememberExpiresIn,
+  jwtAlgorithm,
+  saltRounds,
+} = require("../config/auth");
 
 const INVALID_CREDENTIALS = "Invalid email or password";
+// One message for every rejected token: the reason (expired, revoked, deleted user) is not
+// the caller's business, and the client only looks at the 401
+const INVALID_TOKEN = "Invalid or expired token";
 
 const DUMMY_HASH = bcrypt.hashSync("dummy-password-for-timing", saltRounds);
 
-const signToken = (user) =>
+// "Remember me" sign-ins get a longer-lived token
+const signToken = (user, { remember = false } = {}) =>
   jwt.sign({ sub: user._id.toString() }, jwtSecret, {
     algorithm: jwtAlgorithm,
-    expiresIn: jwtExpiresIn,
+    expiresIn: remember ? jwtRememberExpiresIn : jwtExpiresIn,
     jwtid: crypto.randomUUID(),
   });
 
@@ -49,7 +59,7 @@ const signUp = async ({ email, password, licenseNumber, firstName, lastName }) =
   return { user, token: signToken(user) };
 };
 
-const signIn = async ({ email, password }) => {
+const signIn = async ({ email, password, remember = false }) => {
   const user = await User.findOne({ email, isDeleted: false }).select("+password");
 
   const passwordMatches = await bcrypt.compare(password, user ? user.password : DUMMY_HASH);
@@ -58,22 +68,19 @@ const signIn = async ({ email, password }) => {
     throw new AppError(INVALID_CREDENTIALS, 401);
   }
 
-  return { user, token: signToken(user) };
+  return { user, token: signToken(user, { remember }) };
 };
 
 const verifyToken = async (token) => {
   let payload;
   try {
     payload = jwt.verify(token, jwtSecret, { algorithms: [jwtAlgorithm] });
-  } catch (err) {
-    if (err.name === "TokenExpiredError") {
-      throw new AppError("Token has expired", 401);
-    }
-    throw new AppError("Invalid token", 401);
+  } catch {
+    throw new AppError(INVALID_TOKEN, 401);
   }
 
   if (!payload.jti || !payload.exp) {
-    throw new AppError("Invalid token", 401);
+    throw new AppError(INVALID_TOKEN, 401);
   }
 
   const [user, isRevoked] = await Promise.all([
@@ -81,12 +88,8 @@ const verifyToken = async (token) => {
     RevokedToken.exists({ jti: payload.jti }),
   ]);
 
-  if (isRevoked) {
-    throw new AppError("Token has been revoked", 401);
-  }
-
-  if (!user) {
-    throw new AppError("User belonging to this token no longer exists", 401);
+  if (isRevoked || !user) {
+    throw new AppError(INVALID_TOKEN, 401);
   }
 
   return { user, payload };

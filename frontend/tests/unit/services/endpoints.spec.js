@@ -40,7 +40,7 @@ const ENDPOINTS = [
     'E2',
     () => authApi.signIn({ email: 'a@b.by', password: 'p', remember: true }),
     'post',
-    ['/auth/signin', { email: 'a@b.by', password: 'p' }],
+    ['/auth/signin', { email: 'a@b.by', password: 'p', remember: true }],
   ],
   ['E3', () => authApi.logout(), 'post', ['/auth/logout', null, { skipAuthRedirect: true }]],
   ['E4', () => usersApi.getMe(), 'get', ['/users/me', undefined]],

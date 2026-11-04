@@ -7,16 +7,15 @@ import { clearToken, loadToken, saveToken } from '@/services/tokenStorage'
 // One bootstrap per page load, shared by concurrent callers (guard + components)
 let bootstrapPromise = null
 
-// GET /users/me answers these when the token itself is no good (expired, revoked, user
-// deleted). Anything else (offline, 5xx) says nothing about the token.
-const REJECTED_TOKEN_STATUSES = [401, 403, 404]
+// The backend answers 401 to every bad token (expired, revoked, user deleted). Anything
+// else (offline, 5xx) says nothing about the token.
+const TOKEN_REJECTED = 401
 
 export default {
   namespaced: true,
   state: () => ({
     user: null,
     token: null,
-    remember: false,
     // idle → bootstrapping → ready (the stored session has been checked)
     status: 'idle',
     isSubmitting: false,
@@ -36,14 +35,12 @@ export default {
     initials: (state) => initials(state.user),
   },
   mutations: {
-    SET_SESSION(state, { user, token, remember }) {
+    SET_SESSION(state, { user, token }) {
       state.user = user
       state.token = token
-      state.remember = remember
     },
-    SET_TOKEN(state, { token, remember }) {
+    SET_TOKEN(state, token) {
       state.token = token
-      state.remember = remember
     },
     SET_USER(state, user) {
       state.user = user
@@ -51,7 +48,6 @@ export default {
     CLEAR_SESSION(state) {
       state.user = null
       state.token = null
-      state.remember = false
     },
     SET_STATUS(state, status) {
       state.status = status
@@ -64,10 +60,11 @@ export default {
     },
   },
   actions: {
-    // E2. `remember` picks localStorage over sessionStorage for the token.
+    // E2. `remember` asks for a longer-lived token and keeps it in localStorage, not
+    // sessionStorage.
     async signIn({ dispatch }, { email, password, remember = false }) {
       return dispatch('submit', {
-        request: () => authApi.signIn({ email, password }),
+        request: () => authApi.signIn({ email, password, remember }),
         remember,
       })
     },
@@ -83,7 +80,7 @@ export default {
       try {
         const { user, token } = await request()
         saveToken(token, { remember })
-        commit('SET_SESSION', { user, token, remember })
+        commit('SET_SESSION', { user, token })
         commit('SET_STATUS', 'ready')
         return user
       } catch (err) {
@@ -124,7 +121,7 @@ export default {
         .getMe({ skipAuthRedirect: true })
         .then((user) => commit('SET_USER', user))
         .catch((err) => {
-          if (REJECTED_TOKEN_STATUSES.includes(err?.statusCode)) clearToken()
+          if (err?.statusCode === TOKEN_REJECTED) clearToken(stored)
           commit('CLEAR_SESSION')
         })
         .finally(() => {
@@ -141,8 +138,8 @@ export default {
       return user
     },
 
-    clearSession({ commit }) {
-      clearToken()
+    clearSession({ state, commit }) {
+      clearToken(state.token)
       commit('CLEAR_SESSION')
       commit('SET_ERROR', null)
     },

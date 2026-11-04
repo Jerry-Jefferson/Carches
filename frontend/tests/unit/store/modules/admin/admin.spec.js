@@ -189,7 +189,7 @@ describe('admin store', () => {
 
   it('updateUser refreshes the session copy when admins edit themselves', async () => {
     const store = await loaded()
-    store.commit('auth/SET_SESSION', { user: USER, token: 't', remember: false })
+    store.commit('auth/SET_SESSION', { user: USER, token: 't' })
     vi.mocked(usersApi.update).mockResolvedValue({ ...USER, firstName: 'Anna' })
 
     await store.dispatch('admin/users/updateUser', { id: 'u1', changes: { firstName: 'Anna' } })
@@ -243,7 +243,7 @@ describe('admin store', () => {
     vi.mocked(usersApi.list).mockReturnValueOnce(new Promise((r) => (pending.users = r)))
     vi.mocked(bookingsApi.list).mockReturnValueOnce(new Promise((r) => (pending.trips = r)))
     const store = makeStore()
-    store.commit('auth/SET_SESSION', { user: USER, token: 'token-a', remember: false })
+    store.commit('auth/SET_SESSION', { user: USER, token: 'token-a' })
     const users = store.dispatch('admin/users/fetchUsers')
     const trips = store.dispatch('admin/trips/fetchTrips')
 
@@ -277,7 +277,7 @@ describe('admin store', () => {
 
   it('refuses to delete the signed-in admin (L5)', async () => {
     const store = await loaded()
-    store.commit('auth/SET_SESSION', { user: USER, token: 't', remember: false })
+    store.commit('auth/SET_SESSION', { user: USER, token: 't' })
 
     await expect(store.dispatch('admin/users/deleteUser', 'u1')).rejects.toThrow(
       SELF_DELETE_MESSAGE,
@@ -287,7 +287,7 @@ describe('admin store', () => {
 
   it('reloads trips after deleting a user (L29)', async () => {
     const store = await loaded()
-    store.commit('auth/SET_SESSION', { user: { _id: 'admin1' }, token: 't', remember: false })
+    store.commit('auth/SET_SESSION', { user: { _id: 'admin1' }, token: 't' })
     vi.mocked(usersApi.remove).mockResolvedValue(undefined)
 
     await store.dispatch('admin/users/deleteUser', 'u1')

@@ -104,7 +104,7 @@ Other scripts:
 
 ### Using the app
 
-- Visitors can only open `/auth` (sign in / sign up); every other page redirects there and comes back after signing in. With "Remember me" the session survives a browser restart; it is kept through a backend restart or an offline start too, and dropped only when the server rejects the token.
+- Visitors can only open `/auth` (sign in / sign up); every other page redirects there and comes back after signing in. With "Remember me" the session lasts 7 days (otherwise 1 hour) and survives a browser restart; it is kept through a backend restart or an offline start too, and dropped only when the server rejects the token.
 - Users: **Fleet** (`/fleet` — filters, map, quick booking), **car page** (`/cars/:id` — book now or schedule up to 7 days ahead), **My Trips** (`/trips`), **My Profile** (`/profile`). Users can't finish or cancel trips; the app points them to support.
 - Admins also get the **admin console** (`/admin`): KPIs, the fleet (add / edit / remove cars, maintenance actions), trips and bookings (create, edit, complete, delete) and users (view, edit, delete), plus CSV export. Sections and rows are deep-linked (`/admin?tab=trips&trip=…`, `&date=2026-10-29` for the statistics day). Sign in with the account created by `migrate:admin`.
 
@@ -164,12 +164,12 @@ Use the `MONGO_INITDB_ROOT_USERNAME` / `MONGO_INITDB_ROOT_PASSWORD` values from 
 │   └── package.json
 ├── frontend/
 │   ├── src/                 # MVVM layout (Vue 3, Options API)
-│   │   ├── main.js          # entry: session interceptors, router, store
+│   │   ├── main.js          # entry: registers the axios interceptors, router, store
 │   │   ├── App.vue          # root component: theme + layout picked by the route
 │   │   ├── views/           # routed pages (smart containers) + layouts/
 │   │   ├── components/      # pieces of the views: common/, layout/, auth/, cars/, bookings/, profile/, admin/
 │   │   ├── store/           # Vuex: index.js + modules/ (auth, cars, carDetails, bookings, geo, admin/*)
-│   │   ├── services/        # axios instance, API wrappers, session wiring, token storage
+│   │   ├── services/        # axios instance, API wrappers, axios interceptors, token storage
 │   │   ├── router/          # route constants (ROUTES, TAB_NAMES), route table, guards
 │   │   ├── utils/           # pure helpers by domain: common, format, geo, cars, bookings, users, admin; CSV export
 │   │   └── assets/styles/   # global styles, design tokens, Ant Design theme, tone classes

@@ -139,6 +139,21 @@
               }
             }
           },
+          "429": {
+            "description": "Too many failed sign-in / sign-up attempts from this IP (10 per 15 minutes; successful requests are not counted)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "status": "error",
+                  "statusCode": 429,
+                  "message": "Too many failed attempts. Please try again in 15 minutes"
+                }
+              }
+            }
+          },
           "500": {
             "description": "Internal server error",
             "content": {
@@ -230,6 +245,21 @@
               }
             }
           },
+          "429": {
+            "description": "Too many failed sign-in / sign-up attempts from this IP (10 per 15 minutes; successful requests are not counted)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "status": "error",
+                  "statusCode": 429,
+                  "message": "Too many failed attempts. Please try again in 15 minutes"
+                }
+              }
+            }
+          },
           "500": {
             "description": "Internal server error",
             "content": {
@@ -251,7 +281,7 @@
     "/auth/logout": {
       "post": {
         "summary": "Log out",
-        "description": "Revokes the bearer token used for this request. Any further request with the same token returns 401 \"Token has been revoked\". Other sessions of the same user are not affected.\n\n**Required role:** `user` (admins also allowed).",
+        "description": "Revokes the bearer token used for this request. Any further request with the same token returns 401 \"Invalid or expired token\". Other sessions of the same user are not affected.\n\n**Required role:** `user` (admins also allowed).",
         "tags": ["Auth"],
         "responses": {
           "204": {
@@ -1733,6 +1763,12 @@
             "type": "string",
             "format": "password",
             "example": "S3cureP@ssw0rd"
+          },
+          "remember": {
+            "type": "boolean",
+            "default": false,
+            "description": "\"Remember me\": issue a longer-lived token (`JWT_REMEMBER_EXPIRES_IN`, default 7 days) instead of the usual one (`JWT_EXPIRES_IN`, default 1 hour)",
+            "example": false
           }
         }
       },
@@ -1857,27 +1893,11 @@
                 }
               },
               "invalid": {
-                "summary": "Invalid token",
+                "summary": "Invalid, expired or revoked token, or its user was deleted",
                 "value": {
                   "status": "error",
                   "statusCode": 401,
-                  "message": "Invalid token"
-                }
-              },
-              "expired": {
-                "summary": "Expired token",
-                "value": {
-                  "status": "error",
-                  "statusCode": 401,
-                  "message": "Token has expired"
-                }
-              },
-              "revoked": {
-                "summary": "Revoked token (after logout)",
-                "value": {
-                  "status": "error",
-                  "statusCode": 401,
-                  "message": "Token has been revoked"
+                  "message": "Invalid or expired token"
                 }
               }
             }

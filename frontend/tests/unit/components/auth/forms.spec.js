@@ -68,9 +68,9 @@ describe('auth forms', () => {
       expect(authApi.signIn).toHaveBeenCalledWith({
         email: 'vera@carshes.by',
         password: 'password123',
+        remember: true,
       })
       expect(wrapper.emitted('success')[0][0]).toEqual(USER)
-      expect(store.state.auth.remember).toBe(true)
       expect(localStorage.getItem('carshes.token')).toBe('jwt')
     })
 

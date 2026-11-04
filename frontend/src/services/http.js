@@ -1,10 +1,14 @@
+// The shared axios instance and its pure helpers. The session wiring (Bearer token,
+// 401 → sign-in page) lives in interceptors.js, imported once from main.js, so this file
+// never imports the store or the router (the store's API wrappers import it).
+
 import axios from 'axios'
 
 export const NETWORK_ERROR_MESSAGE = 'Network error. Check your connection.'
 
 // Requests that must never trigger the "session expired" redirect: signing in or up
 // with wrong credentials also answers 401.
-const PUBLIC_AUTH_PATHS = ['/auth/signin', '/auth/signup']
+export const PUBLIC_AUTH_PATHS = ['/auth/signin', '/auth/signup']
 
 const http = axios.create({
   baseURL: import.meta.env.VITE_API_URL || '/api/v2',
@@ -42,39 +46,5 @@ export const normalizeError = (error) => {
 
 export const getErrorMessage = (error, fallback = NETWORK_ERROR_MESSAGE) =>
   error?.message || fallback
-
-/**
- * Wires the instance to the session. Called once from main.js; kept separate so
- * http.js does not import the store (the store's API modules import http.js).
- *
- * - getToken(): current JWT or null — sent as `Authorization: Bearer <token>`
- * - onUnauthorized(error): called on a 401 from any request except sign in / sign up,
- *   unless the request was made with `{ skipAuthRedirect: true }`
- */
-export const installInterceptors = (instance, { getToken, onUnauthorized }) => {
-  const requestId = instance.interceptors.request.use((config) => {
-    const token = getToken()
-    if (token) config.headers.Authorization = `Bearer ${token}`
-    return config
-  })
-
-  const responseId = instance.interceptors.response.use(
-    (response) => response,
-    (error) => {
-      normalizeError(error)
-      const { config } = error
-      const isPublicAuth = PUBLIC_AUTH_PATHS.some((path) => config?.url?.endsWith(path))
-      if (error.statusCode === 401 && !isPublicAuth && !config?.skipAuthRedirect) {
-        onUnauthorized(error)
-      }
-      return Promise.reject(error)
-    },
-  )
-
-  return () => {
-    instance.interceptors.request.eject(requestId)
-    instance.interceptors.response.eject(responseId)
-  }
-}
 
 export default http

@@ -27,6 +27,7 @@ There is **no monorepo tooling** — each folder has its own `package.json`, `no
 | Framework        | **Express 5**                               |
 | Database         | **MongoDB** via **Mongoose 9**              |
 | Authentication   | **JWT** (`jsonwebtoken`) + **bcryptjs**      |
+| Security         | **helmet** (headers, CSP) + **express-rate-limit** (failed sign-in / sign-up attempts) |
 | API Docs         | **Swagger UI Express** (static `swagger.json`) |
 | Containerisation | **Docker** + **Docker Compose**             |
 | Linting          | ESLint 9 (`eslint.config.mjs`)              |
@@ -102,6 +103,7 @@ Carshes/
 │       │   ├── authenticate.js        ← JWT verification
 │       │   ├── requireRole.js         ← role-based access guard
 │       │   ├── validateAuthBody.js    ← request-body validation
+│       │   ├── authRateLimit.js       ← 10 failed sign-in / sign-up attempts per IP per 15 min → 429
 │       │   └── errorHandler.js        ← centralised error handler
 │       ├── utils/
 │       │   ├── AppError.js            ← custom error class
@@ -129,7 +131,7 @@ Carshes/
     ├── .prettierrc.json / .prettierignore
     ├── public/                        ← favicons, site.webmanifest (name, theme colour)
     └── src/                           ← `@/` alias
-        ├── main.js                    ← entry: installs the session interceptors, creates the app with router + store
+        ├── main.js                    ← entry: imports `services/interceptors` (registers them), creates the app with router + store
         ├── App.vue                    ← root component: Ant Design theme + layout picked by route.meta.layout
         │
         ├── assets/
@@ -154,13 +156,13 @@ Carshes/
         │
         ├── router/
         │   ├── routes.constants.js    ← ROUTES (deep-frozen: each page's PATH + NAME) and TAB_NAMES (`tab` query values, e.g. TAB_NAMES.ADMIN.FLEET)
-        │   ├── index.js               ← route table built from ROUTES (meta: layout, guestOnly, roles, title), lazy views from views/
-        │   └── guards.js              ← auth guard, safeRedirect(), document title
+        │   ├── index.js               ← route table built from ROUTES (meta: layout, requiresAuth, guestOnly, roles, title), lazy views from views/; the auth guard (`authGuard`)
+        │   └── guards.js              ← safeRedirect(), document title
         │
         ├── store/
         │   ├── index.js               ← Vuex store (strict in dev), registers the modules; resetOnSignOut plugin clears `bookings`, `admin/*` data and filters and the insights day on auth/CLEAR_SESSION
         │   └── modules/
-        │       ├── auth.js            ← session: signIn, signUp, logout, bootstrap (GET /users/me; drops the stored token only on 401 / 403 / 404)
+        │       ├── auth.js            ← session: signIn, signUp, logout, bootstrap (GET /users/me; drops the stored token only on a 401)
         │       ├── cars.js            ← GET /cars (30 s cache; a forced fetch never reuses an in-flight request), fleet filters, sorting, counts, nearest free car, upsertCar
         │       ├── carDetails.js      ← GET /cars/:id for the car page (not-found flag, silent refresh for polling), distance
         │       ├── bookings.js        ← GET /bookings/my (60 s cache), checkBookable + createBooking with pre-checks (Q2–Q4), trips (bookings joined with cars, Q5)
@@ -170,8 +172,8 @@ Carshes/
         ├── services/                  ← API clients and browser integrations
         │   ├── http.js                ← axios instance (baseURL from VITE_API_URL, defaults to /api/v2), unwrap, error normalising, serverNow() (server clock from the `Date` header)
         │   ├── auth.js / users.js / cars.js / bookings.js ← thin wrappers for E1–E23, used only by Vuex actions
-        │   ├── session.js             ← wires http to the store/router: Bearer token, 401 → /auth?redirect=
-        │   └── tokenStorage.js        ← JWT in localStorage ("Remember me") or sessionStorage
+        │   ├── interceptors.js        ← registers on import (from main.js): Bearer token from the store, 401 → clear session + /auth?redirect=
+        │   └── tokenStorage.js        ← JWT in localStorage ("Remember me", shared by tabs) or sessionStorage (this tab); one stored session per browser, the tab's own token wins, expired tokens are dropped; tokenExpiresAt() reads `exp`
         │
         └── utils/                     ← pure helpers, one small module per concern, grouped by domain
             ├── common/                ← collections.js (ALL, refId, countBy, matchesText), ids.js (shortId), time.js (MINUTE_MS / HOUR_MS / DAY_MS), pickerValue.js (date-picker value ⇄ Date / ms)
@@ -207,6 +209,8 @@ Request → Express router (/api/v2)
 - **Error handling**: controllers wrapped with `catchAsync`; errors bubble up to the centralised `errorHandler` middleware.
 - **Auth flow**: sign up / sign in → JWT issued → token sent in `Authorization: Bearer <token>` header → `authenticate` middleware verifies → `requireRole` checks role.
 - **Token revocation**: revoked JWTs stored in `revokedToken` model.
+- **Token lifetime**: `JWT_EXPIRES_IN` (default `1h`); a sign-in with `remember: true` ("Remember me") gets `JWT_REMEMBER_EXPIRES_IN` (default `7d`). Every rejected token answers the same 401 "Invalid or expired token" — the reason (expired, revoked, deleted user) is not disclosed.
+- **Abuse protection**: `helmet()` sets security headers on every response; `authRateLimit` allows 10 *failed* sign-in / sign-up attempts per IP per 15 minutes (successful ones are not counted; in-memory, per process — behind a reverse proxy set `trust proxy`).
 - **Roles**: `user` and `admin`, with a hierarchy (`ROLE_LEVELS` in `constants/user.js`) — `requireUser` lets both through, `requireAdmin` only admins. Role is read from `req.user`, which `authenticate` loads from the database, so role changes apply immediately.
 - **Users are created only via `POST /auth/signup`** (always role `user`). Admins come from the `migrate:admin` migration or a manual DB update. There is no `POST /users`.
 - **Soft delete**: `User`, `Car` and `CreditCard` use `isDeleted` / `deletedAt`. Every read query must filter `isDeleted: false`; deleted users cannot sign in and their tokens are rejected.
@@ -224,15 +228,15 @@ src/main.js → createApp(App)   — src/App.vue
 - **MVVM layout** (Vue 3, Options API), all in `frontend/src/` (the entry `main.js` and the root `App.vue` at its top):
   - **View** — `views/` holds the routed pages and `views/layouts/` the layouts that wrap them (picked by `route.meta.layout`). Views are the *smart* containers: they read the store through `mapGetters`, dispatch actions and react to the route. `components/` holds the pieces they are built from, grouped by area (`common/`, `layout/`, `auth/`, `cars/`, `bookings/`, `profile/`, `admin/`). Prefer passing data in with props and out with events; a component that needs the store (forms, admin sections, the booking panel) reaches it the same way a view does, through map helpers.
   - **ViewModel** — `store/` (Vuex): `store/index.js` creates the store; each namespaced module lives in `store/modules/` (the nested `admin` module in `store/modules/admin/`). Modules own the state, derive data in getters and call the services in actions.
-  - **Model / services** — `services/`: the axios instance (`http.js`), the thin API wrappers for E1–E23 (`auth.js`, `users.js`, `cars.js`, `bookings.js`), the session wiring (`session.js`) and token storage (`tokenStorage.js`). Only Vuex actions and `session.js` call them.
+  - **Model / services** — `services/`: the axios instance (`http.js`), the thin API wrappers for E1–E23 (`auth.js`, `users.js`, `cars.js`, `bookings.js`), the axios interceptors (`interceptors.js`) and token storage (`tokenStorage.js`). Only Vuex actions call the API wrappers.
   - **Helpers** — `utils/` holds pure functions in domain folders (`common/`, `format/`, `geo/`, `cars/`, `bookings/`, `users/`, `admin/`; `csv.js`, `formErrors.js`, `clipboard.js` and `notify.js` sit at the top) — one concern per file, imported by its full path (`@/utils/cars/carStatus`), no barrel `index.js`; `assets/styles/` holds the global styles, the design tokens and the JS built from them (the Ant Design theme in `antd.js`, tone classes in `tones.js`).
   - **Form schemas** live in their form component (see §8.2 Forms). Only `main.js` and `App.vue` sit in the root of `src/`; don't add other files there. Static text (brand name, tagline, city, support contacts) is written directly where it is shown — there is no site-config module.
-  - Dependencies point one way: views → components → store → services; everyone may use `utils/`, `assets/` and the root constants. `utils/` and `services/` never import components, views, the router or the store (`session.js` receives the store and router as arguments).
+  - Dependencies point one way: views → components → store → services; everyone may use `utils/`, `assets/` and the root constants. `utils/` and `services/` never import components, views, the router or the store — except `services/interceptors.js`, which only `main.js` imports, so it closes no import cycle.
   - Import across folders with the `@/` alias (`@/store/modules/cars`, `@/utils/format/dateTime`); use relative paths only inside one folder. Tests live in `frontend/tests/` (§10 gotcha 26) and import the code under test with `@/` only.
 
 - **Routing**: lazy-loaded views, catch-all 404. Every route's path and name come from `ROUTES` in `router/routes.constants.js` (`ROUTES.FLEET.PATH` / `ROUTES.FLEET.NAME`); the paths are used only by the route table, code navigates by name (`{ name: ROUTES.FLEET.NAME }`), never by path or a name string. Query values for page tabs come from `TAB_NAMES` (`{ name: ROUTES.ADMIN.NAME, query: { tab: TAB_NAMES.ADMIN.TRIPS } }`). `tests/unit/router/routes.spec.js` checks that every entry pairs a `PATH` and a `NAME`, that the map and the table match one to one, and that both objects are deeply frozen. `route.meta.layout` (`auth` / `app` default / `admin`) picks the layout in `App.vue`.
-- **Access** (`router/guards.js`): the guard first restores the stored session (`auth/bootstrap` → `GET /users/me`). A token the backend rejects (401 / 403 / 404) is deleted; after a network or 5xx error it stays stored, so a reload can restore the session. Guests can open only `meta.guestOnly` routes (`/auth`); everything else redirects to `/auth?redirect=<target>`. Signed-in users are sent from `/auth` to `/fleet`; `meta.roles` routes (`/admin`) send other roles to `/fleet` with a warning.
-- **Session**: the token is kept by `services/tokenStorage.js` (localStorage with "Remember me", otherwise sessionStorage; sign-up uses sessionStorage). `services/session.js` adds the Bearer header and, on a 401 from any request except sign-in/sign-up (or one sent with `{ skipAuthRedirect: true }`), clears the session and redirects to `/auth?redirect=…`.
+- **Access** (`authGuard` in `router/index.js`): the guard first restores the stored session (`auth/bootstrap` → `GET /users/me`). A token the backend rejects (401 — the backend answers 401 to every bad token) is deleted; after a network or 5xx error it stays stored, so a reload can restore the session. `meta.requiresAuth` routes (every page except `/auth`, the 404 included) send guests to `/auth?redirect=<target>`; signed in means a token *and* a loaded user. `meta.guestOnly` routes (`/auth`) send signed-in users to `/fleet`; `meta.roles` routes (`/admin`) also require sign-in (guests go to `/auth?redirect=`) and send other roles to `/fleet` with a warning. The guard's tests are in `tests/unit/router/index.spec.js`.
+- **Session**: the token is kept by `services/tokenStorage.js` (localStorage with "Remember me", otherwise sessionStorage; sign-up uses sessionStorage). A new sign-in replaces whatever was stored (one stored session per browser, so the next person on a shared computer never inherits a remembered session). On load a tab's own sessionStorage token wins over the remembered one, and expired tokens (by their `exp`) are dropped instead of being sent to `/users/me`. `clearToken(token)` removes a stored copy only when it is that same token, so one tab's expired session never wipes another tab's newer sign-in. The store keeps only the token, not where it is stored. `services/interceptors.js` adds the Bearer header from `store.state.auth.token` and, on a 401 from any request except sign-in/sign-up (or one sent with `{ skipAuthRedirect: true }`), clears the session only when the failed request carried the token the store holds now (`attachToken` records it as `config.sentToken`) (so concurrent failures act once and a late answer to an old token never ends a newer session), shows a warning and redirects to `/auth?redirect=…`; the redirect is not awaited, so the caller gets the 401 at once. The same file also ends the session when the token's `exp` passes (a timer reset on every `auth/SET_SESSION` / `SET_TOKEN` / `CLEAR_SESSION`, compared with `serverNow()`), instead of at the next failed request. `http.js` stays free of store / router imports: `unwrap`, `normalizeError`, `PUBLIC_AUTH_PATHS`, `serverNow`.
 - **Auth screen**: `/auth?mode=signin|signup&redirect=/path`. The forms dispatch `auth/signIn` / `auth/signUp` and emit `success`; `AuthView` goes to `safeRedirect(redirect)` or `/fleet`. Backend errors go through `mapAuthError()` — known messages (duplicate e-mail / licence number, invalid e-mail, password length) appear under the field, everything else in a form-level alert.
 - **API calls**: components never call HTTP — Vuex actions call the `services/*.js` wrappers, which use the shared `axios` instance in `services/http.js`; errors carry `statusCode` and the backend `message`. `http.js` also tracks the server clock from each response's `Date` header: "now" sent to the backend (a booking that starts now) comes from `serverNow()`. Lists refreshed on a timer drop responses older than the newest committed one. The Vite dev server proxies `/api` requests to the backend (`VITE_BACKEND_URL`).
 - **Component auto-import**: Ant Design Vue components are auto-resolved by `unplugin-vue-components` — no manual imports needed. The app's own components are always imported explicitly (gotcha 17).
@@ -281,6 +285,7 @@ src/main.js → createApp(App)   — src/App.vue
 | `PORT`                      | Express listen port (default `3000`) |
 | `JWT_SECRET`                | ≥ 32 chars, HS256 signing key        |
 | `JWT_EXPIRES_IN`            | Token lifetime (default `1h`)        |
+| `JWT_REMEMBER_EXPIRES_IN`   | Lifetime of "Remember me" tokens (default `7d`) |
 | `BCRYPT_SALT_ROUNDS`        | 10–15 (default `12`)                |
 | `ADMIN_EMAIL`               | Default admin email (migration)      |
 | `ADMIN_PASSWORD`            | Default admin password (≥ 12 chars)  |
