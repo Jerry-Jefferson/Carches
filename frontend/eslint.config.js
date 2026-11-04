@@ -51,7 +51,7 @@ export default [
     },
   },
   {
-    files: ['vite.config.js', 'eslint.config.js', 'playwright.config.js', 'e2e/**/*.js'],
+    files: ['vite.config.js', 'eslint.config.js', 'playwright.config.js', 'tests/e2e/**/*.js'],
     languageOptions: {
       globals: {
         ...globals.node,
@@ -59,7 +59,7 @@ export default [
     },
   },
   {
-    files: ['src/**/__tests__/**/*.{js,vue}', 'src/**/*.{spec,test}.js'],
+    files: ['tests/unit/**/*.js'],
     languageOptions: {
       globals: {
         ...globals.vitest,

@@ -14,6 +14,9 @@ export default defineConfig(({ mode }) => {
       tailwindcss(),
       Components({
         dts: false,
+        // Only Ant Design is auto-resolved; the app's own components (src/components/) are
+        // imported explicitly, so lazy ones stay lazy (CLAUDE.md gotcha 17)
+        dirs: [],
         resolvers: [AntDesignVueResolver({ importStyle: false, resolveIcons: true })],
       }),
     ],
@@ -33,14 +36,14 @@ export default defineConfig(({ mode }) => {
     },
     test: {
       environment: 'jsdom',
-      setupFiles: ['./src/__tests__/setup.js'],
+      setupFiles: ['./tests/unit/setup.js'],
       globals: true,
       css: false,
       // The first test of a file pays for importing Ant Design; with every file in its
       // own worker that can exceed the 5 s default on a busy machine
       testTimeout: 15000,
-      // e2e/ holds the Playwright checks (npm run test:e2e), not unit tests
-      include: ['src/**/*.{test,spec}.js'],
+      // tests/e2e/ holds the Playwright checks (npm run test:e2e), not unit tests
+      include: ['tests/unit/**/*.spec.js'],
       server: {
         deps: {
           inline: ['ant-design-vue'],

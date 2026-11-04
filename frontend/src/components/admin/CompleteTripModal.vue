@@ -1,0 +1,298 @@
+<script>
+import { toTypedSchema } from '@vee-validate/zod'
+import { Field as VeeField, Form as VeeForm } from 'vee-validate'
+import { mapActions, mapGetters } from 'vuex'
+import { z } from 'zod'
+
+import MapView from '@/components/common/MapView.vue'
+import { CAR_UPDATE_FAILED } from '@/store/modules/admin/trips'
+import { refId } from '@/utils/admin'
+import { formatCoords, formatDateTime } from '@/utils/format'
+import { toGeoJsonPoint, toLatLng } from '@/utils/geo'
+import notify from '@/utils/notify'
+import {
+  SCHEDULE_STEP_MINUTES,
+  SCHEDULE_VALUE_FORMAT,
+  completeEndDate,
+  defaultEndTime,
+  pickerTime,
+  toPickerValue,
+  tripStartTime,
+} from '@/utils/schedule'
+import { tripCar } from '@/utils/tripText'
+
+// Fuel and mileage follow the booking model (fuel 0–100 %, mileage ≥ 0). The end and the
+// finish mileage are compared with the trip's start, so the schema is built per trip.
+const req = (label) => ({
+  required_error: `${label} is required`,
+  invalid_type_error: `${label} is required`,
+})
+const MINUTE = 60000
+
+export const completeTripSchema = (trip) =>
+  z
+    .object({
+      endDate: z
+        .string(req('End time'))
+        .min(1, 'End time is required')
+        .refine((v) => !Number.isNaN(pickerTime(v)), 'Enter a valid end time'),
+      finishFuelLevel: z
+        .number(req('Finish fuel'))
+        .min(0, 'Fuel level cannot be negative')
+        .max(100, 'Fuel level cannot exceed 100'),
+      finishMileage: z.number(req('Finish mileage')).min(0, 'Mileage cannot be negative'),
+    })
+    .superRefine((v, ctx) => {
+      const issue = (field, message) => ctx.addIssue({ code: 'custom', path: [field], message })
+      // The picker has no seconds: an end in the start's own minute is fine (it is sent as
+      // the start itself, see completeEndDate)
+      if (pickerTime(v.endDate) < Math.floor(tripStartTime(trip) / MINUTE) * MINUTE)
+        issue('endDate', 'End must be after the start')
+      if (Number.isFinite(trip?.startMileage) && v.finishMileage < trip.startMileage)
+        issue('finishMileage', 'Finish mileage cannot be lower than the start mileage')
+    })
+
+/**
+ * Completes an active or upcoming trip in two steps (Q7): E22 ends the booking (the
+ * backend frees the car), then E12 writes the finish fuel, mileage and location to the car.
+ */
+export default {
+  name: 'CompleteTripModal',
+  components: { MapView, VeeField, VeeForm },
+  props: {
+    open: { type: Boolean, default: false },
+    trip: { type: Object, default: null },
+  },
+  emits: ['update:open', 'done'],
+  data() {
+    return {
+      formError: '',
+      // { message, vin, changes } after the booking was saved but the car update failed
+      carError: null,
+      isSubmitting: false,
+      isRetrying: false,
+      moveCar: false,
+      location: null,
+      // "Now" for the default end, taken when the modal opens
+      openedAt: Date.now(),
+      valueFormat: SCHEDULE_VALUE_FORMAT,
+      showTime: { format: 'HH:mm', minuteStep: SCHEDULE_STEP_MINUTES },
+    }
+  },
+  computed: {
+    ...mapGetters('cars', { cars: 'items' }),
+    car() {
+      return this.cars.find((car) => car._id === refId(this.trip?.carId)) ?? null
+    },
+    carInfo() {
+      return this.trip ? tripCar(this.trip, this.car ? { [this.car._id]: this.car } : {}) : null
+    },
+    schema() {
+      return toTypedSchema(completeTripSchema(this.trip))
+    },
+    initialValues() {
+      return {
+        endDate: toPickerValue(defaultEndTime(this.trip, this.openedAt)),
+        finishFuelLevel: this.car?.fuelLevel ?? this.trip?.startFuelLevel ?? null,
+        finishMileage: this.car?.mileage ?? this.trip?.startMileage ?? null,
+      }
+    },
+    startText() {
+      return formatDateTime(this.trip?.startDate)
+    },
+    markers() {
+      const point = this.location ?? toLatLng(this.car?.location)
+      return point ? [{ id: 'car', ...point, tone: 'info', label: 'New car location' }] : []
+    },
+    locationText() {
+      return this.location ? formatCoords([this.location.lng, this.location.lat]) : ''
+    },
+    formKey() {
+      return `${this.trip?._id}-${this.open}`
+    },
+  },
+  watch: {
+    open(isOpen) {
+      if (isOpen) this.openedAt = Date.now()
+    },
+  },
+  methods: {
+    ...mapActions('admin/trips', ['completeTrip', 'retryCarUpdate']),
+    reset() {
+      this.formError = ''
+      this.carError = null
+      this.moveCar = false
+      this.location = null
+    },
+    close() {
+      this.$emit('update:open', false)
+    },
+    onPick(point) {
+      this.location = point
+    },
+    async onSubmit(values) {
+      this.formError = ''
+      this.isSubmitting = true
+      try {
+        await this.completeTrip({
+          trip: this.trip,
+          endDate: completeEndDate(values.endDate, this.trip),
+          finishFuelLevel: values.finishFuelLevel,
+          finishMileage: values.finishMileage,
+          location: this.moveCar && this.location ? toGeoJsonPoint(this.location) : null,
+        })
+        notify.success('Trip completed')
+        this.$emit('done')
+        this.close()
+      } catch (err) {
+        if (err.code === CAR_UPDATE_FAILED) {
+          this.carError = { message: err.message, vin: err.vin, changes: err.changes }
+          this.$emit('done')
+        } else {
+          this.formError = err.message
+        }
+      } finally {
+        this.isSubmitting = false
+      }
+    },
+    async retry() {
+      this.isRetrying = true
+      try {
+        await this.retryCarUpdate({ vin: this.carError.vin, changes: this.carError.changes })
+        notify.success('Car updated')
+        this.carError = null
+        this.close()
+      } catch (err) {
+        this.carError = { ...this.carError, message: err.message }
+      } finally {
+        this.isRetrying = false
+      }
+    },
+  },
+}
+</script>
+
+<template>
+  <a-modal
+    :open="open"
+    title="Complete trip"
+    :width="560"
+    :footer="null"
+    :mask-closable="!isSubmitting"
+    destroy-on-close
+    @cancel="close"
+    @after-close="reset"
+  >
+    <div v-if="trip" class="flex flex-col gap-4">
+      <div class="rounded-card bg-surface p-4 text-body-md">
+        <p class="m-0 text-label-lg">{{ carInfo.name }}</p>
+        <p class="m-0 text-label-sm text-muted-foreground uppercase">{{ carInfo.plate }}</p>
+        <p class="m-0 mt-1 text-body-sm text-muted-foreground">Started {{ startText }}</p>
+      </div>
+
+      <template v-if="carError">
+        <a-alert
+          type="warning"
+          show-icon
+          :message="`The trip was completed, but the car could not be updated: ${carError.message}`"
+        />
+        <div class="flex justify-end gap-2">
+          <a-button @click="close">Close</a-button>
+          <a-button type="primary" :loading="isRetrying" @click="retry">Retry car update</a-button>
+        </div>
+      </template>
+
+      <VeeForm
+        v-else
+        :key="formKey"
+        v-slot="{ handleSubmit }"
+        :validation-schema="schema"
+        :initial-values="initialValues"
+        as="div"
+      >
+        <a-form layout="vertical" @submit="handleSubmit($event, onSubmit)">
+          <a-alert v-if="formError" class="mb-4" type="error" show-icon :message="formError" />
+
+          <VeeField v-slot="{ value, handleChange, errorMessage }" name="endDate">
+            <a-form-item
+              label="End time"
+              :validate-status="errorMessage ? 'error' : ''"
+              :help="errorMessage"
+            >
+              <a-date-picker
+                :value="value"
+                :value-format="valueFormat"
+                format="D MMM YYYY, HH:mm"
+                :show-time="showTime"
+                :allow-clear="false"
+                class="w-full"
+                aria-label="End time"
+                @update:value="handleChange"
+              />
+            </a-form-item>
+          </VeeField>
+
+          <div class="grid gap-x-4 sm:grid-cols-2">
+            <VeeField v-slot="{ value, handleChange, errorMessage }" name="finishFuelLevel">
+              <a-form-item
+                label="Finish fuel, %"
+                :validate-status="errorMessage ? 'error' : ''"
+                :help="errorMessage"
+              >
+                <a-input-number
+                  :value="value"
+                  :min="0"
+                  :max="100"
+                  class="w-full"
+                  aria-label="Finish fuel"
+                  @update:value="handleChange"
+                />
+              </a-form-item>
+            </VeeField>
+            <VeeField v-slot="{ value, handleChange, errorMessage }" name="finishMileage">
+              <a-form-item
+                label="Finish mileage, km"
+                :validate-status="errorMessage ? 'error' : ''"
+                :help="errorMessage"
+              >
+                <a-input-number
+                  :value="value"
+                  :min="0"
+                  class="w-full"
+                  aria-label="Finish mileage"
+                  @update:value="handleChange"
+                />
+              </a-form-item>
+            </VeeField>
+          </div>
+
+          <a-checkbox v-model:checked="moveCar" class="mb-3">Update car location</a-checkbox>
+          <div v-if="moveCar" class="mb-4 flex flex-col gap-2">
+            <MapView
+              class="h-56"
+              :markers="markers"
+              :fit-bounds="!location"
+              pickable
+              aria-label="Click the map to set the car's new location"
+              @pick="onPick"
+            />
+            <p class="m-0 text-body-sm text-muted-foreground">
+              {{
+                locationText
+                  ? `New location: ${locationText}`
+                  : 'Click the map to set the new location.'
+              }}
+            </p>
+          </div>
+
+          <div class="flex justify-end gap-2">
+            <a-button :disabled="isSubmitting" @click="close">Cancel</a-button>
+            <a-button type="primary" html-type="submit" :loading="isSubmitting">
+              Complete trip
+            </a-button>
+          </div>
+        </a-form>
+      </VeeForm>
+    </div>
+  </a-modal>
+</template>
