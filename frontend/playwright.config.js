@@ -1,13 +1,13 @@
 import { defineConfig, devices } from '@playwright/test'
 
-// End-to-end checks against the running stack (see e2e/README section in the root README):
+// End-to-end checks against the running stack (see the end-to-end section of the root README):
 // the backend in Docker (seeded) and the Vite dev server, which this config starts if needed.
 const BASE_URL = process.env.E2E_BASE_URL || 'http://localhost:5173'
 
 const viewport = (width, height) => ({ viewport: { width, height } })
 
 export default defineConfig({
-  testDir: './e2e',
+  testDir: './tests/e2e',
   // The journeys and the API check change shared data, so files run one at a time
   fullyParallel: false,
   workers: 1,

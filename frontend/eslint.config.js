@@ -33,7 +33,25 @@ export default [
     },
   },
   {
-    files: ['vite.config.js', 'eslint.config.js', 'playwright.config.js', 'e2e/**/*.js'],
+    files: ['src/**/*.{js,vue}'],
+    rules: {
+      // Project rule: store state is read through getters (mapGetters), never mapState
+      'no-restricted-imports': [
+        'error',
+        {
+          paths: [
+            {
+              name: 'vuex',
+              importNames: ['mapState'],
+              message: 'Add a getter to the module and use mapGetters instead.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    files: ['vite.config.js', 'eslint.config.js', 'playwright.config.js', 'tests/e2e/**/*.js'],
     languageOptions: {
       globals: {
         ...globals.node,
@@ -41,7 +59,7 @@ export default [
     },
   },
   {
-    files: ['src/**/__tests__/**/*.{js,vue}', 'src/**/*.{spec,test}.js'],
+    files: ['tests/unit/**/*.js'],
     languageOptions: {
       globals: {
         ...globals.vitest,

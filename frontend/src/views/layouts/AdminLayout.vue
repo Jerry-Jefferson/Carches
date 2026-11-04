@@ -1,0 +1,79 @@
+<script>
+import BrandWordmark from '@/components/common/BrandWordmark.vue'
+import AdminSearch from '@/components/layout/AdminSearch.vue'
+import AdminSidebar from '@/components/layout/AdminSidebar.vue'
+import UserMenu from '@/components/layout/UserMenu.vue'
+import { ROUTES } from '@/router/routes.constants'
+
+/**
+ * Admin console chrome: sidebar (a drawer below `lg`), top bar, content.
+ * The console data (cars, users) is loaded by AdminView; the sidebar and search read the store.
+ */
+export default {
+  name: 'AdminLayout',
+  components: { AdminSearch, AdminSidebar, BrandWordmark, UserMenu },
+  data() {
+    return {
+      isDrawerOpen: false,
+    }
+  },
+  computed: {
+    adminRoute() {
+      return { name: ROUTES.ADMIN.NAME }
+    },
+    fleetRoute() {
+      return { name: ROUTES.FLEET.NAME }
+    },
+  },
+}
+</script>
+
+<template>
+  <div class="flex min-h-screen bg-background">
+    <aside
+      class="sticky top-0 hidden h-screen w-64 shrink-0 flex-col gap-6 bg-card px-4 py-6 text-card-foreground shadow-card lg:flex"
+      aria-label="Admin"
+    >
+      <BrandWordmark :to="adminRoute" size="sm" admin class="px-2" />
+      <div class="flex-1 overflow-y-auto">
+        <AdminSidebar />
+      </div>
+    </aside>
+
+    <!-- Titled like the app's "Menu" drawer, with a close button for keyboard users -->
+    <a-drawer v-model:open="isDrawerOpen" placement="left" :width="280" title="Admin navigation">
+      <div class="flex h-full flex-col gap-6" @click="isDrawerOpen = false">
+        <BrandWordmark :to="adminRoute" size="sm" admin />
+        <AdminSidebar />
+      </div>
+    </a-drawer>
+
+    <div class="flex min-w-0 flex-1 flex-col">
+      <header
+        class="sticky top-0 z-40 flex h-16 items-center gap-3 bg-background/85 px-4 shadow-card backdrop-blur-md md:px-8"
+      >
+        <a-button
+          type="text"
+          shape="circle"
+          class="lg:hidden"
+          aria-label="Open admin navigation"
+          @click="isDrawerOpen = true"
+        >
+          <template #icon><MenuOutlined /></template>
+        </a-button>
+        <div class="min-w-0 flex-1">
+          <AdminSearch />
+        </div>
+        <a-button type="text" aria-label="Back to app" @click="$router.push(fleetRoute)">
+          <template #icon><ArrowLeftOutlined /></template>
+          <span class="hidden sm:inline">Back to app</span>
+        </a-button>
+        <UserMenu />
+      </header>
+
+      <main id="main" class="min-w-0 flex-1 px-4 py-6 md:px-8" tabindex="-1">
+        <slot />
+      </main>
+    </div>
+  </div>
+</template>

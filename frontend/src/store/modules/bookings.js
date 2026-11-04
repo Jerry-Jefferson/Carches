@@ -1,0 +1,184 @@
+import * as bookingsApi from '@/services/bookings'
+import * as carsApi from '@/services/cars'
+import { getErrorMessage, serverNow } from '@/services/http'
+import { BOOKING_STATUS, CAR_STATUS, bookingStatus } from '@/utils/derive'
+
+export const CACHE_MS = 60000
+
+export const BOOKING_BLOCK = Object.freeze({
+  CAR_UNAVAILABLE: 'car_unavailable',
+  OPEN_BOOKING: 'open_booking',
+})
+
+const BLOCK_MESSAGES = {
+  [BOOKING_BLOCK.CAR_UNAVAILABLE]: 'This car is no longer available.',
+  [BOOKING_BLOCK.OPEN_BOOKING]: 'You already have an active trip.',
+}
+
+// Thrown before POST /bookings when a pre-check fails; `code` is a BOOKING_BLOCK value
+export const bookingBlockedError = (code) =>
+  Object.assign(new Error(BLOCK_MESSAGES[code]), { code })
+
+const byStatus = (status) => (state) =>
+  state.mine.filter((booking) => bookingStatus(booking) === status)
+
+// Counts the fetchMine calls
+let mineSeq = 0
+// The newest call whose response has been committed
+let mineCommitted = 0
+
+export default {
+  namespaced: true,
+  state: () => ({
+    mine: [],
+    isLoading: false,
+    isSubmitting: false,
+    error: null,
+    loadedAt: null,
+  }),
+  getters: {
+    // Plain state fields, read by components through mapGetters
+    mine: (state) => state.mine,
+    isLoading: (state) => state.isLoading,
+    isSubmitting: (state) => state.isSubmitting,
+    error: (state) => state.error,
+
+    activeTrips: byStatus(BOOKING_STATUS.ACTIVE),
+    upcoming: byStatus(BOOKING_STATUS.UPCOMING),
+    completed: byStatus(BOOKING_STATUS.COMPLETED),
+    // An active or upcoming booking blocks new bookings (Q2)
+    openBooking: (state, getters) => getters.activeTrips[0] ?? getters.upcoming[0] ?? null,
+    // Bookings joined with the fleet list: E18 populates `carId` without brand and model
+    // (Q5). `car` is null when the car has left the fleet; `plate` comes from either source.
+    trips: (state, getters, rootState, rootGetters) =>
+      state.mine.map((booking) => {
+        const ref = booking.carId
+        const carId = ref && typeof ref === 'object' ? ref._id : ref
+        const car = carId ? rootGetters['cars/byId'](carId) : null
+        return {
+          booking,
+          carId: carId ?? null,
+          car,
+          plate: car?.registrationNumber ?? ref?.registrationNumber ?? '',
+        }
+      }),
+  },
+  mutations: {
+    // On sign-out, so the next user never sees these bookings
+    RESET(state) {
+      state.mine = []
+      state.loadedAt = null
+      state.error = null
+    },
+    SET_MINE(state, bookings) {
+      state.mine = bookings
+      state.loadedAt = Date.now()
+    },
+    SET_LOADING(state, isLoading) {
+      state.isLoading = isLoading
+    },
+    SET_SUBMITTING(state, isSubmitting) {
+      state.isSubmitting = isSubmitting
+    },
+    SET_ERROR(state, error) {
+      state.error = error
+    },
+  },
+  actions: {
+    // E18. Reuses the list for CACHE_MS unless `force` is set.
+    async fetchMine({ state, commit, rootState }, { force = false } = {}) {
+      const isFresh = state.loadedAt && Date.now() - state.loadedAt < CACHE_MS
+      if (!force && isFresh && !state.error) return state.mine
+
+      // A response that arrives after sign-out belongs to the previous user: drop it
+      const token = rootState.auth?.token
+      const isSameSession = () => rootState.auth?.token === token
+      // An overlapping refresh can answer out of order: never replace newer data
+      const seq = ++mineSeq
+
+      commit('SET_LOADING', true)
+      commit('SET_ERROR', null)
+      try {
+        const bookings = (await bookingsApi.listMine()) ?? []
+        if (!isSameSession()) return []
+        if (seq < mineCommitted) return state.mine
+        mineCommitted = seq
+        commit('SET_MINE', bookings)
+        return bookings
+      } catch (err) {
+        if (isSameSession() && seq > mineCommitted) commit('SET_ERROR', getErrorMessage(err))
+        throw err
+      } finally {
+        if (seq === mineSeq) commit('SET_LOADING', false)
+      }
+    },
+
+    // E10 + E18. Fresh car and the caller's open booking, for the booking UI.
+    // Returns { car, block } where block is a BOOKING_BLOCK code or null.
+    async checkBookable({ dispatch, getters }, { carId, force = false }) {
+      const [car] = await Promise.all([carsApi.getById(carId), dispatch('fetchMine', { force })])
+      await dispatch('cars/upsertCar', car, { root: true })
+
+      let block = null
+      if (car.status !== CAR_STATUS.FREE) block = BOOKING_BLOCK.CAR_UNAVAILABLE
+      else if (getters.openBooking) block = BOOKING_BLOCK.OPEN_BOOKING
+      return { car, block }
+    },
+
+    // E21 after fresh pre-checks (the backend checks neither availability nor open
+    // bookings, Q2). Start fuel and mileage come from the car, never from the user (Q3);
+    // the payload is whitelisted so users can't send end fields (Q4). `userId` is the
+    // caller: the backend fills it in only for users, so admins must send it themselves.
+    // "Now" is the server's: with a fast browser clock the backend would see a future
+    // start and reserve the car instead of starting the trip.
+    async createBooking({ commit, dispatch, rootState }, { carId, startDate = null }) {
+      commit('SET_SUBMITTING', true)
+      commit('SET_ERROR', null)
+      try {
+        const { car, block } = await dispatch('checkBookable', { carId, force: true })
+        if (block) throw bookingBlockedError(block)
+
+        const userId = rootState.auth?.user?._id
+        const booking = await bookingsApi.create({
+          ...(userId && { userId }),
+          carId,
+          startDate: startDate ?? serverNow().toISOString(),
+          startFuelLevel: car.fuelLevel,
+          startMileage: car.mileage,
+        })
+
+        // The booking changed the car's status; refresh both lists in the background
+        Promise.allSettled([
+          dispatch('fetchMine', { force: true }),
+          dispatch('cars/fetchCars', { force: true }, { root: true }),
+        ])
+        return booking
+      } catch (err) {
+        commit('SET_ERROR', getErrorMessage(err))
+        throw err
+      } finally {
+        commit('SET_SUBMITTING', false)
+      }
+    },
+
+    // User finishes their own active trip. The backend generates end values.
+    async finishTrip({ commit, dispatch }, { bookingId }) {
+      commit('SET_SUBMITTING', true)
+      commit('SET_ERROR', null)
+      try {
+        const finished = await bookingsApi.finish(bookingId)
+        // Refresh bookings and cars so status changes are reflected everywhere
+        await Promise.allSettled([
+          dispatch('fetchMine', { force: true }),
+          dispatch('cars/fetchCars', { force: true }, { root: true }),
+        ])
+        return finished
+      } catch (err) {
+        commit('SET_ERROR', getErrorMessage(err))
+        throw err
+      } finally {
+        commit('SET_SUBMITTING', false)
+      }
+    },
+  },
+}
