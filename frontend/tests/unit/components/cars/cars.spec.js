@@ -55,6 +55,18 @@ describe('CarCard', () => {
     expect(wrapper.emitted('book')).toEqual([[CAR]])
   })
 
+  it('shows the spec strip: year, mileage and a fuel bar', () => {
+    const wrapper = mountWithRouter(CarCard, {
+      props: { car: { ...CAR, productionInfo: { brand: 'Toyota', model: 'Camry' } } },
+    })
+    const stats = wrapper.findAll('dl > div')
+
+    expect(stats.map((stat) => stat.find('dt').text())).toEqual(['Year', 'Mileage', 'Fuel'])
+    expect(stats[0].find('dd').text()).toBe('—')
+    expect(text(stats[1].find('dd'))).toBe('18 420 km')
+    expect(stats[2].findComponent({ name: 'EnergyBar' }).props('level')).toBe(82)
+  })
+
   it('disables booking for other statuses and hides the distance without location', () => {
     const wrapper = mountWithRouter(CarCard, { props: { car: { ...CAR, status: 'in_use' } } })
 

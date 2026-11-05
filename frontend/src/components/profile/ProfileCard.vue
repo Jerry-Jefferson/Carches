@@ -19,6 +19,15 @@ export default {
     memberSince() {
       return formatDate(this.user.createdAt)
     },
+    // Rows of the profile table
+    details() {
+      return [
+        { label: 'E-mail', value: this.user.email },
+        { label: 'Driving licence', value: this.user.licenseNumber },
+        { label: 'First name', value: this.user.firstName },
+        { label: 'Last name', value: this.user.lastName },
+      ]
+    },
   },
 }
 </script>
@@ -46,10 +55,9 @@ export default {
     </div>
 
     <a-descriptions :column="{ xs: 1, sm: 1, md: 2 }" bordered size="middle">
-      <a-descriptions-item label="E-mail">{{ user.email }}</a-descriptions-item>
-      <a-descriptions-item label="Driving licence">{{ user.licenseNumber }}</a-descriptions-item>
-      <a-descriptions-item label="First name">{{ user.firstName }}</a-descriptions-item>
-      <a-descriptions-item label="Last name">{{ user.lastName }}</a-descriptions-item>
+      <a-descriptions-item v-for="row in details" :key="row.label" :label="row.label">
+        {{ row.value }}
+      </a-descriptions-item>
     </a-descriptions>
   </section>
 </template>

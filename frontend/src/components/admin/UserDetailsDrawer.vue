@@ -37,6 +37,17 @@ export default {
     isAdmin() {
       return this.user?.role === ROLE.ADMIN
     },
+    // Rows of the profile table, already formatted for display
+    details() {
+      if (!this.user) return []
+      return [
+        { label: 'E-mail', value: this.user.email },
+        { label: 'Licence number', value: this.user.licenseNumber },
+        { label: 'Role', value: this.isAdmin ? 'Admin' : 'User' },
+        { label: 'Signed up', value: formatDate(this.user.createdAt) },
+        { label: 'Updated', value: formatDate(this.user.updatedAt) },
+      ]
+    },
     tripRows() {
       return this.trips.map((trip) => {
         const car = this.carsById[refId(trip.carId)]
@@ -53,7 +64,6 @@ export default {
     },
   },
   methods: {
-    formatDate,
     close() {
       this.$emit('update:open', false)
     },
@@ -80,15 +90,9 @@ export default {
         </div>
 
         <a-descriptions :column="1" bordered size="small">
-          <a-descriptions-item label="E-mail">{{ user.email }}</a-descriptions-item>
-          <a-descriptions-item label="Licence number">{{ user.licenseNumber }}</a-descriptions-item>
-          <a-descriptions-item label="Role">{{ isAdmin ? 'Admin' : 'User' }}</a-descriptions-item>
-          <a-descriptions-item label="Signed up">{{
-            formatDate(user.createdAt)
-          }}</a-descriptions-item>
-          <a-descriptions-item label="Updated">{{
-            formatDate(user.updatedAt)
-          }}</a-descriptions-item>
+          <a-descriptions-item v-for="row in details" :key="row.label" :label="row.label">
+            {{ row.value }}
+          </a-descriptions-item>
         </a-descriptions>
 
         <section aria-labelledby="user-trips-title">

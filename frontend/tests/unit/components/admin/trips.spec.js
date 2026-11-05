@@ -10,8 +10,10 @@ import auth from '@/store/modules/auth'
 import cars from '@/store/modules/cars'
 import geo from '@/store/modules/geo'
 import notify from '@/utils/notify'
+import { shortId } from '@/utils/common/ids'
 import { fromPickerValue } from '@/utils/common/pickerValue'
 import AdminTripsSection from '@/components/admin/AdminTripsSection.vue'
+import AdminTripsTable from '@/components/admin/AdminTripsTable.vue'
 import BookingFormModal from '@/components/admin/BookingFormModal.vue'
 import CompleteTripModal from '@/components/admin/CompleteTripModal.vue'
 import DeleteTripModal from '@/components/admin/DeleteTripModal.vue'
@@ -227,6 +229,57 @@ describe('admin trips', () => {
       expect(bookingsApi.getById).toHaveBeenCalledTimes(2)
       expect(drawer.props('error')).toBe('')
       expect(drawer.props('trip')._id).toBe(ACTIVE._id)
+    })
+  })
+
+  describe('AdminTripsTable', () => {
+    // Presentational: mounted with props only, no store or router
+    const mountTable = () =>
+      mount(AdminTripsTable, {
+        props: { trips: [ACTIVE, COMPLETED], cars: [CAR, FREE_CAR], now: NOW },
+        attachTo: document.body,
+      })
+    const actionLabels = (row) =>
+      row.findAll('button[aria-label]').map((button) => button.attributes('aria-label'))
+
+    it('offers Complete only for open bookings, with a label per action', async () => {
+      wrapper = mountTable()
+      await flushPromises()
+      const [active, completed] = wrapper.findAll('tr.ant-table-row')
+      const activeId = shortId(ACTIVE._id)
+      const completedId = shortId(COMPLETED._id)
+
+      expect(actionLabels(active)).toEqual([
+        `View booking ${activeId}`,
+        `Complete booking ${activeId}`,
+        `Edit booking ${activeId}`,
+        `Delete booking ${activeId}`,
+      ])
+      expect(actionLabels(completed)).toEqual([
+        `View booking ${completedId}`,
+        `Edit booking ${completedId}`,
+        `Delete booking ${completedId}`,
+      ])
+      expect(completed.find('button[aria-label^="Delete"]').classes()).toContain(
+        'ant-btn-dangerous',
+      )
+    })
+
+    it('emits each action with its booking', async () => {
+      wrapper = mountTable()
+      await flushPromises()
+      const active = wrapper.findAll('tr.ant-table-row')[0]
+
+      for (const action of ['View', 'Complete', 'Edit', 'Delete']) {
+        await active
+          .find(`button[aria-label="${action} booking ${shortId(ACTIVE._id)}"]`)
+          .trigger('click')
+      }
+
+      expect(wrapper.emitted('view')).toEqual([[ACTIVE]])
+      expect(wrapper.emitted('complete')).toEqual([[ACTIVE]])
+      expect(wrapper.emitted('edit')).toEqual([[ACTIVE]])
+      expect(wrapper.emitted('delete')).toEqual([[ACTIVE]])
     })
   })
 
