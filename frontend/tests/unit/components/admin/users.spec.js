@@ -8,6 +8,7 @@ import admin from '@/store/modules/admin'
 import auth from '@/store/modules/auth'
 import cars from '@/store/modules/cars'
 import geo from '@/store/modules/geo'
+import notify from '@/utils/notify'
 import AdminUsersSection from '@/components/admin/AdminUsersSection.vue'
 import AdminUsersTable from '@/components/admin/AdminUsersTable.vue'
 import UserDetailsDrawer from '@/components/admin/UserDetailsDrawer.vue'
@@ -138,6 +139,7 @@ describe('admin users section', () => {
     vi.mocked(usersApi.getById).mockReset()
     vi.mocked(usersApi.update).mockReset()
     vi.mocked(usersApi.remove).mockReset()
+    vi.mocked(notify.apiError).mockReset()
   })
 
   afterEach(() => {
@@ -145,15 +147,88 @@ describe('admin users section', () => {
     document.body.innerHTML = ''
   })
 
-  it('shows trip counts and hides Delete for the current admin', async () => {
-    ;({ wrapper } = await mountWith(AdminUsersTable, { props: { users: [ADMIN, HANNA] } }))
+  describe('AdminUsersTable', () => {
+    // Presentational: mounted with props only, no store or router
+    const mountTable = (props) =>
+      mount(AdminUsersTable, {
+        props: {
+          users: [ADMIN, HANNA],
+          tripCounts: { user1: { total: 2, completed: 1 } },
+          userTrips: { user1: TRIPS },
+          currentUserId: ADMIN._id,
+          confirmDelete: vi.fn().mockResolvedValue(),
+          ...props,
+        },
+        attachTo: document.body,
+      })
 
-    const rows = wrapper.findAll('tbody tr.ant-table-row')
-    expect(rows).toHaveLength(2)
-    expect(normalise(rows[1].text())).toContain('1 / 2')
-    expect(normalise(rows[0].text())).toContain('0 / 0')
-    expect(wrapper.find('button[aria-label="Delete Ada Admin"]').exists()).toBe(false)
-    expect(wrapper.find('button[aria-label="Delete Hanna Paulava"]').exists()).toBe(true)
+    it('shows trip counts and hides Delete for the current admin', async () => {
+      wrapper = mountTable()
+      await flushPromises()
+
+      const rows = wrapper.findAll('tbody tr.ant-table-row')
+      expect(rows).toHaveLength(2)
+      expect(normalise(rows[1].text())).toContain('1 / 2')
+      expect(normalise(rows[0].text())).toContain('0 / 0')
+      expect(wrapper.find('button[aria-label="Delete Ada Admin"]').exists()).toBe(false)
+      expect(wrapper.find('button[aria-label="Delete Hanna Paulava"]').exists()).toBe(true)
+    })
+
+    it('calls confirmDelete only after confirming, loading until it settles', async () => {
+      let finish
+      const confirmDelete = vi.fn(() => new Promise((resolve) => (finish = resolve)))
+      wrapper = mountTable({ confirmDelete })
+      await flushPromises()
+
+      await wrapper.find('button[aria-label="Delete Hanna Paulava"]').trigger('click')
+      await vi.waitFor(() =>
+        expect(bodyText()).toContain(
+          'Delete Hanna Paulava? Their credit cards will also be removed. They have an active trip.',
+        ),
+      )
+      expect(confirmDelete).not.toHaveBeenCalled()
+
+      bodyButton('Delete').click()
+      await flushPromises()
+
+      expect(confirmDelete).toHaveBeenCalledWith(HANNA)
+      expect(bodyButton('Delete').classList.contains('ant-btn-loading')).toBe(true)
+      finish()
+      await flushPromises()
+    })
+
+    it('shows a highlighted user that sits past the first page (L13)', async () => {
+      const many = Array.from({ length: 12 }, (_, i) => ({
+        ...HANNA,
+        _id: `u${i}`,
+        firstName: `User${String(i).padStart(2, '0')}`,
+      }))
+      wrapper = mountTable({ users: many, highlightId: 'u11' })
+      await flushPromises()
+
+      expect(wrapper.text()).toContain('User11')
+      expect(wrapper.find('.ant-pagination-item-active').text()).toBe('2')
+    })
+  })
+
+  it('passes trip counts, trips and the current admin to the table', async () => {
+    ;({ wrapper } = await mountWith(AdminUsersSection))
+
+    const table = wrapper.findComponent(AdminUsersTable)
+    expect(table.props('tripCounts').user1).toMatchObject({ total: 2 })
+    expect(table.props('userTrips').user1.map((trip) => trip._id)).toEqual(['trip1', 'trip2'])
+    expect(table.props('currentUserId')).toBe(ADMIN._id)
+  })
+
+  it('reports a failed delete and keeps the user', async () => {
+    vi.mocked(usersApi.remove).mockRejectedValue(new Error('Server error'))
+    let store
+    ;({ wrapper, store } = await mountWith(AdminUsersSection))
+
+    await wrapper.findComponent(AdminUsersTable).props('confirmDelete')(HANNA)
+
+    expect(notify.apiError).toHaveBeenCalledWith(expect.any(Error), 'Could not delete the user')
+    expect(store.state.admin.users.items.map((user) => user._id)).toEqual(['admin1', 'user1'])
   })
 
   it('deletes a user after confirmation, warning about an active trip', async () => {
@@ -191,20 +266,6 @@ describe('admin users section', () => {
     await flushPromises()
   })
 
-  it('shows a highlighted user that sits past the first page (L13)', async () => {
-    const many = Array.from({ length: 12 }, (_, i) => ({
-      ...HANNA,
-      _id: `u${i}`,
-      firstName: `User${String(i).padStart(2, '0')}`,
-    }))
-    ;({ wrapper } = await mountWith(AdminUsersTable, {
-      props: { users: many, highlightId: 'u11' },
-    }))
-
-    expect(wrapper.text()).toContain('User11')
-    expect(wrapper.find('.ant-pagination-item-active').text()).toBe('2')
-  })
-
   it('filters by role with counts', async () => {
     ;({ wrapper } = await mountWith(AdminUsersSection))
     const pills = wrapper.find('[aria-label="Role"]').findAll('button')
@@ -237,22 +298,115 @@ describe('admin users section', () => {
     expect(router.currentRoute.value.query).toEqual({ tab: 'users' })
   })
 
-  it('details drawer fetches the user and lists their trips', async () => {
+  it('loads the focused user for the drawer and passes their trips down', async () => {
     vi.mocked(usersApi.getById).mockResolvedValue({ ...HANNA, lastName: 'Klimovich' })
-    let router
-    ;({ wrapper, router } = await mountWith(UserDetailsDrawer, {
-      props: { open: true, userId: 'user1' },
+    ;({ wrapper } = await mountWith(AdminUsersSection, {
+      props: { focusId: 'user1' },
+      path: '/admin?tab=users&user=user1',
     }))
 
     expect(usersApi.getById).toHaveBeenCalledWith('user1')
-    await vi.waitFor(() => expect(bodyText()).toContain('Hanna Klimovich'))
-    expect(bodyText()).toContain('Trips (2)')
-    expect(bodyText()).toContain('Toyota Camry')
-    expect(bodyText()).toContain('Car no longer in fleet')
+    const drawer = wrapper.findComponent(UserDetailsDrawer)
+    await vi.waitFor(() => expect(drawer.props('user').lastName).toBe('Klimovich'))
+    expect(drawer.props('trips').map((trip) => trip._id)).toEqual(['trip1', 'trip2'])
+    expect(drawer.props('cars')).toEqual([CAR])
+    expect(drawer.props('loading')).toBe(false)
+  })
 
-    bodyButton('Details').click()
+  it('passes a failed user load to the drawer and retries it', async () => {
+    vi.mocked(usersApi.getById)
+      .mockRejectedValueOnce(new Error('Network Error'))
+      .mockResolvedValueOnce(HANNA)
+    ;({ wrapper } = await mountWith(AdminUsersSection, {
+      props: { focusId: 'user1' },
+      path: '/admin?tab=users&user=user1',
+    }))
+
+    const drawer = wrapper.findComponent(UserDetailsDrawer)
+    expect(drawer.props('error')).toBe('Network Error')
+
+    drawer.vm.$emit('retry')
     await flushPromises()
+
+    expect(usersApi.getById).toHaveBeenCalledTimes(2)
+    expect(drawer.props('error')).toBe('')
+  })
+
+  it('ignores a late failure of an earlier user load', async () => {
+    const pending = {}
+    vi.mocked(usersApi.getById).mockImplementation(
+      (id) => new Promise((resolve, reject) => (pending[id] = { resolve, reject })),
+    )
+    ;({ wrapper } = await mountWith(AdminUsersSection, {
+      props: { focusId: 'user1' },
+      path: '/admin?tab=users&user=user1',
+    }))
+    await wrapper.setProps({ focusId: 'admin1' })
+
+    pending.admin1.resolve(ADMIN)
+    await flushPromises()
+    pending.user1.reject(new Error('Network Error'))
+    await flushPromises()
+
+    const drawer = wrapper.findComponent(UserDetailsDrawer)
+    expect(drawer.props('error')).toBe('')
+    expect(drawer.props('loading')).toBe(false)
+  })
+
+  it('opens a trip from the drawer on the trips tab', async () => {
+    vi.mocked(usersApi.getById).mockResolvedValue(HANNA)
+    let router
+    ;({ wrapper, router } = await mountWith(AdminUsersSection, {
+      props: { focusId: 'user1' },
+      path: '/admin?tab=users&user=user1',
+    }))
+
+    wrapper.findComponent(UserDetailsDrawer).vm.$emit('view-trip', 'trip1')
+    await flushPromises()
+
     expect(router.currentRoute.value.query).toEqual({ tab: 'trips', trip: 'trip1' })
+  })
+
+  describe('UserDetailsDrawer', () => {
+    // Presentational: mounted with props only, no store or router
+    const mountDrawer = (props) =>
+      mount(UserDetailsDrawer, {
+        props: { open: true, user: HANNA, trips: TRIPS, cars: [CAR], now: Date.now(), ...props },
+        attachTo: document.body,
+      })
+
+    it('shows the user and their trips', async () => {
+      wrapper = mountDrawer()
+      await flushPromises()
+
+      expect(bodyText()).toContain('Hanna Paulava')
+      expect(bodyText()).toContain('AB123456')
+      expect(bodyText()).toContain('Trips (2)')
+      expect(bodyText()).toContain('Toyota Camry')
+      expect(bodyText()).toContain('Car no longer in fleet')
+      expect(bodyText()).toContain('9999 ZZ-7')
+    })
+
+    it('emits view-trip and edit', async () => {
+      wrapper = mountDrawer()
+      await flushPromises()
+
+      bodyButton('Details').click()
+      bodyButton('Edit').click()
+
+      expect(wrapper.emitted('view-trip')).toEqual([['trip1']])
+      expect(wrapper.emitted('edit')).toEqual([[HANNA]])
+    })
+
+    it('shows the error and emits retry', async () => {
+      wrapper = mountDrawer({ user: null, trips: [], error: 'Network Error' })
+      await flushPromises()
+
+      expect(bodyText()).toContain('Network Error')
+      bodyButton('Retry').click()
+
+      expect(wrapper.emitted('retry')).toHaveLength(1)
+    })
   })
 
   describe('UserFormModal', () => {

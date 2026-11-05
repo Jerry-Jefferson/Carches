@@ -2,8 +2,10 @@
 import { mapActions, mapGetters } from 'vuex'
 
 import PillGroup from '@/components/common/PillGroup.vue'
+import { ROUTES, TAB_NAMES } from '@/router/routes.constants'
 import { DEFAULT_USER_FILTERS, filterUsers } from '@/utils/admin/consoleFilters'
 import { ALL } from '@/utils/common/collections'
+import notify from '@/utils/notify'
 import { ROLE } from '@/utils/users/userDisplay'
 import AdminUsersTable from './AdminUsersTable.vue'
 import UserDetailsDrawer from './UserDetailsDrawer.vue'
@@ -23,11 +25,24 @@ export default {
     return {
       editing: null,
       isFormOpen: false,
+      isUserLoading: false,
+      userError: '',
+      userSeq: 0,
     }
   },
   computed: {
-    ...mapGetters('admin/users', ['items', 'filters', 'isLoading']),
-    ...mapGetters('admin/users', ['filteredUsers']),
+    ...mapGetters('admin/users', [
+      'filteredUsers',
+      'items',
+      'filters',
+      'isLoading',
+      'byId',
+      'tripCounts',
+    ]),
+    ...mapGetters('admin/trips', ['tripsByUser']),
+    ...mapGetters('admin/insights', ['now']),
+    ...mapGetters('cars', { cars: 'items' }),
+    ...mapGetters('auth', { currentUser: 'user' }),
     // Role pill counts respect the search
     roleCounts() {
       const searched = filterUsers(this.items, { ...this.filters, role: ALL })
@@ -50,12 +65,26 @@ export default {
     isDrawerOpen() {
       return Boolean(this.focusId)
     },
+    // The drawer's user: E6 refreshes it in the store, so the getter brings the fresh copy
+    focusedUser() {
+      return this.focusId ? this.byId(this.focusId) : null
+    },
+    focusedTrips() {
+      return this.focusId ? (this.tripsByUser[this.focusId] ?? []) : []
+    },
     // Re-checked when the users arrive after the query
     focusKey() {
       return this.focusId ? `${this.focusId}:${this.items.length}` : null
     },
   },
   watch: {
+    // The drawer is open exactly while `focusId` is set, so this covers opening it too
+    focusId: {
+      handler(id) {
+        if (id) this.loadUser()
+      },
+      immediate: true,
+    },
     focusKey: {
       handler() {
         this.revealFocused()
@@ -64,7 +93,7 @@ export default {
     },
   },
   methods: {
-    ...mapActions('admin/users', ['setFilters']),
+    ...mapActions('admin/users', ['setFilters', 'fetchUser', 'deleteUser']),
     revealFocused() {
       if (!this.focusId) return
       const known = this.items.some((user) => user._id === this.focusId)
@@ -80,9 +109,39 @@ export default {
     onDrawerOpen(isOpen) {
       if (!isOpen) this.closeDrawer()
     },
+    // E6 for the details drawer
+    async loadUser() {
+      const id = this.focusId
+      if (!id) return
+      // Opening another user while one loads: only the latest answer counts
+      const seq = ++this.userSeq
+      this.userError = ''
+      this.isUserLoading = true
+      try {
+        await this.fetchUser(id)
+      } catch (err) {
+        if (seq === this.userSeq) this.userError = err.message
+      } finally {
+        if (seq === this.userSeq) this.isUserLoading = false
+      }
+    },
+    viewTrip(id) {
+      this.$router.push({
+        name: ROUTES.ADMIN.NAME,
+        query: { ...this.$route.query, tab: TAB_NAMES.ADMIN.TRIPS, trip: id, user: undefined },
+      })
+    },
     edit(user) {
       this.editing = user
       this.isFormOpen = true
+    },
+    async remove(user) {
+      try {
+        await this.deleteUser(user._id)
+        notify.success('User deleted')
+      } catch (err) {
+        notify.apiError(err, 'Could not delete the user')
+      }
     },
   },
 }
@@ -118,6 +177,10 @@ export default {
         :users="filteredUsers"
         :highlight-id="focusId"
         :is-loading="isLoading"
+        :user-trips="tripsByUser"
+        :trip-counts="tripCounts"
+        :current-user-id="currentUser?._id"
+        :confirm-delete="remove"
         @view="view"
         @edit="edit"
       />
@@ -125,9 +188,16 @@ export default {
 
     <UserDetailsDrawer
       :open="isDrawerOpen"
-      :user-id="focusId"
+      :user="focusedUser"
+      :trips="focusedTrips"
+      :cars="cars"
+      :now="now"
+      :loading="isUserLoading"
+      :error="userError"
       @update:open="onDrawerOpen"
       @edit="edit"
+      @retry="loadUser"
+      @view-trip="viewTrip"
     />
     <UserFormModal v-model:open="isFormOpen" :user="editing" />
   </section>

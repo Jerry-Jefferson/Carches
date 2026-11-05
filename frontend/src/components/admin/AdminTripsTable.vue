@@ -1,5 +1,5 @@
 <script>
-import { mapGetters } from 'vuex'
+import { CheckOutlined, DeleteOutlined, EditOutlined, EyeOutlined } from '@ant-design/icons-vue'
 
 import StatusTag from '@/components/common/StatusTag.vue'
 import { BOOKING_STATUS, bookingStatus } from '@/utils/bookings/bookingStatus'
@@ -9,11 +9,20 @@ import { formatDateTime } from '@/utils/format/dateTime'
 
 const PAGE_SIZES = ['5', '10', '20', '50']
 
+// Row buttons: each emits its `event` with the booking. "Complete" only for open bookings.
+const ACTIONS = Object.freeze([
+  { event: 'view', title: 'View', icon: EyeOutlined },
+  { event: 'complete', title: 'Complete', icon: CheckOutlined, openOnly: true },
+  { event: 'edit', title: 'Edit', icon: EditOutlined },
+  { event: 'delete', title: 'Delete', icon: DeleteOutlined, danger: true },
+])
+
 // Trip log of the console (E19 rows). Car names are joined from the `cars` store (Q5).
 export default {
   name: 'AdminTripsTable',
   components: { StatusTag },
   props: {
+    cars: { type: Array, required: true },
     trips: { type: Array, required: true },
     // Current time in ms, ticked by the console
     now: { type: Number, required: true },
@@ -38,13 +47,13 @@ export default {
     }
   },
   computed: {
-    ...mapGetters('cars', { cars: 'items' }),
     carsById() {
       return Object.fromEntries(this.cars.map((car) => [car._id, car]))
     },
     rows() {
       return this.trips.map((trip) => {
         const status = bookingStatus(trip, this.now)
+        const isOpen = status !== BOOKING_STATUS.COMPLETED
         return {
           key: trip._id,
           trip,
@@ -55,7 +64,7 @@ export default {
           car: tripCar(trip, this.carsById),
           duration: durationText(trip, this.now),
           distance: distanceFuelText(trip),
-          canComplete: status !== BOOKING_STATUS.COMPLETED,
+          actions: ACTIONS.filter((action) => isOpen || !action.openOnly),
         }
       })
     },
@@ -141,45 +150,15 @@ export default {
       <StatusTag v-else-if="column.key === 'status'" :status="record.status" kind="booking" />
 
       <div v-else-if="column.key === 'actions'" class="flex gap-1">
-        <a-tooltip title="View">
+        <a-tooltip v-for="action in record.actions" :key="action.event" :title="action.title">
           <a-button
             type="text"
             shape="circle"
-            :aria-label="`View booking ${record.id}`"
-            @click="$emit('view', record.trip)"
+            :danger="action.danger"
+            :aria-label="`${action.title} booking ${record.id}`"
+            @click="$emit(action.event, record.trip)"
           >
-            <template #icon><EyeOutlined /></template>
-          </a-button>
-        </a-tooltip>
-        <a-tooltip v-if="record.canComplete" title="Complete">
-          <a-button
-            type="text"
-            shape="circle"
-            :aria-label="`Complete booking ${record.id}`"
-            @click="$emit('complete', record.trip)"
-          >
-            <template #icon><CheckOutlined /></template>
-          </a-button>
-        </a-tooltip>
-        <a-tooltip title="Edit">
-          <a-button
-            type="text"
-            shape="circle"
-            :aria-label="`Edit booking ${record.id}`"
-            @click="$emit('edit', record.trip)"
-          >
-            <template #icon><EditOutlined /></template>
-          </a-button>
-        </a-tooltip>
-        <a-tooltip title="Delete">
-          <a-button
-            type="text"
-            shape="circle"
-            danger
-            :aria-label="`Delete booking ${record.id}`"
-            @click="$emit('delete', record.trip)"
-          >
-            <template #icon><DeleteOutlined /></template>
+            <template #icon><component :is="action.icon" /></template>
           </a-button>
         </a-tooltip>
       </div>

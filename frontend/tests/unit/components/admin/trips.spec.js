@@ -10,8 +10,10 @@ import auth from '@/store/modules/auth'
 import cars from '@/store/modules/cars'
 import geo from '@/store/modules/geo'
 import notify from '@/utils/notify'
+import { shortId } from '@/utils/common/ids'
 import { fromPickerValue } from '@/utils/common/pickerValue'
 import AdminTripsSection from '@/components/admin/AdminTripsSection.vue'
+import AdminTripsTable from '@/components/admin/AdminTripsTable.vue'
 import BookingFormModal from '@/components/admin/BookingFormModal.vue'
 import CompleteTripModal from '@/components/admin/CompleteTripModal.vue'
 import DeleteTripModal from '@/components/admin/DeleteTripModal.vue'
@@ -191,6 +193,93 @@ describe('admin trips', () => {
       await vi.waitFor(() => expect(bodyText()).toContain(CAR.vin))
       expect(bookingsApi.getById).toHaveBeenCalledWith(ACTIVE._id)
       expect(rows()[1].classes()).toContain('*:bg-primary/15')
+    })
+
+    it('shows only the latest booking when an earlier load answers last (L29)', async () => {
+      const pending = {}
+      vi.mocked(bookingsApi.getById).mockImplementation(
+        (id) => new Promise((resolve) => (pending[id] = resolve)),
+      )
+      ;({ wrapper } = await mountWith(AdminTripsSection))
+      wrapper.vm.view(ACTIVE)
+      wrapper.vm.view(COMPLETED)
+
+      pending[COMPLETED._id](COMPLETED)
+      await flushPromises()
+      pending[ACTIVE._id](ACTIVE)
+      await flushPromises()
+
+      const drawer = wrapper.findComponent(TripDetailsDrawer)
+      expect(drawer.props('trip')._id).toBe(COMPLETED._id)
+      expect(drawer.props('loading')).toBe(false)
+    })
+
+    it('passes a failed load to the drawer and retries it', async () => {
+      vi.mocked(bookingsApi.getById)
+        .mockRejectedValueOnce(new Error('Network Error'))
+        .mockResolvedValueOnce(ACTIVE)
+      ;({ wrapper } = await mountWith(AdminTripsSection, { focusId: ACTIVE._id }))
+
+      const drawer = wrapper.findComponent(TripDetailsDrawer)
+      expect(drawer.props('error')).toBe('Network Error')
+
+      drawer.vm.$emit('retry')
+      await flushPromises()
+
+      expect(bookingsApi.getById).toHaveBeenCalledTimes(2)
+      expect(drawer.props('error')).toBe('')
+      expect(drawer.props('trip')._id).toBe(ACTIVE._id)
+    })
+  })
+
+  describe('AdminTripsTable', () => {
+    // Presentational: mounted with props only, no store or router
+    const mountTable = () =>
+      mount(AdminTripsTable, {
+        props: { trips: [ACTIVE, COMPLETED], cars: [CAR, FREE_CAR], now: NOW },
+        attachTo: document.body,
+      })
+    const actionLabels = (row) =>
+      row.findAll('button[aria-label]').map((button) => button.attributes('aria-label'))
+
+    it('offers Complete only for open bookings, with a label per action', async () => {
+      wrapper = mountTable()
+      await flushPromises()
+      const [active, completed] = wrapper.findAll('tr.ant-table-row')
+      const activeId = shortId(ACTIVE._id)
+      const completedId = shortId(COMPLETED._id)
+
+      expect(actionLabels(active)).toEqual([
+        `View booking ${activeId}`,
+        `Complete booking ${activeId}`,
+        `Edit booking ${activeId}`,
+        `Delete booking ${activeId}`,
+      ])
+      expect(actionLabels(completed)).toEqual([
+        `View booking ${completedId}`,
+        `Edit booking ${completedId}`,
+        `Delete booking ${completedId}`,
+      ])
+      expect(completed.find('button[aria-label^="Delete"]').classes()).toContain(
+        'ant-btn-dangerous',
+      )
+    })
+
+    it('emits each action with its booking', async () => {
+      wrapper = mountTable()
+      await flushPromises()
+      const active = wrapper.findAll('tr.ant-table-row')[0]
+
+      for (const action of ['View', 'Complete', 'Edit', 'Delete']) {
+        await active
+          .find(`button[aria-label="${action} booking ${shortId(ACTIVE._id)}"]`)
+          .trigger('click')
+      }
+
+      expect(wrapper.emitted('view')).toEqual([[ACTIVE]])
+      expect(wrapper.emitted('complete')).toEqual([[ACTIVE]])
+      expect(wrapper.emitted('edit')).toEqual([[ACTIVE]])
+      expect(wrapper.emitted('delete')).toEqual([[ACTIVE]])
     })
   })
 
@@ -381,20 +470,40 @@ describe('admin trips', () => {
   })
 
   describe('TripDetailsDrawer', () => {
-    it('shows only the latest booking when an earlier load answers last (L29)', async () => {
-      const pending = {}
-      vi.mocked(bookingsApi.getById).mockImplementation(
-        (id) => new Promise((resolve) => (pending[id] = resolve)),
-      )
-      ;({ wrapper } = await mountWith(TripDetailsDrawer, { open: true, tripId: ACTIVE._id }))
-      await wrapper.setProps({ tripId: COMPLETED._id })
+    // Presentational: mounted with props only, no store or router
+    const mountDrawer = (props) =>
+      mount(TripDetailsDrawer, {
+        props: { open: true, tripId: ACTIVE._id, cars: [CAR, FREE_CAR], now: NOW, ...props },
+        attachTo: document.body,
+      })
 
-      pending[COMPLETED._id](COMPLETED)
-      await flushPromises()
-      pending[ACTIVE._id](ACTIVE)
+    it('shows the booking it is given, with the live duration from `now`', async () => {
+      wrapper = mountDrawer({ trip: ACTIVE })
       await flushPromises()
 
-      expect(wrapper.vm.trip._id).toBe(COMPLETED._id)
+      expect(bodyText()).toContain('Booking')
+      expect(bodyText()).toContain('Hanna Paulava')
+      expect(bodyText()).toContain('Toyota Camry')
+      expect(bodyText()).toContain(CAR.vin)
+      expect(bodyText()).toContain('1 h 05 min')
+      expect(bodyText()).toContain('Active')
+    })
+
+    it('shows the loading state', async () => {
+      wrapper = mountDrawer({ loading: true })
+      await flushPromises()
+
+      expect(bodyText()).toContain('Loading booking…')
+    })
+
+    it('shows the error and emits retry', async () => {
+      wrapper = mountDrawer({ error: 'Network Error' })
+      await flushPromises()
+
+      expect(bodyText()).toContain('Could not load the booking')
+      expect(bodyText()).toContain('Network Error')
+      bodyButton('Retry').click()
+      expect(wrapper.emitted('retry')).toHaveLength(1)
     })
   })
 })

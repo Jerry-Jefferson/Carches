@@ -1,6 +1,4 @@
 <script>
-import { mapActions, mapGetters } from 'vuex'
-
 import StatusTag from '@/components/common/StatusTag.vue'
 import { bookingStatus } from '@/utils/bookings/bookingStatus'
 import { tripCar, tripClient } from '@/utils/bookings/tripLabels'
@@ -11,26 +9,26 @@ import { formatKm, formatPercent } from '@/utils/format/number'
 
 const EMPTY = '—'
 
-// Full booking from E20: user, car, dates, start / finish values and computed metrics
+/**
+ * Full booking: user, car, dates, start / finish values and computed metrics.
+ * Presentational — the parent loads the booking (E20) and passes it in.
+ * - trip / loading / error: the loaded booking and the state of its request
+ * - emits `retry` when the user asks to load it again
+ */
 export default {
   name: 'TripDetailsDrawer',
   components: { StatusTag },
   props: {
     open: { type: Boolean, default: false },
     tripId: { type: String, default: null },
+    trip: { type: Object, default: null },
+    loading: { type: Boolean, default: false },
+    error: { type: String, default: '' },
+    cars: { type: Array, required: true },
+    now: { type: Number, required: true },
   },
-  emits: ['update:open'],
-  data() {
-    return {
-      trip: null,
-      isLoading: false,
-      error: '',
-      loadSeq: 0,
-    }
-  },
+  emits: ['update:open', 'retry'],
   computed: {
-    ...mapGetters('cars', { cars: 'items' }),
-    ...mapGetters('admin/insights', ['now']),
     carsById() {
       return Object.fromEntries(this.cars.map((car) => [car._id, car]))
     },
@@ -84,35 +82,7 @@ export default {
       ]
     },
   },
-  watch: {
-    open: {
-      handler(isOpen) {
-        if (isOpen) this.load()
-      },
-      immediate: true,
-    },
-    tripId() {
-      if (this.open) this.load()
-    },
-  },
   methods: {
-    ...mapActions('admin/trips', ['fetchTrip']),
-    async load() {
-      if (!this.tripId) return
-      // Opening another booking while one loads: only the latest answer is shown
-      const seq = ++this.loadSeq
-      this.trip = null
-      this.error = ''
-      this.isLoading = true
-      try {
-        const trip = await this.fetchTrip(this.tripId)
-        if (seq === this.loadSeq) this.trip = trip
-      } catch (err) {
-        if (seq === this.loadSeq) this.error = err.message
-      } finally {
-        if (seq === this.loadSeq) this.isLoading = false
-      }
-    },
     close() {
       this.$emit('update:open', false)
     },
@@ -122,7 +92,7 @@ export default {
 
 <template>
   <a-drawer :open="open" :title="title" :width="440" placement="right" @close="close">
-    <div v-if="isLoading" class="flex justify-center py-10">
+    <div v-if="loading" class="flex justify-center py-10">
       <a-spin tip="Loading booking…" />
     </div>
 
@@ -134,7 +104,7 @@ export default {
       :description="error"
     >
       <template #action>
-        <a-button size="small" @click="load">Retry</a-button>
+        <a-button size="small" @click="$emit('retry')">Retry</a-button>
       </template>
     </a-alert>
 

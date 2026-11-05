@@ -1,6 +1,4 @@
 <script>
-import { mapGetters } from 'vuex'
-
 import StatusTag from '@/components/common/StatusTag.vue'
 import { bookingStatus } from '@/utils/bookings/bookingStatus'
 import { tripDistance } from '@/utils/bookings/tripMetrics'
@@ -17,15 +15,12 @@ export default {
   props: {
     open: { type: Boolean, default: false },
     car: { type: Object, default: null },
+    trips: { type: Array, default: () => [] },
   },
   emits: ['update:open', 'view-trip'],
   computed: {
-    ...mapGetters('admin/trips', ['tripsByCar']),
     title() {
       return this.car ? `History of ${carName(this.car)}` : 'History'
-    },
-    trips() {
-      return this.car ? (this.tripsByCar[this.car._id] ?? []) : []
     },
     summary() {
       if (!this.car) return []

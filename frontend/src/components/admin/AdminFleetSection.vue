@@ -2,9 +2,11 @@
 import { mapActions, mapGetters } from 'vuex'
 
 import PillGroup from '@/components/common/PillGroup.vue'
+import { carName } from '@/utils/cars/carDisplay'
 import { CAR_STATUS, carStatusMeta } from '@/utils/cars/carStatus'
 import { ALL } from '@/utils/common/collections'
-import { ROUTES } from '@/router/routes.constants'
+import notify from '@/utils/notify'
+import { ROUTES, TAB_NAMES } from '@/router/routes.constants'
 import AdminFleetMap from './AdminFleetMap.vue'
 import AdminFleetTable from './AdminFleetTable.vue'
 import LowFuelAlerts from './LowFuelAlerts.vue'
@@ -48,8 +50,11 @@ export default {
   },
   computed: {
     ...mapGetters('cars', { cars: 'items', isLoadingCars: 'isLoading' }),
-    ...mapGetters('admin/fleet', ['filters']),
-    ...mapGetters('admin/fleet', ['filteredCars', 'statusCounts', 'brands']),
+    ...mapGetters('admin/fleet', ['filters', 'filteredCars', 'statusCounts', 'brands']),
+    ...mapGetters('admin/trips', ['tripsByCar']),
+    historyTrips() {
+      return this.historyCar ? (this.tripsByCar[this.historyCar._id] ?? []) : []
+    },
     statusOptions() {
       const total = Object.values(this.statusCounts).reduce((sum, count) => sum + count, 0)
       return [
@@ -97,7 +102,16 @@ export default {
     clearTimeout(this.highlightTimer)
   },
   methods: {
-    ...mapActions('admin/fleet', ['setFilters', 'resetFilters']),
+    ...mapActions('admin/fleet', ['setFilters', 'resetFilters', 'deleteCar']),
+    // E13, after the table's confirmation
+    async removeCar(car) {
+      try {
+        await this.deleteCar(car)
+        notify.success(`${carName(car)} removed from the fleet`)
+      } catch (err) {
+        notify.apiError(err, 'Could not remove the car')
+      }
+    },
     openCreate() {
       this.editedCar = null
       this.isFormOpen = true
@@ -114,7 +128,7 @@ export default {
       this.isHistoryOpen = false
       this.$router.push({
         name: ROUTES.ADMIN.NAME,
-        query: { ...this.$route.query, tab: 'trips', trip: tripId },
+        query: { ...this.$route.query, tab: TAB_NAMES.ADMIN.TRIPS, trip: tripId },
       })
     },
     showOnMap(car) {
@@ -201,6 +215,7 @@ export default {
         :cars="filteredCars"
         :highlight-id="highlightId"
         :loading="isLoadingCars && !cars.length"
+        :confirm-delete="removeCar"
         @edit="openEdit"
         @history="openHistory"
         @show-on-map="showOnMap"
@@ -209,7 +224,7 @@ export default {
 
     <div class="grid grid-cols-1 gap-6 xl:grid-cols-3">
       <div class="xl:col-span-2">
-        <AdminFleetMap ref="map" @edit="openEdit" />
+        <AdminFleetMap ref="map" :cars="cars" @edit="openEdit" />
       </div>
       <div class="flex flex-col gap-6">
         <LowFuelAlerts @show-on-map="showOnMap" />
@@ -219,6 +234,11 @@ export default {
     </div>
 
     <VehicleFormModal v-model:open="isFormOpen" :car="editedCar" />
-    <VehicleHistoryDrawer v-model:open="isHistoryOpen" :car="historyCar" @view-trip="viewTrip" />
+    <VehicleHistoryDrawer
+      v-model:open="isHistoryOpen"
+      :car="historyCar"
+      :trips="historyTrips"
+      @view-trip="viewTrip"
+    />
   </section>
 </template>

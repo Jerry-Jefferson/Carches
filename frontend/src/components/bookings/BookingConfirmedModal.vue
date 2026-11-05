@@ -45,6 +45,14 @@ export default {
     fleetRoute() {
       return { name: ROUTES.FLEET.NAME }
     },
+    // Text rows of the summary; the status row has a tag and stays in the template
+    details() {
+      return [
+        { label: 'Car', value: this.name },
+        { label: 'Plate', value: this.car?.registrationNumber },
+        { label: 'Start time', value: this.startTime },
+      ]
+    },
   },
   methods: {
     close() {
@@ -81,17 +89,9 @@ export default {
       </div>
 
       <dl class="m-0 flex w-full flex-col gap-2 rounded-card bg-surface p-4 text-left text-body-md">
-        <div class="flex justify-between gap-4">
-          <dt class="text-muted-foreground">Car</dt>
-          <dd class="m-0 text-label-lg">{{ name }}</dd>
-        </div>
-        <div class="flex justify-between gap-4">
-          <dt class="text-muted-foreground">Plate</dt>
-          <dd class="m-0 text-label-lg">{{ car?.registrationNumber }}</dd>
-        </div>
-        <div class="flex justify-between gap-4">
-          <dt class="text-muted-foreground">Start time</dt>
-          <dd class="m-0 text-label-lg">{{ startTime }}</dd>
+        <div v-for="row in details" :key="row.label" class="flex justify-between gap-4">
+          <dt class="text-muted-foreground">{{ row.label }}</dt>
+          <dd class="m-0 text-label-lg">{{ row.value }}</dd>
         </div>
         <div class="flex items-center justify-between gap-4">
           <dt class="text-muted-foreground">Status</dt>

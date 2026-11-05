@@ -15,6 +15,7 @@ import LowFuelAlerts from '@/components/admin/LowFuelAlerts.vue'
 import MaintenanceActions from '@/components/admin/MaintenanceActions.vue'
 import ReservedCardsWidget from '@/components/admin/ReservedCardsWidget.vue'
 import VehicleFormModal from '@/components/admin/VehicleFormModal.vue'
+import VehicleHistoryDrawer from '@/components/admin/VehicleHistoryDrawer.vue'
 
 vi.mock('@/services/cars', () => ({
   list: vi.fn(),
@@ -116,15 +117,118 @@ describe('admin fleet section', () => {
 
       expect(store.state.admin.fleet.filters).toMatchObject({ q: '', brand: 'Toyota' })
     })
+
+    const mountSection = (store) =>
+      mount(AdminFleetSection, {
+        global: {
+          plugins: [store, makeRouter()],
+          stubs: {
+            AdminFleetTable: true,
+            AdminFleetMap: true,
+            LowFuelAlerts: true,
+            ReservedCardsWidget: true,
+            MaintenanceActions: true,
+            VehicleFormModal: true,
+            VehicleHistoryDrawer: true,
+          },
+        },
+      })
+
+    it('deletes the car the table confirms (E13)', async () => {
+      const free = car('b')
+      const store = makeStore([car('a'), free])
+      vi.mocked(carsApi.remove).mockResolvedValue()
+      wrapper = mountSection(store)
+      await flushPromises()
+
+      await wrapper.findComponent(AdminFleetTable).props('confirmDelete')(free)
+
+      expect(carsApi.remove).toHaveBeenCalledWith('VINB')
+      expect(store.state.cars.items.map((item) => item._id)).toEqual(['a'])
+      expect(notify.success).toHaveBeenCalledWith('Toyota Camry removed from the fleet')
+    })
+
+    it('reports a failed delete and keeps the car', async () => {
+      const free = car('b')
+      const store = makeStore([car('a'), free])
+      vi.mocked(carsApi.remove).mockRejectedValue(new Error('Server error'))
+      wrapper = mountSection(store)
+      await flushPromises()
+
+      await wrapper.findComponent(AdminFleetTable).props('confirmDelete')(free)
+
+      expect(notify.apiError).toHaveBeenCalledWith(expect.any(Error), 'Could not remove the car')
+      expect(store.state.cars.items.map((item) => item._id)).toEqual(['a', 'b'])
+    })
+
+    it('passes the history car and its trips to the drawer', async () => {
+      const free = car('b')
+      const store = makeStore([car('a'), free])
+      const trip = {
+        _id: 'trip1',
+        userId: null,
+        carId: { _id: 'b' },
+        startDate: new Date().toISOString(),
+        endDate: null,
+      }
+      store.commit('admin/trips/SET_ITEMS', [trip, { ...trip, _id: 'trip2', carId: { _id: 'a' } }])
+      wrapper = mountSection(store)
+      await flushPromises()
+
+      wrapper.findComponent(AdminFleetTable).vm.$emit('history', free)
+      await flushPromises()
+
+      const drawer = wrapper.findComponent(VehicleHistoryDrawer)
+      expect(drawer.props('car')).toEqual(free)
+      expect(drawer.props('trips').map((item) => item._id)).toEqual(['trip1'])
+    })
+  })
+
+  describe('VehicleHistoryDrawer', () => {
+    // Presentational: mounted with props only, no store or router
+    it('lists the trips it is given and emits view-trip', async () => {
+      const trip = {
+        _id: 'trip1',
+        userId: { firstName: 'Hanna', lastName: 'Paulava' },
+        carId: { _id: 'b' },
+        startDate: new Date().toISOString(),
+        endDate: null,
+      }
+      wrapper = mount(VehicleHistoryDrawer, {
+        props: { open: true, car: car('b'), trips: [trip] },
+        attachTo: document.body,
+      })
+      await flushPromises()
+
+      expect(bodyText()).toContain('History of Toyota Camry')
+      expect(bodyText()).toContain('1 booking')
+      expect(bodyText()).toContain('Hanna Paulava')
+      bodyButton('Details').click()
+      expect(wrapper.emitted('view-trip')).toEqual([['trip1']])
+    })
+
+    it('says when the car has not been booked', async () => {
+      wrapper = mount(VehicleHistoryDrawer, {
+        props: { open: true, car: car('b'), trips: [] },
+        attachTo: document.body,
+      })
+      await flushPromises()
+
+      expect(bodyText()).toContain('This car has not been booked yet.')
+    })
   })
 
   describe('AdminFleetTable', () => {
-    it('blocks deleting a car in a trip and removes a free one', async () => {
+    // Presentational: mounted with props only, no store or router
+    it('blocks deleting a car in a trip and deletes a free one only after confirming', async () => {
       const busy = car('a', { status: 'in_use' })
       const free = car('b')
-      const store = makeStore([busy, free])
-      vi.mocked(carsApi.remove).mockResolvedValue()
-      wrapper = mountWith(AdminFleetTable, { store, props: { cars: [busy, free] } })
+      let finish
+      const confirmDelete = vi.fn(() => new Promise((resolve) => (finish = resolve)))
+      wrapper = mount(AdminFleetTable, {
+        props: { cars: [busy, free], confirmDelete },
+        attachTo: document.body,
+      })
 
       const busyDelete = wrapper.find('button[aria-label^="Delete Toyota Camry (not possible"]')
       expect(busyDelete.attributes('disabled')).toBeDefined()
@@ -135,12 +239,16 @@ describe('admin fleet section', () => {
       await vi.waitFor(() =>
         expect(bodyText()).toContain('Remove Toyota Camry (B-7) from the fleet?'),
       )
+      expect(confirmDelete).not.toHaveBeenCalled()
+
       bodyButton('Remove').click()
       await flushPromises()
 
-      expect(carsApi.remove).toHaveBeenCalledWith('VINB')
-      expect(store.state.cars.items.map((item) => item._id)).toEqual(['a'])
-      expect(notify.success).toHaveBeenCalled()
+      expect(confirmDelete).toHaveBeenCalledWith(free)
+      // The popconfirm waits for the returned request
+      expect(bodyButton('Remove').classList.contains('ant-btn-loading')).toBe(true)
+      finish()
+      await flushPromises()
     })
   })
 

@@ -1,10 +1,13 @@
 <script>
+import { CalendarOutlined, DashboardOutlined, FieldTimeOutlined } from '@ant-design/icons-vue'
+
 import CarPlaceholder from '@/components/common/CarPlaceholder.vue'
 import EnergyBar from '@/components/common/EnergyBar.vue'
 import StatusTag from '@/components/common/StatusTag.vue'
 import { carName } from '@/utils/cars/carDisplay'
 import { CAR_STATUS, carStatusMeta } from '@/utils/cars/carStatus'
 import { fuelTone } from '@/utils/cars/fuelLevel'
+import { EMPTY_VALUE } from '@/utils/format/locale'
 import { formatKm, formatPercent } from '@/utils/format/number'
 import { walkingMinutes } from '@/utils/geo/coordinates'
 import { formatDistance } from '@/utils/geo/geoFormat'
@@ -42,6 +45,14 @@ export default {
     },
     mileage() {
       return formatKm(this.car.mileage)
+    },
+    // Spec strip under the photo. Fuel shows a bar instead of text (`isFuel`).
+    stats() {
+      return [
+        { label: 'Year', icon: CalendarOutlined, value: this.year ?? EMPTY_VALUE },
+        { label: 'Mileage', icon: FieldTimeOutlined, value: this.mileage },
+        { label: 'Fuel', icon: DashboardOutlined, isFuel: true },
+      ]
     },
     distanceText() {
       if (this.distance === null) return ''
@@ -100,25 +111,14 @@ export default {
       </div>
 
       <dl class="m-0 grid grid-cols-3 gap-2 rounded-control bg-surface p-3 text-body-sm">
-        <div class="min-w-0">
+        <div v-for="stat in stats" :key="stat.label" class="min-w-0">
           <dt class="flex items-center gap-1 text-muted-foreground">
-            <CalendarOutlined aria-hidden="true" /> Year
+            <component :is="stat.icon" aria-hidden="true" /> {{ stat.label }}
           </dt>
-          <dd class="m-0 text-label-md">{{ year ?? '—' }}</dd>
-        </div>
-        <div class="min-w-0">
-          <dt class="flex items-center gap-1 text-muted-foreground">
-            <FieldTimeOutlined aria-hidden="true" /> Mileage
-          </dt>
-          <dd class="m-0 truncate text-label-md">{{ mileage }}</dd>
-        </div>
-        <div class="min-w-0">
-          <dt class="flex items-center gap-1 text-muted-foreground">
-            <DashboardOutlined aria-hidden="true" /> Fuel
-          </dt>
-          <dd class="m-0 pt-1">
+          <dd v-if="stat.isFuel" class="m-0 pt-1">
             <EnergyBar :level="car.fuelLevel ?? 0" :show-label="false" />
           </dd>
+          <dd v-else class="m-0 truncate text-label-md">{{ stat.value }}</dd>
         </div>
       </dl>
 
