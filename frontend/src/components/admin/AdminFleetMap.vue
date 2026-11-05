@@ -1,6 +1,4 @@
 <script>
-import { mapGetters } from 'vuex'
-
 import MapView from '@/components/common/MapView.vue'
 import StatusTag from '@/components/common/StatusTag.vue'
 import { carName } from '@/utils/cars/carDisplay'
@@ -14,9 +12,11 @@ import { toneClasses } from '@/assets/styles/tones'
 export default {
   name: 'AdminFleetMap',
   components: { MapView, StatusTag },
+  props: {
+    cars: { type: Array, required: true },
+  },
   emits: ['edit'],
   computed: {
-    ...mapGetters('cars', { cars: 'items' }),
     carsById() {
       return Object.fromEntries(this.cars.map((car) => [car._id, car]))
     },

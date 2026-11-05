@@ -1,6 +1,4 @@
 <script>
-import { mapActions, mapGetters } from 'vuex'
-
 import CarPlaceholder from '@/components/common/CarPlaceholder.vue'
 import EnergyBar from '@/components/common/EnergyBar.vue'
 import StatusTag from '@/components/common/StatusTag.vue'
@@ -18,7 +16,12 @@ const BUSY = [CAR_STATUS.IN_USE, CAR_STATUS.RESERVED]
 const byText = (read) => (a, b) => read(a).localeCompare(read(b))
 const byNumber = (read) => (a, b) => (read(a) ?? -Infinity) - (read(b) ?? -Infinity)
 
-// Fleet table of the admin console (E9 rows; E13 delete). Edit and history open in the section.
+/**
+ * Fleet table of the admin console. Presentational: rows come in as `cars`; edit, history
+ * and "show on map" are emitted for the section to handle.
+ * `confirmDelete(car)` is a prop, not an event: the popconfirm waits for the promise it
+ * returns and keeps its OK button loading until the request (E13) ends.
+ */
 export default {
   name: 'AdminFleetTable',
   components: { CarPlaceholder, EnergyBar, StatusTag },
@@ -27,6 +30,7 @@ export default {
     // Row to highlight, e.g. after picking a car in the top search
     highlightId: { type: String, default: null },
     loading: { type: Boolean, default: false },
+    confirmDelete: { type: Function, required: true },
   },
   emits: ['edit', 'history', 'show-on-map'],
   data() {
@@ -71,11 +75,7 @@ export default {
       ],
     }
   },
-  computed: {
-    ...mapGetters('admin/fleet', ['isMutating']),
-  },
   methods: {
-    ...mapActions('admin/fleet', ['deleteCar']),
     carName,
     formatCoords,
     formatKm,
@@ -101,14 +101,6 @@ export default {
         notify.success('VIN copied')
       } catch {
         notify.error('Could not copy the VIN')
-      }
-    },
-    async remove(car) {
-      try {
-        await this.deleteCar(car)
-        notify.success(`${carName(car)} removed from the fleet`)
-      } catch (err) {
-        notify.apiError(err, 'Could not remove the car')
       }
     },
   },
@@ -210,7 +202,7 @@ export default {
           :ok-button-props="{ danger: true }"
           cancel-text="Cancel"
           placement="topRight"
-          @confirm="remove(record)"
+          @confirm="confirmDelete(record)"
         >
           <a-button type="text" size="small" danger :aria-label="`Delete ${carName(record)}`">
             <template #icon><DeleteOutlined /></template>

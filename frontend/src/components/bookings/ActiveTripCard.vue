@@ -1,6 +1,5 @@
 <script>
 import { CheckCircleOutlined } from '@ant-design/icons-vue'
-import { mapActions, mapGetters } from 'vuex'
 
 import StatusTag from '@/components/common/StatusTag.vue'
 import { ROUTES } from '@/router/routes.constants'
@@ -9,9 +8,11 @@ import { tripCarName } from '@/utils/bookings/tripLabels'
 import { tripDuration } from '@/utils/bookings/tripMetrics'
 import { formatDateTime, formatDuration } from '@/utils/format/dateTime'
 import { formatKm, formatPercent } from '@/utils/format/number'
-import notify from '@/utils/notify'
 
-// The trip in progress, with a live duration. Users can finish trips themselves.
+/**
+ * The trip in progress, with a live duration. Presentational: "Finish Trip" emits `finish`;
+ * the page finishes the trip and passes back `isSubmitting` and any `error`.
+ */
 export default {
   name: 'ActiveTripCard',
   components: { StatusTag },
@@ -21,17 +22,17 @@ export default {
     // Current time in ms, ticked by the page
     now: { type: Number, required: true },
     fleetLoaded: { type: Boolean, default: true },
+    isSubmitting: { type: Boolean, default: false },
+    error: { type: String, default: '' },
   },
-  emits: ['finished'],
+  emits: ['finish'],
   data() {
     return {
       status: BOOKING_STATUS.ACTIVE,
       finishIcon: CheckCircleOutlined,
-      error: '',
     }
   },
   computed: {
-    ...mapGetters('bookings', ['isSubmitting']),
     name() {
       return tripCarName(this.trip, this.fleetLoaded)
     },
@@ -49,19 +50,6 @@ export default {
         { label: 'Fuel at start', value: formatPercent(booking.startFuelLevel) },
         { label: 'Mileage at start', value: formatKm(booking.startMileage) },
       ]
-    },
-  },
-  methods: {
-    ...mapActions('bookings', ['finishTrip']),
-    async handleFinish() {
-      this.error = ''
-      try {
-        await this.finishTrip({ bookingId: this.trip.booking._id })
-        notify.success('Trip finished!')
-        this.$emit('finished')
-      } catch (err) {
-        this.error = err?.response?.data?.message || err.message || 'Could not finish the trip'
-      }
     },
   },
 }
@@ -102,7 +90,7 @@ export default {
       block
       :loading="isSubmitting"
       :disabled="isSubmitting"
-      @click="handleFinish"
+      @click="$emit('finish')"
     >
       <component :is="finishIcon" aria-hidden="true" />
       Finish Trip

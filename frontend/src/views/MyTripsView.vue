@@ -8,6 +8,7 @@ import PillGroup from '@/components/common/PillGroup.vue'
 import ActiveTripCard from '@/components/bookings/ActiveTripCard.vue'
 import TripListItem from '@/components/bookings/TripListItem.vue'
 import { BOOKING_STATUS, bookingStatus, bookingStatusMeta } from '@/utils/bookings/bookingStatus'
+import notify from '@/utils/notify'
 import { ROUTES } from '@/router/routes.constants'
 
 const ALL = 'all'
@@ -25,10 +26,11 @@ export default {
       filter: ALL,
       now: Date.now(),
       carIcon: CarOutlined,
+      finishError: '',
     }
   },
   computed: {
-    ...mapGetters('bookings', ['mine', 'isLoading', 'error']),
+    ...mapGetters('bookings', ['mine', 'isLoading', 'isSubmitting', 'error']),
     ...mapGetters('cars', { carsLoadedAt: 'loadedAt', carsError: 'error' }),
     ...mapGetters('bookings', ['trips']),
     // Without the fleet list, a missing car can't be told apart from a removed one
@@ -92,13 +94,23 @@ export default {
     clearInterval(this.timer)
   },
   methods: {
-    ...mapActions('bookings', ['fetchMine']),
+    ...mapActions('bookings', ['fetchMine', 'finishTrip']),
     ...mapActions('cars', ['fetchCars']),
     async load(force = false) {
       this.now = Date.now()
       // Failures land in the stores: the trips error is shown, the cars error only
       // hides car names
       await Promise.allSettled([this.fetchMine({ force }), this.fetchCars({ force })])
+    },
+    async handleFinish() {
+      this.finishError = ''
+      try {
+        await this.finishTrip({ bookingId: this.activeTrip.booking._id })
+        notify.success('Trip finished!')
+      } catch (err) {
+        // http.js has already put the backend message into err.message
+        this.finishError = err.message || 'Could not finish the trip'
+      }
     },
     showAll() {
       this.filter = ALL
@@ -154,7 +166,9 @@ export default {
         :trip="activeTrip"
         :now="now"
         :fleet-loaded="fleetLoaded"
-        @finished="load(true)"
+        :is-submitting="isSubmitting"
+        :error="finishError"
+        @finish="handleFinish"
       />
 
       <EmptyState

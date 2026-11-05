@@ -1,6 +1,4 @@
 <script>
-import { mapGetters } from 'vuex'
-
 import StatusTag from '@/components/common/StatusTag.vue'
 import { BOOKING_STATUS, bookingStatus } from '@/utils/bookings/bookingStatus'
 import { distanceFuelText, durationText, tripCar, tripClient } from '@/utils/bookings/tripLabels'
@@ -14,6 +12,7 @@ export default {
   name: 'AdminTripsTable',
   components: { StatusTag },
   props: {
+    cars: { type: Array, required: true },
     trips: { type: Array, required: true },
     // Current time in ms, ticked by the console
     now: { type: Number, required: true },
@@ -38,7 +37,6 @@ export default {
     }
   },
   computed: {
-    ...mapGetters('cars', { cars: 'items' }),
     carsById() {
       return Object.fromEntries(this.cars.map((car) => [car._id, car]))
     },

@@ -9,6 +9,7 @@ import bookings from '@/store/modules/bookings'
 import cars from '@/store/modules/cars'
 import geo from '@/store/modules/geo'
 import { toPickerValue } from '@/utils/common/pickerValue'
+import ActiveTripCard from '@/components/bookings/ActiveTripCard.vue'
 import BookingConfirmedModal from '@/components/bookings/BookingConfirmedModal.vue'
 import BookingPanel from '@/components/bookings/BookingPanel.vue'
 
@@ -218,5 +219,57 @@ describe('BookingConfirmedModal', () => {
     const labelId = dialog.getAttribute('aria-labelledby')
     expect(document.getElementById(labelId)?.textContent).toBe('Booking confirmed')
     wrapper.unmount()
+  })
+})
+
+describe('ActiveTripCard', () => {
+  const NOW = Date.parse('2026-11-05T12:00:00Z')
+  const TRIP = {
+    booking: {
+      _id: 'b1',
+      startDate: new Date(NOW - 65 * 60000).toISOString(),
+      endDate: null,
+      startFuelLevel: 82,
+      startMileage: 18420,
+    },
+    carId: 'car1',
+    car: CAR,
+    plate: CAR.registrationNumber,
+  }
+  let wrapper
+
+  // Presentational: no store; the router only resolves the car link
+  const mountCard = async (props) => {
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [{ path: '/cars/:id', name: 'car-details', component: { template: '<div />' } }],
+    })
+    wrapper = mount(ActiveTripCard, {
+      props: { trip: TRIP, now: NOW, ...props },
+      global: { plugins: [router] },
+    })
+    await flushPromises()
+  }
+  const finishButton = () => wrapper.find('#finish-trip-btn')
+
+  afterEach(() => wrapper?.unmount())
+
+  it('shows the trip with its duration from `now` and emits finish', async () => {
+    await mountCard()
+
+    expect(text(wrapper)).toContain('Toyota Camry')
+    expect(text(wrapper)).toContain('1 h 05 min')
+    expect(wrapper.find('a[href="/cars/car1"]').exists()).toBe(true)
+
+    await finishButton().trigger('click')
+    expect(wrapper.emitted('finish')).toHaveLength(1)
+  })
+
+  it('shows the loading state and the error it is given', async () => {
+    await mountCard({ isSubmitting: true, error: 'Trip already finished' })
+
+    expect(finishButton().classes()).toContain('ant-btn-loading')
+    expect(finishButton().attributes('disabled')).toBeDefined()
+    expect(text(wrapper)).toContain('Trip already finished')
   })
 })

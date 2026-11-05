@@ -1,6 +1,4 @@
 <script>
-import { mapActions, mapGetters } from 'vuex'
-
 import InitialsAvatar from '@/components/common/InitialsAvatar.vue'
 import { BOOKING_STATUS, bookingStatus } from '@/utils/bookings/bookingStatus'
 import { shortId } from '@/utils/common/ids'
@@ -13,7 +11,12 @@ import { toneClasses } from '@/assets/styles/tones'
 const EMPTY_COUNTS = Object.freeze({ total: 0, completed: 0 })
 const time = (value) => new Date(value ?? 0).getTime()
 
-// Users table (E5 rows, E8 delete). The current admin can't delete themselves (Q16).
+/**
+ * Users table of the admin console. Presentational: rows, trip counts and the current admin
+ * come in as props; view / edit are emitted. The current admin can't delete themselves (Q16).
+ * `confirmDelete(user)` is a prop, not an event: the popconfirm waits for the promise it
+ * returns and keeps its OK button loading until the request (E8) ends.
+ */
 export default {
   name: 'AdminUsersTable',
   components: { InitialsAvatar },
@@ -22,6 +25,10 @@ export default {
     // Row to highlight, e.g. picked in the top search
     highlightId: { type: String, default: null },
     isLoading: { type: Boolean, default: false },
+    userTrips: { type: Object, default: () => ({}) },
+    tripCounts: { type: Object, default: () => ({}) },
+    currentUserId: { type: String, default: null },
+    confirmDelete: { type: Function, required: true },
   },
   emits: ['view', 'edit'],
   data() {
@@ -35,9 +42,6 @@ export default {
     }
   },
   computed: {
-    ...mapGetters('auth', { currentUser: 'user' }),
-    ...mapGetters('admin/users', ['tripCounts']),
-    ...mapGetters('admin/trips', ['tripsByUser']),
     columns() {
       return [
         {
@@ -94,7 +98,6 @@ export default {
     },
   },
   methods: {
-    ...mapActions('admin/users', ['deleteUser']),
     showRow(id) {
       const index = id ? this.displayed.findIndex((user) => user._id === id) : -1
       if (index !== -1) this.page = Math.floor(index / this.pageSize) + 1
@@ -117,10 +120,10 @@ export default {
       return toneClasses(this.isAdmin(user) ? 'accent' : 'muted').soft
     },
     isSelf(user) {
-      return user._id === this.currentUser?._id
+      return user._id === this.currentUserId
     },
     hasActiveTrip(user) {
-      return (this.tripsByUser[user._id] ?? []).some(
+      return (this.userTrips[user._id] ?? []).some(
         (trip) => bookingStatus(trip) === BOOKING_STATUS.ACTIVE,
       )
     },
@@ -138,14 +141,6 @@ export default {
         notify.success('E-mail copied')
       } catch {
         notify.error('Could not copy the e-mail')
-      }
-    },
-    async remove(user) {
-      try {
-        await this.deleteUser(user._id)
-        notify.success('User deleted')
-      } catch (err) {
-        notify.apiError(err, 'Could not delete the user')
       }
     },
   },
@@ -231,7 +226,7 @@ export default {
           :ok-button-props="{ danger: true }"
           cancel-text="Cancel"
           placement="topRight"
-          @confirm="remove(record)"
+          @confirm="confirmDelete(record)"
         >
           <a-button type="text" size="small" danger :aria-label="`Delete ${fullName(record)}`">
             <template #icon><DeleteOutlined /></template>

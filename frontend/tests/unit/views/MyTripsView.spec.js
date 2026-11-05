@@ -8,10 +8,13 @@ import * as carsApi from '@/services/cars'
 import bookings from '@/store/modules/bookings'
 import cars from '@/store/modules/cars'
 import geo from '@/store/modules/geo'
+import notify from '@/utils/notify'
+import ActiveTripCard from '@/components/bookings/ActiveTripCard.vue'
 import MyTripsView from '@/views/MyTripsView.vue'
 
 vi.mock('@/services/cars', () => ({ list: vi.fn(), getById: vi.fn() }))
-vi.mock('@/services/bookings', () => ({ listMine: vi.fn(), create: vi.fn() }))
+vi.mock('@/services/bookings', () => ({ listMine: vi.fn(), create: vi.fn(), finish: vi.fn() }))
+vi.mock('@/utils/notify', () => ({ default: { success: vi.fn(), error: vi.fn() } }))
 
 const MINUTE = 60000
 const HOUR = 60 * MINUTE
@@ -72,6 +75,8 @@ describe('MyTripsView', () => {
 
   beforeEach(() => {
     vi.mocked(bookingsApi.listMine).mockReset()
+    vi.mocked(bookingsApi.finish).mockReset()
+    vi.mocked(notify.success).mockReset()
     vi.mocked(carsApi.list).mockReset()
     vi.mocked(carsApi.list).mockResolvedValue([CAR])
   })
@@ -164,5 +169,37 @@ describe('MyTripsView', () => {
     await flushPromises()
 
     expect(active()).toContain('1 h 06 min')
+  })
+
+  it('finishes the active trip from the card and refreshes the list', async () => {
+    const finished = { ...ACTIVE, endDate: iso(0), finishFuelLevel: 70, finishMileage: 18460 }
+    vi.mocked(bookingsApi.listMine)
+      .mockResolvedValueOnce([ACTIVE, COMPLETED])
+      .mockResolvedValueOnce([finished, COMPLETED])
+    vi.mocked(bookingsApi.finish).mockResolvedValue(finished)
+    ;({ wrapper } = await setup())
+
+    const card = wrapper.findComponent(ActiveTripCard)
+    expect(card.props('isSubmitting')).toBe(false)
+    card.vm.$emit('finish')
+    await flushPromises()
+
+    expect(bookingsApi.finish).toHaveBeenCalledWith('b1')
+    expect(notify.success).toHaveBeenCalledWith('Trip finished!')
+    expect(wrapper.findComponent(ActiveTripCard).exists()).toBe(false)
+  })
+
+  it('passes a failed finish to the card as its error', async () => {
+    vi.mocked(bookingsApi.listMine).mockResolvedValue([ACTIVE])
+    vi.mocked(bookingsApi.finish).mockRejectedValue(new Error('Trip already finished'))
+    ;({ wrapper } = await setup())
+
+    wrapper.findComponent(ActiveTripCard).vm.$emit('finish')
+    await flushPromises()
+
+    const card = wrapper.findComponent(ActiveTripCard)
+    expect(card.props('error')).toBe('Trip already finished')
+    expect(card.props('isSubmitting')).toBe(false)
+    expect(notify.success).not.toHaveBeenCalled()
   })
 })

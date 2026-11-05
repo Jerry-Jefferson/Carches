@@ -192,6 +192,42 @@ describe('admin trips', () => {
       expect(bookingsApi.getById).toHaveBeenCalledWith(ACTIVE._id)
       expect(rows()[1].classes()).toContain('*:bg-primary/15')
     })
+
+    it('shows only the latest booking when an earlier load answers last (L29)', async () => {
+      const pending = {}
+      vi.mocked(bookingsApi.getById).mockImplementation(
+        (id) => new Promise((resolve) => (pending[id] = resolve)),
+      )
+      ;({ wrapper } = await mountWith(AdminTripsSection))
+      wrapper.vm.view(ACTIVE)
+      wrapper.vm.view(COMPLETED)
+
+      pending[COMPLETED._id](COMPLETED)
+      await flushPromises()
+      pending[ACTIVE._id](ACTIVE)
+      await flushPromises()
+
+      const drawer = wrapper.findComponent(TripDetailsDrawer)
+      expect(drawer.props('trip')._id).toBe(COMPLETED._id)
+      expect(drawer.props('loading')).toBe(false)
+    })
+
+    it('passes a failed load to the drawer and retries it', async () => {
+      vi.mocked(bookingsApi.getById)
+        .mockRejectedValueOnce(new Error('Network Error'))
+        .mockResolvedValueOnce(ACTIVE)
+      ;({ wrapper } = await mountWith(AdminTripsSection, { focusId: ACTIVE._id }))
+
+      const drawer = wrapper.findComponent(TripDetailsDrawer)
+      expect(drawer.props('error')).toBe('Network Error')
+
+      drawer.vm.$emit('retry')
+      await flushPromises()
+
+      expect(bookingsApi.getById).toHaveBeenCalledTimes(2)
+      expect(drawer.props('error')).toBe('')
+      expect(drawer.props('trip')._id).toBe(ACTIVE._id)
+    })
   })
 
   describe('CompleteTripModal', () => {
@@ -381,20 +417,40 @@ describe('admin trips', () => {
   })
 
   describe('TripDetailsDrawer', () => {
-    it('shows only the latest booking when an earlier load answers last (L29)', async () => {
-      const pending = {}
-      vi.mocked(bookingsApi.getById).mockImplementation(
-        (id) => new Promise((resolve) => (pending[id] = resolve)),
-      )
-      ;({ wrapper } = await mountWith(TripDetailsDrawer, { open: true, tripId: ACTIVE._id }))
-      await wrapper.setProps({ tripId: COMPLETED._id })
+    // Presentational: mounted with props only, no store or router
+    const mountDrawer = (props) =>
+      mount(TripDetailsDrawer, {
+        props: { open: true, tripId: ACTIVE._id, cars: [CAR, FREE_CAR], now: NOW, ...props },
+        attachTo: document.body,
+      })
 
-      pending[COMPLETED._id](COMPLETED)
-      await flushPromises()
-      pending[ACTIVE._id](ACTIVE)
+    it('shows the booking it is given, with the live duration from `now`', async () => {
+      wrapper = mountDrawer({ trip: ACTIVE })
       await flushPromises()
 
-      expect(wrapper.vm.trip._id).toBe(COMPLETED._id)
+      expect(bodyText()).toContain('Booking')
+      expect(bodyText()).toContain('Hanna Paulava')
+      expect(bodyText()).toContain('Toyota Camry')
+      expect(bodyText()).toContain(CAR.vin)
+      expect(bodyText()).toContain('1 h 05 min')
+      expect(bodyText()).toContain('Active')
+    })
+
+    it('shows the loading state', async () => {
+      wrapper = mountDrawer({ loading: true })
+      await flushPromises()
+
+      expect(bodyText()).toContain('Loading booking…')
+    })
+
+    it('shows the error and emits retry', async () => {
+      wrapper = mountDrawer({ error: 'Network Error' })
+      await flushPromises()
+
+      expect(bodyText()).toContain('Could not load the booking')
+      expect(bodyText()).toContain('Network Error')
+      bodyButton('Retry').click()
+      expect(wrapper.emitted('retry')).toHaveLength(1)
     })
   })
 })

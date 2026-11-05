@@ -1,6 +1,5 @@
 <script>
 import { mapActions, mapGetters } from 'vuex'
-
 import ErrorState from '@/components/common/ErrorState.vue'
 import PillGroup from '@/components/common/PillGroup.vue'
 import { filterTrips } from '@/utils/admin/consoleFilters'
@@ -37,6 +36,10 @@ export default {
     return {
       detailsId: null,
       isDetailsOpen: false,
+      detailsTrip: null,
+      isDetailsLoading: false,
+      detailsError: '',
+      detailsSeq: 0,
       formTrip: null,
       isFormOpen: false,
       tripToComplete: null,
@@ -96,7 +99,7 @@ export default {
     },
   },
   methods: {
-    ...mapActions('admin/trips', ['setFilters', 'fetchTrips']),
+    ...mapActions('admin/trips', ['setFilters', 'fetchTrips', 'fetchTrip']),
     async reload() {
       try {
         await this.fetchTrips()
@@ -111,6 +114,24 @@ export default {
     view(trip) {
       this.detailsId = trip._id
       this.isDetailsOpen = true
+      this.loadDetails()
+    },
+    // E20 for the details drawer
+    async loadDetails() {
+      if (!this.detailsId) return
+      // Opening another booking while one loads: only the latest answer is shown
+      const seq = ++this.detailsSeq
+      this.detailsTrip = null
+      this.detailsError = ''
+      this.isDetailsLoading = true
+      try {
+        const trip = await this.fetchTrip(this.detailsId)
+        if (seq === this.detailsSeq) this.detailsTrip = trip
+      } catch (err) {
+        if (seq === this.detailsSeq) this.detailsError = err.message
+      } finally {
+        if (seq === this.detailsSeq) this.isDetailsLoading = false
+      }
     },
     onDetailsOpen(isOpen) {
       this.isDetailsOpen = isOpen
@@ -188,6 +209,7 @@ export default {
       />
       <AdminTripsTable
         v-else
+        :cars="cars"
         :trips="filtered"
         :now="now"
         :highlight-id="highlightId"
@@ -199,7 +221,17 @@ export default {
       />
     </div>
 
-    <TripDetailsDrawer :open="isDetailsOpen" :trip-id="detailsId" @update:open="onDetailsOpen" />
+    <TripDetailsDrawer
+      :open="isDetailsOpen"
+      :trip-id="detailsId"
+      :trip="detailsTrip"
+      :loading="isDetailsLoading"
+      :error="detailsError"
+      :cars="cars"
+      :now="now"
+      @update:open="onDetailsOpen"
+      @retry="loadDetails"
+    />
     <BookingFormModal v-model:open="isFormOpen" :trip="formTrip" />
     <CompleteTripModal v-model:open="isCompleteOpen" :trip="tripToComplete" />
     <DeleteTripModal v-model:open="isDeleteOpen" :trip="tripToDelete" />
